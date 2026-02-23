@@ -1,0 +1,29 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  background: linear-gradient(90deg, #1f3a5f 0%, #3b5f8a 80%, #1f3a5f 100%);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.menu {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+.menu ul {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.profile img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}

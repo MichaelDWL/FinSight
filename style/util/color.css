@@ -1,0 +1,15 @@
+:root {
+  --p1: #1e1e1e;
+  --p2: #2e2e2e;
+  --p3: #3e3e3e;
+  --p4: #4e4e4e;
+  --p5: #5e5e5e;
+  --p6: #6e6e6e;
+  --p7: #7e7e7e;
+
+  --pw: white;
+}
+
+.c-pw {
+  color: var(--pw);
+}
