@@ -1,3 +1,113 @@
-* {
-  font-family: "Roboto", sans-serif;
+/* FONTES BASE */
+
+.font-desc {
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+  max-width: 50ch;
+  line-height: 1.6;
+}
+
+/* TÍTULOS */
+
+.font-title-lg {
+  font-family: "Manrope", sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+.font-title-md {
+  font-family: "Manrope", sans-serif;
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.font-title-sm {
+  font-family: "Manrope", sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+/* TEXTO AUXILIAR */
+
+.font-label {
+  font-family: "Inter", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.font-small {
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  line-height: 1.3;
+}
+
+/* VALORES FINANCEIROS */
+
+.font-value-lg {
+  font-family: "Manrope", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-value-md {
+  font-family: "Manrope", sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.font-value-sm {
+  font-family: "Inter", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* STATUS (RECEITA / DESPESA) */
+
+.font-income {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.font-expense {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.font-warning {
+  color: #d97706;
+  font-style: italic;
+}
+
+/* RESPONSIVIDADE */
+
+@media (max-width: 1200px) {
+  .font-title-lg {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 800px) {
+  .font-title-lg {
+    font-size: 1.3rem;
+  }
+
+  .font-title-md {
+    font-size: 1rem;
+  }
+
+  .font-desc {
+    font-size: 0.9rem;
+  }
+
+  .font-value-lg {
+    font-size: 1.25rem;
+  }
 }
