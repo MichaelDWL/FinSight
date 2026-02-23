@@ -6,6 +6,7 @@
 @import "./util/tipografia.css";
 @import "./util/color.css";
 @import "./util/modal.css";
+@import "./util/card.css";
 
 /* Home */
 @import "./home/welcome.css";

@@ -10,8 +10,9 @@
 .menu {
   display: flex;
   align-items: center;
-  gap: 2rem;
+  gap: 7rem;
 }
+
 .menu ul {
   display: flex;
   gap: 1.25rem;
@@ -20,10 +21,11 @@
 .profile {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 1.125rem;
 }
+
 .profile img {
-  width: 40px;
-  height: 40px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
 }
