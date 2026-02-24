@@ -10,7 +10,22 @@
 .menu {
   display: flex;
   align-items: center;
-  gap: 7rem;
+  gap: 1rem;
+  padding: 0.5rem;
+}
+
+.menu a {
+  padding: 0.6rem;
+  border-left: #1f3a5f 2px solid;
+}
+.menu a {
+  padding: 0.6rem;
+  border-left: #1f3a5f 2px solid;
+}
+
+.menu a:hover {
+  border-left: #3b5f8a 2px solid;
+  color: var(--pw2);
 }
 
 .menu ul {
