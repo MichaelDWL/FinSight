@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Manrope:wght@200..800&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
   <title>FinSight - Gerenciamento Financeiro</title>
   <link rel="stylesheet" href="style/style.css">
@@ -44,59 +45,157 @@
           <span class="font-value-lg"> R$ <strong>12.450,00</strong></span>
         </div>
         <div class="res-item">
-          <h3 class="font-title-sm">Despesas por Mês</h3>
+          <h3 class="font-title-sm">Despesa Mensal</h3>
           <span class="font-value-lg"> R$ <strong>4.360,00</strong></span>
         </div>
         <div class="res-item">
-          <h3 class="font-title-sm">Receitas do Mês</h3>
+          <h3 class="font-title-sm">Receita Mensal</h3>
           <span class="font-value-lg"> R$ <strong>7.250,00</strong></span>
         </div>
       </div>
     </section>
 
-    <section class="last-transactions">
-      <h2 class="font-title-md">Últimas Transações</h2>
-      <div class="transactions-list">
+    <section class="recente">
+      <div id="last-transactions" class="card-1">
+        <h2 class="font-title-md">Recentes</h2>
+        <div class="transactions-list">
 
-        <div class="transactions-item">
-          <div class="transaction-info">
-            <h3>Supermercado</h3>
-            <p>Alimentação</p>
+          <div class="transactions-item">
+            <div class="transaction-info">
+              <h3 class="font-title-sm">Supermercado</h3>
+              <p class="font-desc c-desc">Alimentação</p>
+            </div>
+            <div class="transaction-value">
+              <span class="font-value-md">R$ -150,00</span>
+              <i class="fa-solid fa-circle-up" style="color: rgb(230, 99, 135);"></i>
+            </div>
           </div>
-          <span class="font-value-md"> R$ -150,00</span>
+
+          <div class="transactions-item">
+            <div class="transaction-info">
+              <h3 class="font-title-sm">Salário Recebido</h3>
+              <p class="font-desc c-desc">Receita</p>
+            </div>
+            <div class="transaction-value">
+              <span class="font-value-md">R$ +5.150,00</span>
+              <i class="fa-solid fa-circle-down" style="color: rgb(99, 230, 190);"></i>
+            </div>
+          </div>
+
+          <div class="transactions-item">
+            <div class="transaction-info">
+              <h3 class="font-title-sm">Conta de Luz</h3>
+              <p class="font-desc c-desc">Moradia</p>
+            </div>
+            <div class="transaction-value">
+              <span class="font-value-md">R$ -180,00</span>
+              <i class="fa-solid fa-circle-up" style="color: rgb(230, 99, 135);"></i>
+            </div>
+          </div>
+
+          <div class="transactions-item">
+            <div class="transaction-info">
+              <h3 class="font-title-sm">Restaurante</h3>
+              <p class="font-desc c-desc">Lazer</p>
+            </div>
+            <div class="transaction-value">
+              <span class="font-value-md">R$ -120,00</span>
+              <i class="fa-solid fa-circle-up" style="color: rgb(230, 99, 135);"></i>
+            </div>
+          </div>
+
         </div>
+      </div>
 
-        <div class="transactions-item">
-          <div class="transaction-info">
-            <h3>Salário Recebido</h3>
-            <p>Receita</p>
+      <div id="insightFin" class="card-1">
+        <h2 class="font-title-md"> Insights Financeiros </h2>
+        <div class="insight-list">
+          <div class="insight-item">
+            <div class="insight-icon">
+              <i class="fa-solid fa-circle-exclamation" style="color: rgb(255, 212, 59);"></i>
+            </div>
+            <div>
+              <h3 class="font-title-sm">Gastos com lazer aumentaram 35% </h3>
+              <p class="font-desc c-desc"> em relação ao mês passado</p>
+            </div>
           </div>
-          <span class="font-value-md"> R$ +5.150,00</span>
-        </div>
 
-        <div class="transactions-item">
-          <div class="transaction-info">
-            <h3>Conta de Luz</h3>
-            <p>Moradia</p>
+          <div class="insight-item">
+            <div class="insight-icon">
+              <i class="fa-solid fa-circle-check" style="color: rgb(99, 230, 190);"></i>
+            </div>
+            <div>
+              <h3 class="font-title-sm">Você está abaixo do orçamento de alimentação. Parabéns !</h3>
+            </div>
           </div>
-          <span class="font-value-md"> R$ -180,00</span>
-        </div>
 
-        <div class="transactions-item">
-          <div class="transaction-info">
-            <h3>Restaurante</h3>
-            <p>Lazer</p>
+          <div class="insight-item">
+            <div class="insight-icon">
+              <i class="fa-solid fa-money-check-dollar" style="color: rgb(99, 230, 101);"></i>
+            </div>
+            <div>
+              <h3 class="font-title-sm">Se mantiver o ritmo atual, seu saldo no final do Mês será de <span> R$ 8.900,00 </span> </h3>
+            </div>
           </div>
-          <span class="font-value-md"> R$ -120,00</span>
+          <div class="insight-item">
+            <div class="insight-icon">
+              <i class="fa-solid fa-circle-xmark" style="color: rgb(230, 99, 135);"></i>
+            </div>
+            <div>
+              <h3 class="font-title-sm">Você já passou R$300,00 do limite estabelecido.</h3>
+            </div>
+          </div>
+
         </div>
 
       </div>
+
+      <div id="goals-list" class="card-1">
+        <div class="goals">
+          <h2 class="font-title-md">Metas Financeiras</h2>
+          <div class="goals-list">
+            <div class="goal-item">
+              <h3 class="font-title-sm">Comprar um carro</h3>
+              <p class="font-desc c-desc">Economizar para comprar um carro</p>
+
+              <div class="progress-bar">
+                <div class="progress"></div>
+              </div>
+              <span class="font-value-sm">60% concluído</span>
+            </div>
+
+            <div class="goal-item">
+              <h3 class="font-title-sm">Comprar um VideoGame</h3>
+              <p class="font-desc c-desc">Economizar para comprar um Nintendo Switch</p>
+
+              <div class="progress-bar">
+                <div class="progress"></div>
+              </div>
+              <span class="font-value-sm">10% concluído</span>
+            </div>
+
+            <div class="goal-item">
+              <h3 class="font-title-sm">Viajar</h3>
+              <p class="font-desc c-desc">Economizar para as Férias</p>
+
+              <div class="progress-bar">
+                <div class="progress"></div>
+              </div>
+              <span class="font-value-sm">90% concluído</span>
+            </div>
+
+
+          </div>
+        </div>
+      </div>
+
+
 
 
     </section>
 
   </main>
-  <script src="./js/main.js"> </script>
+  <script type="module" src="./js/main.js"> </script>
 </body>
 
 </html>

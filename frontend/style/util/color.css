@@ -11,8 +11,21 @@
   --pw1: #f0f0f0;
   --pw2: #e0e0e0;
   --pw3: #d0d0d0;
+  --pw4: #d0d0d0da;
+  --pw5: #b1b1b1;
+  --pw6: #4a5568;
+  --pw7: #4a5d6e;
+  --pw8: #2d3748;
+
+  --bg: aliceblue;
+
+  --border-color: #cccccc51;
 }
 
 .c-pw {
   color: var(--pw);
+}
+
+.c-desc {
+  color: var(--pw6);
 }

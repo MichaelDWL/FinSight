@@ -1,0 +1,19 @@
+.insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.insight-icon {
+  font-size: 2rem;
+  color: var(--pw4);
+}
+
+.insight-item {
+  display: flex;
+  gap: var(--gap-md);
+  padding: var(--pad-sm);
+  border-radius: var(--border-radius-md);
+  border: var(--border-card);
+  box-shadow: var(--bx-shadow-item);
+}

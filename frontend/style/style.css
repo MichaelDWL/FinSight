@@ -8,6 +8,13 @@
 @import "./util/modal.css";
 @import "./util/card.css";
 @import "./util/util.css";
+@import "./util/tokens.css";
+
+/* Components */
+@import "./components/welcome.css";
 
 /* Home */
-@import "./home/welcome.css";
+@import "./home/lastTrans.css";
+@import "./home/recente.css";
+@import "./home/resMetas.css";
+@import "./home/insight.css";

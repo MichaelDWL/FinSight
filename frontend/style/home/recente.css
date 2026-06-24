@@ -1,0 +1,6 @@
+.recente {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--pad-md);
+  gap: var(--gap-md);
+}
