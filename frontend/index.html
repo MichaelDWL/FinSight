@@ -16,20 +16,67 @@
 
 <body>
   <header class="header c-pw font-title-sm">
-    <h1 class="font-title-lg">FinSight</h1>
-    <nav class="menu">
+
+    <div class="header-brand">
+
+
+
+    </div>
+
+    <nav class="nav">
       <ul>
-        <li><a href="#">Dashboard</a></li>
-        <li><a href="#">Transações</a></li>
-        <li><a href="#">Relatórios</a></li>
-        <li><a href="#">Planejamento</a></li>
+        <li><a class="nav-link nav-link-active" href="#"><i class="fa-solid fa-house"></i>Dashboard</a></li>
+        <li><a class="nav-link" href="#"><i class="fa-solid fa-arrow-right-arrow-left"></i>Transações</a></li>
+        <li><a class="nav-link" href="#"><i class="fa-regular fa-file-lines"></i>Relatórios</a></li>
+        <li><a class="nav-link" href="#"><i class="fa-regular fa-calendar-days"></i>Planejamento</a></li>
       </ul>
     </nav>
+
     <div class="profile">
       <span>Olá, Michael!</span>
       <img src="./assets/profile-man.png" alt="profile picture" class="profile-picture">
     </div>
+
   </header>
+
+  <aside>
+    <nav class="sidebar">
+      <div class="sidebar-btn">
+        <div class="sidebar-brand">
+          <i class="fa-solid fa-chart-simple"></i>
+          <h1 class="font-title-md">FinSight</h1>
+        </div>
+        <button class="sidebar-toggle" type="button" aria-label="Fechar menu" aria-expanded="true">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+      </div>
+
+      <ul class="nav-list">
+        <li class="nav-item nav-active"> <a href="#"><i class="fa-solid fa-house"></i> Dashboard </a> </li>
+        <li class="nav-item"> <a href="#"><i class="fa-solid fa-arrow-right-arrow-left"></i> Transações </a> </li>
+        <li class="nav-item"> <a href="#"><i class="fa-solid fa-tags"></i> Categorias </a> </li>
+        <li class="nav-item"> <a href="#"><i class="fa-regular fa-calendar-days"></i> Planejamento </a> </li>
+        <li class="nav-item"> <a href="#"><i class="fa-regular fa-file-lines"></i> Relatórios </a> </li>
+        <li class="nav-item"> <a href="#"><i class="fa-solid fa-bullseye"></i> Metas </a> </li>
+        <li class="nav-item"> <a href="#"><i class="fa-solid fa-gear"></i> Configurações </a> </li>
+      </ul>
+
+      <div class="sidebar-tip">
+        <div class="sidebar-tip-icon">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <h2 class="font-title-sm">Dica do dia</h2>
+        <p class="font-small">Pequenas economias hoje viram grandes conquistas amanhã.</p>
+        <a href="#" class="font-label">Saiba mais</a>
+      </div>
+
+      <div class="logout">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <p> Sair </p>
+      </div>
+    </nav>
+
+  </aside>
 
   <main>
     <section class="welcome c-pw">
@@ -183,18 +230,68 @@
               </div>
               <span class="font-value-sm">90% concluído</span>
             </div>
-
-
           </div>
         </div>
       </div>
-
-
-
-
     </section>
-
   </main>
+
+  <div class="modal">
+    <div class="card-1">
+
+      <h2 class="font-title-md">Adicionar Despesa</h2>
+
+      <div class="inputs-list">
+
+        <input type="text" name="descricao-despesa" id="desc-expense" class="input-basic" required placeholder="Ex.: Supermercado, Restaurante...">
+
+        <input type="number" name="value-expense" class="input-basic" required placeholder="R$ 0,00">
+
+        <div id="categoria-custo-expense">
+          <ul class="input-select">
+            <li class="input-select-item">Alimentação</li>
+            <li class="input-select-item">Casa</li>
+            <li class="input-select-item">Lazer</li>
+            <li class="input-select-item">Saúde</li>
+            <li class="input-select-item">Viagem</li>
+            <li class="input-select-item">Transporte</li>
+            <li class="input-select-item">Jogos</li>
+            <li class="input-select-item">Assinaturas</li>
+          </ul>
+        </div>
+
+        <div id="forma-pagamento-expense">
+          <ul class="input-select">
+            <li class="input-select-item">Cartão de Débito</li>
+            <li class="input-select-item">Cartão de Crédito</li>
+            <li class="input-select-item">Pix</li>
+            <li class="input-select-item">Dinheiro</li>
+            <li class="input-select-item">Boleto</li>
+            <li class="input-select-item">Crediário</li>
+          </ul>
+        </div>
+
+        <div id="conta-expense">
+          <ul class="input-select">
+            <li class="input-select-item">Cartão de Débito n°1</li>
+            <li class="input-select-item">Cartão de Débito n°2</li>
+            <li class="input-select-item">Cartão de Débito n°3</li>
+            <li class="input-select-item">Cartão de Débito n°4</li>
+          </ul>
+        </div>
+
+        <div class="obs-expense">
+          <input type="text-area" placeholder="Adicione uma observação">
+
+        </div>
+
+
+      </div>
+    </div>
+  </div>
+
+
+
   <script type="module" src="./js/main.js"> </script>
 </body>
 

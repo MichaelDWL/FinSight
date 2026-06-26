@@ -9,6 +9,7 @@
   --pad-md: 1.125rem;
   --pad-lg: 1.5rem;
   --pad-xl: 2rem;
+  --pad-btnNav: 0.5rem 1rem;
 
   --border-radius-sm: 4px;
   --border-radius-md: 8px;
@@ -16,5 +17,7 @@
 
   --bx-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
   --bx-shadow-item: 0 2px 4px rgba(0, 0, 0, 0.05);
+
   --border-card: 1px solid var(--border-color);
+  --border-card: 1px solid var(--border-color-input);
 }

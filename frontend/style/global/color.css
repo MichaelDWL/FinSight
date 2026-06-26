@@ -19,7 +19,15 @@
 
   --bg: aliceblue;
 
+  --brand-900: #0f2d4f;
+  --brand-800: #1f3a5f;
+  --brand-700: #2c4e7a;
+  --brand-600: #3b5f8a;
+  --brand-accent: #0d6efd;
+  --brand-accent-soft: rgba(13, 110, 253, 0.16);
+
   --border-color: #cccccc51;
+  --border-color-input: #b1b1b1;
 }
 
 .c-pw {

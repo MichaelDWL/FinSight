@@ -1,17 +1,21 @@
 /* Global */
 @import "./global/global.css";
 @import "./global/header.css";
+@import "./global/sidebar.css";
+@import "./global/tipografia.css";
+@import "./global/tokens.css";
+@import "./global/color.css";
 
 /* Util */
-@import "./util/tipografia.css";
-@import "./util/color.css";
 @import "./util/modal.css";
 @import "./util/card.css";
 @import "./util/util.css";
-@import "./util/tokens.css";
 
 /* Components */
 @import "./components/welcome.css";
+@import "./components/inputs.css";
+@import "./components/modal/modal.css";
+@import "./components/modal/newExpenses.css";
 
 /* Home */
 @import "./home/lastTrans.css";
