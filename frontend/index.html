@@ -237,56 +237,87 @@
   </main>
 
   <div class="modal">
-    <div class="card-1">
-
-      <h2 class="font-title-md">Adicionar Despesa</h2>
-
-      <div class="inputs-list">
-
-        <input type="text" name="descricao-despesa" id="desc-expense" class="input-basic" required placeholder="Ex.: Supermercado, Restaurante...">
-
-        <input type="number" name="value-expense" class="input-basic" required placeholder="R$ 0,00">
-
-        <div id="categoria-custo-expense">
-          <ul class="input-select">
-            <li class="input-select-item">Alimentação</li>
-            <li class="input-select-item">Casa</li>
-            <li class="input-select-item">Lazer</li>
-            <li class="input-select-item">Saúde</li>
-            <li class="input-select-item">Viagem</li>
-            <li class="input-select-item">Transporte</li>
-            <li class="input-select-item">Jogos</li>
-            <li class="input-select-item">Assinaturas</li>
-          </ul>
+    <div class="card-1 new-expense-card">
+      <div class="new-expense-header">
+        <div>
+          <span class="new-expense-tag font-label">Nova saída</span>
+          <h2 class="font-title-md">Adicionar Despesa</h2>
+          <p class="font-small">Registre uma despesa e mantenha seus gastos sempre organizados.</p>
         </div>
 
-        <div id="forma-pagamento-expense">
-          <ul class="input-select">
-            <li class="input-select-item">Cartão de Débito</li>
-            <li class="input-select-item">Cartão de Crédito</li>
-            <li class="input-select-item">Pix</li>
-            <li class="input-select-item">Dinheiro</li>
-            <li class="input-select-item">Boleto</li>
-            <li class="input-select-item">Crediário</li>
-          </ul>
-        </div>
-
-        <div id="conta-expense">
-          <ul class="input-select">
-            <li class="input-select-item">Cartão de Débito n°1</li>
-            <li class="input-select-item">Cartão de Débito n°2</li>
-            <li class="input-select-item">Cartão de Débito n°3</li>
-            <li class="input-select-item">Cartão de Débito n°4</li>
-          </ul>
-        </div>
-
-        <div class="obs-expense">
-          <input type="text-area" placeholder="Adicione uma observação">
-
-        </div>
-
-
+        <button class="expense-modal-close" type="button" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       </div>
+
+      <form class="new-expense-form">
+        <div class="inputs-list">
+          <label class="expense-field expense-field-wide" for="desc-expense">
+            <span class="font-label">Descrição</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-pen"></i>
+              <input type="text" name="descricao-despesa" id="desc-expense" class="input-basic" required placeholder="Ex.: Supermercado, Restaurante...">
+            </div>
+          </label>
+
+          <label class="expense-field" for="value-expense">
+            <span class="font-label">Valor</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input type="number" name="value-expense" id="value-expense" class="input-basic" required placeholder="0,00">
+            </div>
+          </label>
+
+          <div class="expense-field" id="categoria-custo-expense">
+            <span class="font-label">Categoria</span>
+            <ul class="input-select">
+              <li data-value="1" class="input-select-item">Alimentação</li>
+              <li data-value="2" class="input-select-item">Casa</li>
+              <li data-value="3" class="input-select-item">Lazer</li>
+              <li data-value="4" class="input-select-item">Saúde</li>
+              <li data-value="5" class="input-select-item">Viagem</li>
+              <li data-value="6" class="input-select-item">Transporte</li>
+              <li data-value="7" class="input-select-item">Jogos</li>
+              <li data-value="8" class="input-select-item">Assinaturas</li>
+            </ul>
+          </div>
+
+          <div class="expense-field" id="forma-pagamento-expense">
+            <span class="font-label">Forma de pagamento</span>
+            <ul class="input-select">
+              <li data-value="1" class="input-select-item">Cartão de Débito</li>
+              <li data-value="2" class="input-select-item">Cartão de Crédito</li>
+              <li data-value="3" class="input-select-item">Pix</li>
+              <li data-value="4" class="input-select-item">Dinheiro</li>
+              <li data-value="5" class="input-select-item">Boleto</li>
+              <li data-value="6" class="input-select-item">Crediário</li>
+            </ul>
+          </div>
+
+          <div class="expense-field" id="conta-expense">
+            <span class="font-label">Conta</span>
+            <ul class="input-select">
+              <li data-value="1" class="input-select-item">Cartão de Débito n°1</li>
+              <li data-value="2" class="input-select-item">Cartão de Débito n°2</li>
+              <li data-value="3" class="input-select-item">Cartão de Débito n°3</li>
+              <li data-value="4" class="input-select-item">Cartão de Débito n°4</li>
+            </ul>
+          </div>
+
+          <label class="expense-field expense-field-wide obs-expense" for="obs-expense">
+            <span class="font-label">Observação</span>
+            <textarea name="obs-expense" id="obs-expense" placeholder="Adicione uma observação"></textarea>
+          </label>
+        </div>
+
+        <div class="new-expense-actions">
+          <button class="expense-secondary-btn" type="button">Cancelar</button>
+          <button class="expense-primary-btn" type="button">
+            <i class="fa-solid fa-plus"></i>
+            Adicionar despesa
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
