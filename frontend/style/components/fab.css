@@ -1,0 +1,148 @@
+.fab-add {
+  --fab-size: 3.5rem;
+
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  color: var(--pw);
+  background: linear-gradient(135deg, var(--brand-accent) 0%, #0965e8 55%, var(--brand-600) 100%);
+  box-shadow:
+    0 16px 32px rgba(13, 110, 253, 0.32),
+    0 4px 12px rgba(15, 45, 79, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+  transition:
+    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    gap 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.fab-add::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(13, 110, 253, 0.55), rgba(99, 230, 190, 0.35));
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.25s ease;
+}
+
+.fab-add::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.28), transparent 52%);
+  pointer-events: none;
+}
+
+.fab-add-icon {
+  display: grid;
+  flex-shrink: 0;
+  width: var(--fab-size);
+  height: var(--fab-size);
+  place-items: center;
+  font-size: 1.15rem;
+  transition: transform 0.25s ease;
+}
+
+.fab-add-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-family: "Inter", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition:
+    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease 0.05s;
+}
+
+.fab-add:hover {
+  width: auto;
+  gap: 0.15rem;
+  padding-right: 1.35rem;
+  transform: translateY(-3px);
+  box-shadow:
+    0 22px 40px rgba(13, 110, 253, 0.38),
+    0 8px 18px rgba(15, 45, 79, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+}
+
+.fab-add:hover::before {
+  opacity: 1;
+}
+
+.fab-add:hover .fab-add-icon {
+  transform: rotate(90deg);
+}
+
+.fab-add:hover .fab-add-label {
+  max-width: 9rem;
+  opacity: 1;
+}
+
+.fab-add:active {
+  transform: translateY(-1px) scale(0.98);
+  box-shadow:
+    0 10px 22px rgba(13, 110, 253, 0.28),
+    0 3px 8px rgba(15, 45, 79, 0.16);
+}
+
+.fab-add:focus-visible {
+  outline: 3px solid rgba(13, 110, 253, 0.45);
+  outline-offset: 4px;
+}
+
+@media (max-width: 760px) {
+  .fab-add {
+    --fab-size: 3.25rem;
+    right: 1.25rem;
+    bottom: 1.25rem;
+  }
+
+  .fab-add:hover {
+    width: var(--fab-size);
+    gap: 0;
+    padding-right: 0;
+    transform: translateY(-2px);
+  }
+
+  .fab-add:hover .fab-add-icon {
+    transform: none;
+  }
+
+  .fab-add:hover .fab-add-label {
+    max-width: 0;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fab-add,
+  .fab-add-icon,
+  .fab-add-label,
+  .fab-add::before {
+    transition: none;
+  }
+
+  .fab-add:hover .fab-add-icon {
+    transform: none;
+  }
+}
