@@ -236,7 +236,7 @@
     </section>
   </main>
 
-  <button class="fab-add" type="button" aria-label="Adicionar despesa">
+  <button class="fab-add" id="openModal" type="button" aria-label="Adicionar despesa">
     <span class="fab-add-icon">
       <i class="fa-solid fa-plus"></i>
     </span>
@@ -252,7 +252,7 @@
           <p class="font-small">Registre uma despesa e mantenha seus gastos sempre organizados.</p>
         </div>
 
-        <button class="expense-modal-close" type="button" aria-label="Fechar modal">
+        <button class="expense-modal-close" id="closeModal" type="button" aria-label="Fechar modal">
           <i class="fa-solid fa-xmark"></i>
         </button>
       </div>
@@ -318,8 +318,8 @@
         </div>
 
         <div class="new-expense-actions">
-          <button class="expense-secondary-btn" type="button">Cancelar</button>
-          <button class="expense-primary-btn" type="button">
+          <button class="expense-secondary-btn" id="cancelForm" type="button">Cancelar</button>
+          <button class="expense-primary-btn" id="addExpense" type="button">
             <i class="fa-solid fa-plus"></i>
             Adicionar despesa
           </button>
