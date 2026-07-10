@@ -11,15 +11,8 @@
 @import "./util/util.css";
 
 /* Components */
-@import "./components/welcome.css";
 @import "./components/inputs.css";
 @import "./components/modal/modal.css";
 @import "./components/modal/newExpenses.css";
 @import "./components/fab.css";
 @import "./pages/app.css";
-
-/* Home */
-@import "./home/lastTrans.css";
-@import "./home/recente.css";
-@import "./home/resMetas.css";
-@import "./home/insight.css";
