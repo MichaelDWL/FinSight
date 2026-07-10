@@ -252,6 +252,120 @@
   box-shadow: 0 12px 28px rgba(13, 110, 253, 0.14);
 }
 
+.expense-date-field {
+  position: relative;
+}
+
+.expense-date-field .input-basic {
+  cursor: pointer;
+}
+
+.expense-calendar {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 0;
+  z-index: 6;
+  width: min(100%, 320px);
+  padding: 0.85rem;
+  border: 1px solid rgba(13, 110, 253, 0.12);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98)),
+    var(--surface);
+  box-shadow: 0 18px 42px rgba(15, 45, 79, 0.18);
+}
+
+.expense-calendar.is-hidden {
+  display: none;
+}
+
+.expense-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.expense-calendar-title {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.expense-calendar-nav {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(13, 110, 253, 0.12);
+  border-radius: 999px;
+  color: var(--brand-800);
+  background: var(--surface);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.expense-calendar-nav:hover {
+  color: var(--pw);
+  background: var(--brand-accent);
+  transform: translateY(-1px);
+}
+
+.expense-calendar-weekdays,
+.expense-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.28rem;
+}
+
+.expense-calendar-weekdays {
+  margin-bottom: 0.35rem;
+}
+
+.expense-calendar-weekdays span {
+  color: var(--pw6);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.expense-calendar-day {
+  display: grid;
+  min-height: 2.05rem;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--brand-900);
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.expense-calendar-day:hover {
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+  transform: translateY(-1px);
+}
+
+.expense-calendar-day.is-muted {
+  color: var(--pw5);
+}
+
+.expense-calendar-day.is-today {
+  box-shadow: inset 0 0 0 1px rgba(13, 110, 253, 0.36);
+}
+
+.expense-calendar-day.is-selected {
+  color: var(--pw);
+  background: linear-gradient(135deg, var(--brand-accent), #63a4ff);
+  box-shadow: 0 10px 18px rgba(13, 110, 253, 0.24);
+}
+
 .new-expense-actions {
   display: flex;
   justify-content: flex-end;
@@ -394,6 +508,12 @@
   .new-expense-form .input-select {
     min-height: 2.55rem;
     border-radius: 11px;
+  }
+
+  .expense-calendar {
+    position: static;
+    width: 100%;
+    margin-top: 0.55rem;
   }
 
   .expense-input-wrapper {

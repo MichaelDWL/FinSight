@@ -14,9 +14,12 @@
   --border-radius-sm: 4px;
   --border-radius-md: 8px;
   --border-radius-lg: 16px;
+  --border-radius-xl: 22px;
 
   --bx-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
   --bx-shadow-item: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --bx-shadow-card-elevated: 0 18px 40px rgba(15, 45, 79, 0.09);
+  --bx-shadow-item-elevated: 0 12px 24px rgba(15, 45, 79, 0.08);
 
   --border-card: 1px solid var(--border-color);
   --border-card: 1px solid var(--border-color-input);
