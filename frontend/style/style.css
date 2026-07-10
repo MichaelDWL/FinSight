@@ -16,6 +16,7 @@
 @import "./components/modal/modal.css";
 @import "./components/modal/newExpenses.css";
 @import "./components/fab.css";
+@import "./pages/app.css";
 
 /* Home */
 @import "./home/lastTrans.css";
