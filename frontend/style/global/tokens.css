@@ -20,7 +20,20 @@
   --bx-shadow-item: 0 2px 4px rgba(0, 0, 0, 0.05);
   --bx-shadow-card-elevated: 0 18px 40px rgba(15, 45, 79, 0.09);
   --bx-shadow-item-elevated: 0 12px 24px rgba(15, 45, 79, 0.08);
+  --bx-shadow-hover: 0 22px 44px rgba(15, 45, 79, 0.13);
+  --bx-shadow-field: 0 8px 20px rgba(15, 45, 79, 0.05);
+  --bx-shadow-field-focus: 0 12px 28px rgba(13, 110, 253, 0.14);
 
-  --border-card: 1px solid var(--border-color);
-  --border-card: 1px solid var(--border-color-input);
+  --border-card: 1px solid rgba(255, 255, 255, 0.82);
+  --border-field: 1px solid rgba(177, 177, 177, 0.55);
+  --surface-card: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(248, 251, 255, 0.94)
+  );
+  --surface-card-accent: radial-gradient(
+    circle at top right,
+    var(--brand-accent-soft),
+    transparent 38%
+  );
 }
