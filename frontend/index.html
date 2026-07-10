@@ -24,6 +24,7 @@
         <li><a class="nav-link nav-link-active" href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i>Dashboard</a></li>
         <li><a class="nav-link" href="#transacoes" data-route="transacoes"><i class="fa-solid fa-arrow-right-arrow-left"></i>Transações</a></li>
         <li><a class="nav-link" href="#patrimonio" data-route="patrimonio"><i class="fa-solid fa-wallet"></i>Patrimônio</a></li>
+        <li><a class="nav-link" href="#contas-resumo" data-route="contas-resumo"><i class="fa-solid fa-credit-card"></i>Contas</a></li>
         <li><a class="nav-link" href="#metas" data-route="metas"><i class="fa-solid fa-bullseye"></i>Metas</a></li>
       </ul>
     </nav>
@@ -49,9 +50,28 @@
       <ul class="nav-list">
         <li class="nav-item nav-active"><a href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i> Dashboard</a></li>
         <li class="nav-item"><a href="#transacoes" data-route="transacoes"><i class="fa-solid fa-arrow-right-arrow-left"></i> Transações</a></li>
-        <li class="nav-item"><a href="#patrimonio" data-route="patrimonio"><i class="fa-solid fa-wallet"></i> Patrimônio</a></li>
-        <li class="nav-item"><a href="#investimento-novo" data-route="investimento-novo"><i class="fa-solid fa-circle-plus"></i> Adicionar investimento</a></li>
-        <li class="nav-item"><a href="#investimento-detalhe" data-route="investimento-detalhe"><i class="fa-solid fa-chart-line"></i> Detalhes</a></li>
+        <li class="nav-item nav-group" data-nav-group="investments">
+          <button class="nav-group-toggle" type="button" data-action="toggle-investments-menu" aria-expanded="false" aria-controls="investmentsSubmenu">
+            <span><i class="fa-solid fa-wallet"></i> Patrimônio</span>
+            <i class="fa-solid fa-chevron-down nav-group-chevron"></i>
+          </button>
+          <ul class="nav-submenu" id="investmentsSubmenu">
+            <li><a href="#patrimonio" data-route="patrimonio">Carteira</a></li>
+            <li><button type="button" data-action="add-investment" data-subroute="investimento-novo">Investir</button></li>
+            <li><a href="#investimento-detalhe" data-route="investimento-detalhe">Detalhes</a></li>
+          </ul>
+        </li>
+        <li class="nav-item nav-group" data-nav-group="accounts">
+          <button class="nav-group-toggle" type="button" data-action="toggle-accounts-menu" aria-expanded="false" aria-controls="accountsSubmenu">
+            <span><i class="fa-solid fa-credit-card"></i> Contas</span>
+            <i class="fa-solid fa-chevron-down nav-group-chevron"></i>
+          </button>
+          <ul class="nav-submenu" id="accountsSubmenu">
+            <li><a href="#contas-resumo" data-route="contas-resumo">Resumo</a></li>
+            <li><a href="#contas-despesas" data-route="contas-despesas">Despesas</a></li>
+            <li><a href="#contas-cartoes" data-route="contas-cartoes">Cartões</a></li>
+          </ul>
+        </li>
         <li class="nav-item"><a href="#metas" data-route="metas"><i class="fa-solid fa-bullseye"></i> Metas</a></li>
         <li class="nav-item"><a href="#perfil" data-route="perfil"><i class="fa-solid fa-user-gear"></i> Perfil</a></li>
       </ul>
@@ -74,12 +94,31 @@
 
   <main id="app" aria-live="polite"></main>
 
-  <button class="fab-add" id="quickAction" type="button" aria-label="Adicionar item">
+  <button class="fab-add" id="quickAction" type="button" aria-label="Adicionar item" aria-haspopup="menu" aria-expanded="false" aria-controls="quickActionMenu">
     <span class="fab-add-icon">
       <i class="fa-solid fa-plus"></i>
     </span>
     <span class="fab-add-label">Adicionar</span>
   </button>
+
+  <div class="fab-menu is-hidden" id="quickActionMenu" role="menu" aria-label="Escolha o que deseja adicionar">
+    <button class="fab-menu-item" type="button" role="menuitem" data-quick-add="expense">
+      <span><i class="fa-solid fa-receipt"></i></span>
+      <strong>Despesa</strong>
+    </button>
+    <button class="fab-menu-item" type="button" role="menuitem" data-quick-add="investment">
+      <span><i class="fa-solid fa-chart-line"></i></span>
+      <strong>Investimento</strong>
+    </button>
+    <button class="fab-menu-item" type="button" role="menuitem" data-quick-add="bill">
+      <span><i class="fa-solid fa-file-invoice-dollar"></i></span>
+      <strong>Conta</strong>
+    </button>
+    <button class="fab-menu-item" type="button" role="menuitem" data-quick-add="card">
+      <span><i class="fa-solid fa-credit-card"></i></span>
+      <strong>Cartão</strong>
+    </button>
+  </div>
 
   <div class="modal isHidden" id="expenseModal" aria-hidden="true">
     <div class="card-1 new-expense-card" role="dialog" aria-modal="true" aria-labelledby="expenseModalTitle">
@@ -171,6 +210,306 @@
           <button class="expense-primary-btn" type="submit">
             <i class="fa-solid fa-plus"></i>
             Adicionar despesa
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal isHidden" id="investmentModal" aria-hidden="true">
+    <div class="card-1 new-expense-card investment-modal-card" role="dialog" aria-modal="true" aria-labelledby="investmentModalTitle">
+      <div class="new-expense-header">
+        <div>
+          <span class="new-expense-tag font-label">Novo ativo</span>
+          <h2 class="font-title-md" id="investmentModalTitle">Adicionar Investimento</h2>
+          <p class="font-small">Cadastre um investimento com as informações principais da sua carteira.</p>
+        </div>
+
+        <button class="expense-modal-close" id="closeInvestmentModal" type="button" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form class="new-expense-form" id="investmentForm">
+        <div class="inputs-list">
+          <label class="expense-field" for="investmentName">
+            <span class="font-label">Nome</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-chart-line"></i>
+              <input id="investmentName" name="name" type="text" class="input-basic" required placeholder="Ex.: Tesouro Selic">
+            </div>
+          </label>
+
+          <label class="expense-field" for="investmentCategory">
+            <span class="font-label">Categoria</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-layer-group"></i>
+              <select id="investmentCategory" name="category" class="input-basic">
+                <option>Poupança</option>
+                <option>Renda fixa</option>
+                <option>Cripto</option>
+                <option>Fundo</option>
+                <option>Ações</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="investmentInstitution">
+            <span class="font-label">Instituição</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-building-columns"></i>
+              <input id="investmentInstitution" name="institution" type="text" class="input-basic" placeholder="Ex.: Nubank">
+            </div>
+          </label>
+
+          <label class="expense-field investment-date-field" for="investmentDateDisplay">
+            <span class="font-label">Data</span>
+            <div class="expense-input-wrapper investment-date-input" data-investment-calendar-trigger>
+              <i class="fa-regular fa-calendar-days"></i>
+              <input id="investmentDateDisplay" type="text" class="input-basic" readonly required placeholder="Selecione a data">
+              <input id="investmentDate" name="date" type="hidden" required>
+            </div>
+            <div class="investment-calendar is-hidden" id="investmentCalendar" aria-label="Calendário do investimento"></div>
+          </label>
+
+          <label class="expense-field" for="investmentInvested">
+            <span class="font-label">Valor investido</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="investmentInvested" name="invested" type="number" class="input-basic" required min="0.01" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field" for="investmentCurrent">
+            <span class="font-label">Valor atual</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="investmentCurrent" name="current" type="number" class="input-basic" required min="0.01" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field expense-field-wide obs-expense" for="investmentNotes">
+            <span class="font-label">Observações</span>
+            <textarea id="investmentNotes" name="notes" placeholder="Adicione uma observação curta, se quiser."></textarea>
+          </label>
+        </div>
+
+        <div class="new-expense-actions">
+          <button class="expense-secondary-btn" id="cancelInvestmentForm" type="button">Cancelar</button>
+          <button class="expense-primary-btn" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Salvar investimento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal isHidden" id="billModal" aria-hidden="true">
+    <div class="card-1 new-expense-card" role="dialog" aria-modal="true" aria-labelledby="billModalTitle">
+      <div class="new-expense-header">
+        <div>
+          <span class="new-expense-tag font-label">Nova conta</span>
+          <h2 class="font-title-md" id="billModalTitle">Adicionar Conta</h2>
+          <p class="font-small">Cadastre uma conta para acompanhar vencimento, pagamento e valor do mês.</p>
+        </div>
+
+        <button class="expense-modal-close" id="closeBillModal" type="button" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form class="new-expense-form" id="billForm">
+        <div class="inputs-list">
+          <label class="expense-field" for="billName">
+            <span class="font-label">Nome da conta</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-file-invoice-dollar"></i>
+              <input id="billName" name="name" type="text" class="input-basic" required placeholder="Ex.: Internet">
+            </div>
+          </label>
+
+          <label class="expense-field" for="billCategory">
+            <span class="font-label">Categoria</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-tags"></i>
+              <select id="billCategory" name="category" class="input-basic">
+                <option>Moradia</option>
+                <option>Alimentação</option>
+                <option>Transporte</option>
+                <option>Saúde</option>
+                <option>Lazer</option>
+                <option>Assinaturas</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="billValue">
+            <span class="font-label">Valor</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="billValue" name="value" type="number" class="input-basic" required min="0.01" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field" for="billDueDate">
+            <span class="font-label">Data de vencimento</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-regular fa-calendar-days"></i>
+              <input id="billDueDate" name="dueDate" type="date" class="input-basic" required>
+            </div>
+          </label>
+
+          <label class="expense-field" for="billAccount">
+            <span class="font-label">Conta bancária</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-building-columns"></i>
+              <select id="billAccount" name="account" class="input-basic">
+                <option>Nubank</option>
+                <option>Reserva diária</option>
+                <option>Carteira</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="billPayment">
+            <span class="font-label">Forma de pagamento</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-money-bill-wave"></i>
+              <select id="billPayment" name="payment" class="input-basic">
+                <option>Pix</option>
+                <option>Cartão de Crédito</option>
+                <option>Cartão de Débito</option>
+                <option>Boleto</option>
+                <option>Dinheiro</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="billRecurring">
+            <span class="font-label">Recorrente</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-rotate-right"></i>
+              <select id="billRecurring" name="recurring" class="input-basic">
+                <option>Não</option>
+                <option>Sim</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field expense-field-wide obs-expense" for="billNotes">
+            <span class="font-label">Observações</span>
+            <textarea id="billNotes" name="notes" placeholder="Adicione uma observação, se quiser."></textarea>
+          </label>
+        </div>
+
+        <div class="new-expense-actions">
+          <button class="expense-secondary-btn" id="cancelBillForm" type="button">Cancelar</button>
+          <button class="expense-primary-btn" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Salvar conta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal isHidden" id="cardModal" aria-hidden="true">
+    <div class="card-1 new-expense-card" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+      <div class="new-expense-header">
+        <div>
+          <span class="new-expense-tag font-label">Novo cartão</span>
+          <h2 class="font-title-md" id="cardModalTitle">Adicionar Cartão</h2>
+          <p class="font-small">Informe apenas dados de identificação. Nunca pedimos o número completo do cartão.</p>
+        </div>
+
+        <button class="expense-modal-close" id="closeCardModal" type="button" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form class="new-expense-form" id="cardForm">
+        <div class="inputs-list">
+          <label class="expense-field" for="cardName">
+            <span class="font-label">Nome do cartão</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-credit-card"></i>
+              <input id="cardName" name="name" type="text" class="input-basic" required placeholder="Ex.: Nubank">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardBank">
+            <span class="font-label">Banco</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-building-columns"></i>
+              <input id="cardBank" name="bank" type="text" class="input-basic" required placeholder="Ex.: Nubank">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardBrand">
+            <span class="font-label">Bandeira</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-regular fa-credit-card"></i>
+              <select id="cardBrand" name="brand" class="input-basic">
+                <option>Mastercard</option>
+                <option>Visa</option>
+                <option>Elo</option>
+                <option>American Express</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardLastDigits">
+            <span class="font-label">Últimos 3 números</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-hashtag"></i>
+              <input id="cardLastDigits" name="lastDigits" type="text" class="input-basic" required maxlength="3" inputmode="numeric" placeholder="458">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardColor">
+            <span class="font-label">Cor do cartão</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-palette"></i>
+              <input id="cardColor" name="color" type="color" class="input-basic" value="#0d6efd">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardLimit">
+            <span class="font-label">Limite</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="cardLimit" name="totalLimit" type="number" class="input-basic" required min="0.01" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardClosingDay">
+            <span class="font-label">Dia do fechamento</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-regular fa-calendar"></i>
+              <input id="cardClosingDay" name="closingDay" type="number" class="input-basic" required min="1" max="31" placeholder="10">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardDueDay">
+            <span class="font-label">Dia do vencimento</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-regular fa-calendar-check"></i>
+              <input id="cardDueDay" name="dueDay" type="number" class="input-basic" required min="1" max="31" placeholder="17">
+            </div>
+          </label>
+
+          <label class="expense-field expense-field-wide obs-expense" for="cardNotes">
+            <span class="font-label">Observações</span>
+            <textarea id="cardNotes" name="notes" placeholder="Adicione uma observação, se quiser."></textarea>
+          </label>
+        </div>
+
+        <div class="new-expense-actions">
+          <button class="expense-secondary-btn" id="cancelCardForm" type="button">Cancelar</button>
+          <button class="expense-primary-btn" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Salvar cartão
           </button>
         </div>
       </form>

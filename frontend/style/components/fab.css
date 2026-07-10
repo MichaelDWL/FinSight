@@ -110,11 +110,80 @@
   outline-offset: 4px;
 }
 
+.fab-menu {
+  position: fixed;
+  right: 2rem;
+  bottom: 6.15rem;
+  z-index: 49;
+  display: grid;
+  gap: 0.65rem;
+  min-width: 210px;
+  padding: 0.65rem;
+  border: var(--border-card);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.96)),
+    var(--surface);
+  box-shadow: 0 18px 42px rgba(15, 45, 79, 0.18);
+  transform-origin: bottom right;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.fab-menu.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px) scale(0.96);
+}
+
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 16px;
+  color: var(--brand-900);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.fab-menu-item:hover {
+  background: var(--surface-blue);
+  transform: translateY(-1px);
+}
+
+.fab-menu-item span {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border-radius: 15px;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+.fab-menu-item strong {
+  font-family: "Outfit", sans-serif;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+
 @media (max-width: 760px) {
   .fab-add {
     --fab-size: 3.25rem;
     right: 1.25rem;
     bottom: 5.95rem;
+  }
+
+  .fab-menu {
+    right: 1.25rem;
+    bottom: 9.7rem;
   }
 
   .fab-add:hover {
@@ -139,12 +208,20 @@
     right: 1rem;
     bottom: 5.65rem;
   }
+
+  .fab-menu {
+    right: 1rem;
+    bottom: 9.35rem;
+    min-width: min(210px, calc(100vw - 2rem));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .fab-add,
   .fab-add-icon,
   .fab-add-label,
+  .fab-menu,
+  .fab-menu-item,
   .fab-add::before {
     transition: none;
   }
