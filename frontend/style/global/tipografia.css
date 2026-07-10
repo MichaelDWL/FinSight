@@ -10,22 +10,22 @@
 /* TÍTULOS */
 
 .font-title-lg {
-  font-family: "Manrope", sans-serif;
-  font-weight: 700;
+  font-family: "Outfit", sans-serif;
+  font-weight: 600;
   font-size: 1.75rem;
   line-height: 1.2;
   letter-spacing: -0.5px;
 }
 
 .font-title-md {
-  font-family: "Manrope", sans-serif;
+  font-family: "Outfit", sans-serif;
   font-weight: 600;
   font-size: 1.25rem;
   line-height: 1.2;
 }
 
 .font-title-sm {
-  font-family: "Manrope", sans-serif;
+  font-family: "Outfit", sans-serif;
   font-weight: 600;
   font-size: 1rem;
   line-height: 1.1;
@@ -49,14 +49,14 @@
 /* VALORES FINANCEIROS */
 
 .font-value-lg {
-  font-family: "Manrope", sans-serif;
+  font-family: "Outfit", sans-serif;
   font-size: 1.5rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .font-value-md {
-  font-family: "Manrope", sans-serif;
+  font-family: "Outfit", sans-serif;
   font-size: 1.125rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;

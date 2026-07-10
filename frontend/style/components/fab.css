@@ -114,7 +114,7 @@
   .fab-add {
     --fab-size: 3.25rem;
     right: 1.25rem;
-    bottom: 1.25rem;
+    bottom: 5.95rem;
   }
 
   .fab-add:hover {
@@ -131,6 +131,13 @@
   .fab-add:hover .fab-add-label {
     max-width: 0;
     opacity: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .fab-add {
+    right: 1rem;
+    bottom: 5.65rem;
   }
 }
 
