@@ -8,8 +8,12 @@ body {
   --sidebar-width: 15.5rem;
   min-height: 100vh;
   padding-left: var(--sidebar-width);
-  background-color: var(--bg);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(13, 110, 253, 0.12), transparent 30rem),
+    linear-gradient(180deg, #f1f8ff 0%, #f7fbff 45%, #eef6ff 100%);
   transition: padding-left 0.25s ease;
+  color: var(--pw8);
+  font-family: "Inter", sans-serif;
 }
 
 body.sidebar-closed {
@@ -26,6 +30,31 @@ ul {
   list-style: none;
 }
 
-/* body {
-  display: flex;
-} */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+}
+
+main {
+  width: min(100%, 1480px);
+  margin: 0 auto;
+  padding: var(--pad-lg);
+}
+
+@media (max-width: 900px) {
+  main {
+    padding: var(--pad-md);
+  }
+}
+
+@media (max-width: 560px) {
+  main {
+    padding: var(--pad-sm);
+  }
+}

@@ -1,19 +1,58 @@
 .insight-list {
   display: flex;
   flex-direction: column;
-  gap: var(--gap-md);
+  gap: 0.85rem;
 }
 
 .insight-icon {
-  font-size: 2rem;
-  color: var(--pw4);
+  display: grid;
+  flex-shrink: 0;
+  width: 2.85rem;
+  height: 2.85rem;
+  place-items: center;
+  border-radius: var(--border-radius-lg);
+  background: var(--surface-blue);
+  font-size: 1.45rem;
 }
 
 .insight-item {
   display: flex;
-  gap: var(--gap-md);
-  padding: var(--pad-sm);
-  border-radius: var(--border-radius-md);
-  border: var(--border-card);
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.95rem;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid rgba(13, 110, 253, 0.08);
+  background: rgba(255, 255, 255, 0.78);
   box-shadow: var(--bx-shadow-item);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.insight-item:hover {
+  box-shadow: var(--bx-shadow-item-elevated);
+  transform: translateY(-2px);
+}
+
+.insight-item:nth-child(1) .insight-icon {
+  background: var(--warning-soft);
+}
+
+.insight-item:nth-child(2) .insight-icon {
+  background: var(--income-soft);
+}
+
+.insight-item:nth-child(3) .insight-icon {
+  background: var(--success-soft);
+}
+
+.insight-item:nth-child(4) .insight-icon {
+  background: var(--expense-soft);
+}
+
+.insight-item h3 {
+  color: var(--brand-900);
+  line-height: 1.25;
+}
+
+.insight-item p {
+  margin-top: 0.2rem;
 }
