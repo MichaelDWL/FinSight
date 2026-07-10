@@ -134,16 +134,16 @@
   gap: 0.65rem;
   height: 2.75rem;
   padding: 0 0.85rem;
-  border: 1px solid rgba(177, 177, 177, 0.55);
+  border: var(--border-field);
   border-radius: 12px;
   background-color: var(--pw);
-  box-shadow: 0 8px 20px rgba(15, 45, 79, 0.05);
+  box-shadow: var(--bx-shadow-field);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .expense-input-wrapper:focus-within {
   border-color: var(--brand-accent);
-  box-shadow: 0 12px 28px rgba(13, 110, 253, 0.14);
+  box-shadow: var(--bx-shadow-field-focus);
   transform: translateY(-1px);
 }
 
@@ -180,11 +180,11 @@
   height: auto;
   min-height: 2.75rem;
   padding: 0.28rem;
-  border: 1px solid rgba(177, 177, 177, 0.55);
+  border: var(--border-field);
   border-radius: 12px;
   color: var(--pw8);
   background-color: var(--pw);
-  box-shadow: 0 8px 20px rgba(15, 45, 79, 0.05);
+  box-shadow: var(--bx-shadow-field);
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
@@ -204,7 +204,7 @@
 .new-expense-form .input-select:hover,
 .new-expense-form .input-select:focus-within {
   border-color: var(--brand-accent);
-  box-shadow: 0 12px 28px rgba(13, 110, 253, 0.14);
+  box-shadow: var(--bx-shadow-field-focus);
   transform: translateY(-1px);
 }
 
@@ -235,11 +235,11 @@
   min-height: 5.25rem;
   resize: vertical;
   padding: 0.85rem;
-  border: 1px solid rgba(177, 177, 177, 0.55);
+  border: var(--border-field);
   border-radius: 12px;
   color: var(--pw8);
   background-color: var(--pw);
-  box-shadow: 0 8px 20px rgba(15, 45, 79, 0.05);
+  box-shadow: var(--bx-shadow-field);
   font-family: "Inter", sans-serif;
   font-size: 0.9rem;
   line-height: 1.5;
@@ -249,7 +249,7 @@
 .obs-expense textarea:focus {
   outline: none;
   border-color: var(--brand-accent);
-  box-shadow: 0 12px 28px rgba(13, 110, 253, 0.14);
+  box-shadow: var(--bx-shadow-field-focus);
 }
 
 .expense-date-field {
@@ -261,109 +261,7 @@
 }
 
 .expense-calendar {
-  position: absolute;
-  top: calc(100% + 0.55rem);
-  left: 0;
   z-index: 6;
-  width: min(100%, 320px);
-  padding: 0.85rem;
-  border: 1px solid rgba(13, 110, 253, 0.12);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98)),
-    var(--surface);
-  box-shadow: 0 18px 42px rgba(15, 45, 79, 0.18);
-}
-
-.expense-calendar.is-hidden {
-  display: none;
-}
-
-.expense-calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.expense-calendar-title {
-  color: var(--brand-900);
-  font-family: "Outfit", sans-serif;
-  font-size: 0.98rem;
-  font-weight: 700;
-  text-transform: capitalize;
-}
-
-.expense-calendar-nav {
-  display: grid;
-  width: 2rem;
-  height: 2rem;
-  place-items: center;
-  border: 1px solid rgba(13, 110, 253, 0.12);
-  border-radius: 999px;
-  color: var(--brand-800);
-  background: var(--surface);
-  cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-}
-
-.expense-calendar-nav:hover {
-  color: var(--pw);
-  background: var(--brand-accent);
-  transform: translateY(-1px);
-}
-
-.expense-calendar-weekdays,
-.expense-calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.28rem;
-}
-
-.expense-calendar-weekdays {
-  margin-bottom: 0.35rem;
-}
-
-.expense-calendar-weekdays span {
-  color: var(--pw6);
-  font-size: 0.68rem;
-  font-weight: 800;
-  text-align: center;
-  text-transform: uppercase;
-}
-
-.expense-calendar-day {
-  display: grid;
-  min-height: 2.05rem;
-  place-items: center;
-  border-radius: 11px;
-  color: var(--brand-900);
-  background: transparent;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
-}
-
-.expense-calendar-day:hover {
-  color: var(--brand-accent);
-  background: var(--brand-accent-soft);
-  transform: translateY(-1px);
-}
-
-.expense-calendar-day.is-muted {
-  color: var(--pw5);
-}
-
-.expense-calendar-day.is-today {
-  box-shadow: inset 0 0 0 1px rgba(13, 110, 253, 0.36);
-}
-
-.expense-calendar-day.is-selected {
-  color: var(--pw);
-  background: linear-gradient(135deg, var(--brand-accent), #63a4ff);
-  box-shadow: 0 10px 18px rgba(13, 110, 253, 0.24);
 }
 
 .new-expense-actions {
@@ -371,21 +269,10 @@
   justify-content: flex-end;
   gap: 0.65rem;
   padding-top: 0.1rem;
-}
-
-.expense-secondary-btn,
-.expense-primary-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 2.65rem;
-  padding: 0 1.1rem;
-  border-radius: 999px;
-  font-family: "Inter", sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  --button-min-height: 2.65rem;
+  --button-padding-x: 1.1rem;
+  --button-font-size: 0.9rem;
+  --button-font-weight: 700;
 }
 
 .expense-secondary-btn {
@@ -396,11 +283,10 @@
 
 .expense-secondary-btn:hover {
   background-color: var(--pw1);
-  transform: translateY(-1px);
 }
 
 .expense-primary-btn {
-  gap: 0.5rem;
+  --button-gap: 0.5rem;
   border: 0;
   color: var(--pw);
   background: linear-gradient(90deg, var(--brand-accent), #0965e8);
@@ -410,7 +296,6 @@
 .expense-primary-btn:hover {
   background: linear-gradient(90deg, #0965e8, var(--brand-accent));
   box-shadow: 0 18px 32px rgba(13, 110, 253, 0.34);
-  transform: translateY(-1px);
 }
 
 @media (max-width: 760px) {
@@ -463,12 +348,14 @@
 
 @media (max-width: 480px) {
   .modal {
-    padding: 0.5rem;
+    padding: 0;
   }
 
   .modal .new-expense-card {
     width: 100%;
-    border-radius: 16px;
+    min-height: 100vh;
+    max-height: none;
+    border-radius: 0;
   }
 
   .new-expense-header {

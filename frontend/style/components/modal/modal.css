@@ -1,5 +1,4 @@
 .modal {
-  /* display: none; */
   position: fixed;
   top: 0;
   left: 0;
@@ -10,7 +9,6 @@
   justify-content: center;
   align-items: center;
   z-index: 99;
-  /* position: relative; */
 }
 
 .modal.isHidden {
@@ -20,26 +18,4 @@
 .modal .card-1 {
   width: 100%;
   max-width: 600px;
-}
-
-.modal-close {
-  display: flex;
-  width: 20px;
-  height: 20px;
-  position: absolute;
-  right: 1rem;
-  top: 0.5rem;
-  font-weight: bold;
-  cursor: pointer;
-  border-radius: 50%;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-close:hover {
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.active {
-  display: none;
 }
