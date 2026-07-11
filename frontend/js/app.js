@@ -1,3 +1,10 @@
+import { billsService } from "./services/bills.js";
+import { cardsService } from "./services/cards.js";
+import { dashboardService } from "./services/dashboard.js";
+import { investmentsService } from "./services/investments.js";
+import { transactionsService } from "./services/transactions.js";
+import { usersService } from "./services/users.js";
+
 const app = document.querySelector("#app");
 const pageTitle = document.querySelector("#pageTitle");
 const toast = document.querySelector("#toast");
@@ -42,231 +49,15 @@ const toIsoDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const transactions = [
-  {
-    icon: "fa-cart-shopping",
-    description: "Supermercado",
-    category: "Alimentação",
-    account: "Nubank",
-    value: -150,
-    date: "2026-07-09",
-    type: "Despesa",
-  },
-  {
-    icon: "fa-building-columns",
-    description: "Salário recebido",
-    category: "Receita",
-    account: "Itaú",
-    value: 5150,
-    date: "2026-07-05",
-    type: "Receita",
-  },
-  {
-    icon: "fa-bolt",
-    description: "Conta de luz",
-    category: "Moradia",
-    account: "Nubank",
-    value: -180,
-    date: "2026-07-04",
-    type: "Despesa",
-  },
-  {
-    icon: "fa-utensils",
-    description: "Restaurante",
-    category: "Lazer",
-    account: "Inter",
-    value: -120,
-    date: "2026-07-02",
-    type: "Despesa",
-  },
-  {
-    icon: "fa-laptop",
-    description: "Projeto freelance",
-    category: "Receita",
-    account: "Nubank",
-    value: 980,
-    date: "2026-06-28",
-    type: "Receita",
-  },
-];
-
-const investments = [
-  {
-    icon: "🏦",
-    name: "Nubank",
-    category: "Poupança",
-    institution: "Nubank",
-    invested: 7600,
-    current: 8500,
-    date: "2025-11-12",
-    returnRate: 12,
-    notes: "Reserva de emergência para manter seis meses de tranquilidade.",
-  },
-  {
-    icon: "₿",
-    name: "Bitcoin",
-    category: "Cripto",
-    institution: "Mercado Bitcoin",
-    invested: 2400,
-    current: 3250,
-    date: "2025-09-18",
-    returnRate: 35,
-    notes: "Exposição pequena e acompanhada mensalmente.",
-  },
-  {
-    icon: "📈",
-    name: "Tesouro Selic",
-    category: "Renda fixa",
-    institution: "Tesouro Direto",
-    invested: 4800,
-    current: 5120,
-    date: "2026-01-20",
-    returnRate: 7,
-    notes: "Objetivo conservador para metas de curto prazo.",
-  },
-];
-
-const accounts = [
-  {
-    icon: "fa-building-columns",
-    name: "Nubank",
-    type: "Conta corrente",
-    balance: 4380,
-    color: "text-brand",
-  },
-  {
-    icon: "fa-piggy-bank",
-    name: "Reserva diária",
-    type: "Poupança",
-    balance: 6200,
-    color: "text-income",
-  },
-  {
-    icon: "fa-wallet",
-    name: "Carteira",
-    type: "Dinheiro físico",
-    balance: 420,
-    color: "text-warning",
-  },
-];
-
-const creditCards = [
-  {
-    icon: "fa-credit-card",
-    name: "Nubank Platinum",
-    bank: "Nubank",
-    brand: "Mastercard",
-    lastDigits: "458",
-    color: "#7c3aed",
-    closingDay: 18,
-    dueDay: 25,
-    totalLimit: 8500,
-    usedLimit: 3120,
-    invoiceCurrent: 3120,
-    nextInvoice: 680,
-    notes: "Cartão principal para compras do mês.",
-    purchases: [
-      { name: "Mercado", category: "Alimentação", value: 420, date: "2026-07-08" },
-      { name: "Streaming", category: "Assinaturas", value: 59.9, date: "2026-07-06" },
-      { name: "Farmácia", category: "Saúde", value: 180, date: "2026-07-03" },
-    ],
-  },
-  {
-    icon: "fa-credit-card",
-    name: "Itaú Click",
-    bank: "Itaú",
-    brand: "Visa",
-    lastDigits: "921",
-    color: "#0d6efd",
-    closingDay: 10,
-    dueDay: 17,
-    totalLimit: 5200,
-    usedLimit: 1880,
-    invoiceCurrent: 1880,
-    nextInvoice: 240,
-    notes: "Cartão de apoio para compras parceladas.",
-    purchases: [
-      { name: "Tênis", category: "Lazer", value: 320, date: "2026-07-02" },
-      { name: "Internet", category: "Casa", value: 129.9, date: "2026-07-01" },
-    ],
-  },
-];
-
-const bills = [
-  {
-    id: 1,
-    icon: "fa-bolt",
-    name: "Conta de luz",
-    category: "Moradia",
-    value: 180,
-    dueDate: "2026-07-04",
-    account: "Nubank",
-    payment: "Pix",
-    recurring: true,
-    paid: true,
-    notes: "Conta já paga este mês.",
-  },
-  {
-    id: 2,
-    icon: "fa-wifi",
-    name: "Internet",
-    category: "Casa",
-    value: 129.9,
-    dueDate: "2026-07-10",
-    account: "Nubank",
-    payment: "Cartão de Crédito",
-    recurring: true,
-    paid: false,
-    notes: "Vence hoje.",
-  },
-  {
-    id: 3,
-    icon: "fa-house",
-    name: "Aluguel",
-    category: "Moradia",
-    value: 1850,
-    dueDate: "2026-07-15",
-    account: "Reserva diária",
-    payment: "Boleto",
-    recurring: true,
-    paid: false,
-    notes: "Pagamento mensal da moradia.",
-  },
-  {
-    id: 4,
-    icon: "fa-heart-pulse",
-    name: "Plano de saúde",
-    category: "Saúde",
-    value: 420,
-    dueDate: "2026-07-20",
-    account: "Nubank",
-    payment: "Pix",
-    recurring: true,
-    paid: false,
-    notes: "Plano familiar.",
-  },
-];
-
-const goals = [
-  {
-    name: "Reserva de emergência",
-    desired: 18000,
-    current: 12600,
-    date: "Dezembro de 2026",
-  },
-  {
-    name: "Viagem de férias",
-    desired: 7000,
-    current: 4200,
-    date: "Janeiro de 2027",
-  },
-  {
-    name: "Entrada do carro",
-    desired: 24000,
-    current: 8300,
-    date: "Agosto de 2027",
-  },
-];
+let dashboardData = null;
+let transactions = [];
+let investments = [];
+let accounts = [];
+let creditCards = [];
+let bills = [];
+let goals = [];
+let currentUser = null;
+let isLoadingData = false;
 
 const routeTitles = {
   dashboard: "Dashboard",
@@ -289,6 +80,92 @@ function showToast(message = "Tudo certo. Sua ação foi registrada.") {
   showToast.timeout = window.setTimeout(() => {
     toast.classList.remove("is-visible");
   }, 2600);
+}
+
+function normalizeInvestment(investment) {
+  const category = investment.category || investment.type || "Investimento";
+
+  return {
+    ...investment,
+    icon: getInvestmentIcon(category),
+    category,
+    current: Number(investment.current ?? investment.value ?? 0),
+    invested: Number(investment.invested ?? 0),
+    returnRate: Number(investment.returnRate ?? 0),
+  };
+}
+
+function normalizeGoal(goal) {
+  return {
+    ...goal,
+    desired: Number(goal.desired ?? goal.target ?? 0),
+    current: Number(goal.current ?? 0),
+    date: goal.date || (goal.deadline ? formatDateLabel(String(goal.deadline).slice(0, 10)) : "Sem prazo"),
+  };
+}
+
+function normalizeBill(bill) {
+  return {
+    ...bill,
+    icon: bill.icon || getBillIcon(bill.category),
+    account: bill.account || "Conta principal",
+    payment: bill.payment || bill.paymentMethod || "Pix",
+    recurring: Boolean(bill.recurring ?? bill.recurrence),
+    paid: Boolean(bill.paid ?? bill.status === "paid"),
+    dueDate: String(bill.dueDate || toIsoDate(new Date())).slice(0, 10),
+  };
+}
+
+function applyDashboardData(data) {
+  dashboardData = data;
+  transactions = data.transactions || data.latestTransactions || [];
+  investments = (data.investments || []).map(normalizeInvestment);
+  accounts = data.accounts || [];
+  creditCards = data.cards || [];
+  bills = (data.bills || data.pendingBills || []).map(normalizeBill);
+  goals = (data.goals || []).map(normalizeGoal);
+}
+
+function updateUserHeader() {
+  if (!currentUser) return;
+
+  const profile = document.querySelector(".profile");
+  const name = currentUser.name || "Usuario";
+  const initials = name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const greeting = profile?.querySelector("span:first-child");
+  const picture = profile?.querySelector(".profile-picture");
+
+  if (greeting) greeting.textContent = `Olá, ${name.split(" ")[0]}!`;
+  if (picture) picture.textContent = initials;
+}
+
+async function loadAppData({ force = false } = {}) {
+  if (dashboardData && !force) return;
+  if (isLoadingData) return;
+
+  isLoadingData = true;
+  try {
+    const [dashboard, user] = await Promise.all([dashboardService.getDashboard(), usersService.profile()]);
+    applyDashboardData(dashboard);
+    currentUser = user;
+    updateUserHeader();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Não foi possível carregar os dados da API.");
+  } finally {
+    isLoadingData = false;
+  }
+}
+
+async function reloadAndRender() {
+  await loadAppData({ force: true });
+  renderRoute();
 }
 
 function openExpenseModal() {
@@ -560,33 +437,35 @@ function getExpenseIcon(category) {
   return icons[category] || "fa-wallet";
 }
 
-function addExpenseFromForm() {
+function mapPaymentMethod(payment) {
+  const paymentMap = {
+    Pix: "pix",
+    "Cartão de Débito": "debito",
+    "Cartão de Crédito": "cartao_credito",
+    Dinheiro: "dinheiro",
+    Boleto: "boleto",
+  };
+
+  return paymentMap[payment] || "pix";
+}
+
+async function addExpenseFromForm() {
   if (!expenseForm) return;
 
   const formData = new FormData(expenseForm);
-  const category = formData.get("category") || "Despesa";
   const value = Number(formData.get("value")) || 0;
 
-  transactions.unshift({
-    icon: getExpenseIcon(category),
+  await transactionsService.create({
     description: formData.get("description") || "Nova despesa",
-    category,
-    account: formData.get("account") || "Nubank",
-    value: -Math.abs(value),
+    value: Math.abs(value),
     date: formData.get("date") || new Date().toISOString().slice(0, 10),
-    type: "Despesa",
+    type: "despesa",
+    payment: mapPaymentMethod(formData.get("payment")),
   });
 
   closeExpenseDialog({ reset: true });
   showToast("Despesa adicionada com sucesso.");
-
-  const route = getRoute();
-  if (route === "transacoes") {
-    renderTransactionsTable();
-    return;
-  }
-
-  if (route === "dashboard") renderRoute();
+  await reloadAndRender();
 }
 
 function getInvestmentIcon(category) {
@@ -601,31 +480,25 @@ function getInvestmentIcon(category) {
   return icons[category] || "💼";
 }
 
-function addInvestmentFromForm() {
+async function addInvestmentFromForm() {
   if (!investmentForm) return;
 
   const formData = new FormData(investmentForm);
-  const category = formData.get("category") || "Investimento";
   const invested = Number(formData.get("invested")) || 0;
   const current = Number(formData.get("current")) || invested;
-  const returnRate = invested > 0 ? Math.round(((current - invested) / invested) * 100) : 0;
 
-  investments.unshift({
-    icon: getInvestmentIcon(category),
+  await investmentsService.create({
     name: formData.get("name") || "Novo investimento",
-    category,
     institution: formData.get("institution") || "Instituição",
     invested,
-    current,
+    value: current,
     date: formData.get("date") || toIsoDate(new Date()),
-    returnRate,
     notes: formData.get("notes") || "Investimento cadastrado no FinSight.",
   });
 
   closeInvestmentDialog({ reset: true });
   showToast("Investimento salvo com sucesso.");
-
-  if (["patrimonio", "investimento-novo"].includes(getRoute())) renderRoute();
+  await reloadAndRender();
 }
 
 function getBillStatus(bill) {
@@ -719,46 +592,39 @@ function cardSummary(card) {
       <p class="item-meta">${formatCurrency(available)} disponível</p>
       <div class="card-actions">
         <a class="btn-secondary" href="#cartao-detalhe" data-route="cartao-detalhe">Ver detalhes</a>
-        <button class="btn-secondary" type="button" data-action="show-toast">Editar</button>
-        <button class="btn-danger" type="button" data-action="delete-card" data-card-name="${card.name}">Excluir</button>
+        <button class="btn-secondary" type="button" data-action="edit-card">Editar</button>
+        <button class="btn-danger" type="button" data-action="delete-card" data-card-id="${card.id}">Excluir</button>
       </div>
     </article>
   `;
 }
 
-function addBillFromForm() {
+async function addBillFromForm() {
   if (!billForm) return;
 
   const formData = new FormData(billForm);
-  const category = formData.get("category") || "Conta";
 
-  bills.unshift({
-    id: Date.now(),
-    icon: getBillIcon(category),
+  await billsService.create({
     name: formData.get("name") || "Nova conta",
-    category,
     value: Number(formData.get("value")) || 0,
     dueDate: formData.get("dueDate") || toIsoDate(new Date()),
-    account: formData.get("account") || "Nubank",
-    payment: formData.get("payment") || "Pix",
-    recurring: formData.get("recurring") === "Sim",
-    paid: false,
+    paymentMethod: mapPaymentMethod(formData.get("payment")),
+    recurrence: formData.get("recurring") === "Sim",
     notes: formData.get("notes") || "",
   });
 
   closeBillDialog({ reset: true });
   showToast("Conta cadastrada com sucesso.");
-  if (getRoute().startsWith("contas-")) renderRoute();
+  await reloadAndRender();
 }
 
-function addCardFromForm() {
+async function addCardFromForm() {
   if (!cardForm) return;
 
   const formData = new FormData(cardForm);
   const totalLimit = Number(formData.get("totalLimit")) || 0;
 
-  creditCards.unshift({
-    icon: "fa-credit-card",
+  await cardsService.create({
     name: formData.get("name") || "Novo cartão",
     bank: formData.get("bank") || "Banco",
     brand: formData.get("brand") || "Cartão",
@@ -767,16 +633,12 @@ function addCardFromForm() {
     closingDay: Number(formData.get("closingDay")) || 1,
     dueDay: Number(formData.get("dueDay")) || 10,
     totalLimit,
-    usedLimit: 0,
-    invoiceCurrent: 0,
-    nextInvoice: 0,
     notes: formData.get("notes") || "",
-    purchases: [],
   });
 
   closeCardDialog({ reset: true });
   showToast("Cartão cadastrado com segurança.");
-  if (["contas-cartoes", "cartao-detalhe"].includes(getRoute())) renderRoute();
+  await reloadAndRender();
 }
 
 function getRoute() {
@@ -892,6 +754,11 @@ function investmentCard(investment, compact = false) {
 }
 
 function dashboardView() {
+  const balance = Number(dashboardData?.balance || 0);
+  const income = Number(dashboardData?.income || 0);
+  const expenses = Number(dashboardData?.expenses || 0);
+  const netWorth = Number(dashboardData?.netWorth || 0);
+
   return `
     <section class="app-page">
       <div class="page-hero">
@@ -907,10 +774,10 @@ function dashboardView() {
       </div>
 
       <div class="metrics-grid">
-        ${metricCard("Saldo atual", formatCurrency(12450), "fa-wallet", "+8% em relação ao mês anterior")}
-        ${metricCard("Receitas", formatCurrency(7250), "fa-arrow-trend-up", "Entradas deste mês", "income")}
-        ${metricCard("Despesas", formatCurrency(4360), "fa-arrow-trend-down", "Saídas deste mês", "expense")}
-        ${metricCard("Patrimônio", formatCurrency(16870), "fa-gem", "Investimentos e reserva")}
+        ${metricCard("Saldo atual", formatCurrency(balance), "fa-wallet", "Contas ativas no PostgreSQL")}
+        ${metricCard("Receitas", formatCurrency(income), "fa-arrow-trend-up", "Entradas registradas", "income")}
+        ${metricCard("Despesas", formatCurrency(expenses), "fa-arrow-trend-down", "Saídas registradas", "expense")}
+        ${metricCard("Patrimônio", formatCurrency(netWorth), "fa-gem", "Contas e investimentos")}
       </div>
 
       <div class="dashboard-grid">
@@ -1111,7 +978,7 @@ function renderTransactionsTable() {
                 <td>${transaction.account}</td>
                 <td><strong class="${transaction.value >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(transaction.value)}</strong></td>
                 <td>${new Date(transaction.date).toLocaleDateString("pt-BR")}</td>
-                <td><button class="icon-button" type="button" data-action="show-toast" aria-label="Abrir menu de ações"><i class="fa-solid fa-ellipsis"></i></button></td>
+                <td><button class="icon-button" type="button" data-action="open-transaction-actions" aria-label="Abrir menu de ações"><i class="fa-solid fa-ellipsis"></i></button></td>
               </tr>
             `
           )
@@ -1291,7 +1158,7 @@ function cardDetailView() {
           <p class="page-subtitle">${card.notes || "Acompanhe limite, vencimentos e compras cadastradas neste cartão."}</p>
         </div>
         <div class="hero-actions">
-          <button class="btn-secondary" type="button" data-action="show-toast"><i class="fa-solid fa-pen"></i> Editar</button>
+          <button class="btn-secondary" type="button" data-action="edit-card"><i class="fa-solid fa-pen"></i> Editar</button>
           <button class="btn-danger" type="button" data-action="delete-card" data-card-name="${card.name}"><i class="fa-solid fa-trash"></i> Excluir</button>
         </div>
       </div>
@@ -1557,6 +1424,21 @@ function initializeInvestmentCalendar() {
 }
 
 function investmentDetailView() {
+  if (!investments.length) {
+    return `
+      <section class="app-page">
+        <div class="page-hero">
+          <div>
+            <span class="page-eyebrow">Detalhes</span>
+            <h1 class="page-title">Nenhum investimento encontrado.</h1>
+            <p class="page-subtitle">Assim que os dados forem carregados da API, ou um novo investimento for cadastrado, os detalhes aparecerão aqui.</p>
+          </div>
+          <button class="btn-primary" type="button" data-action="add-investment"><i class="fa-solid fa-plus"></i> Novo investimento</button>
+        </div>
+      </section>
+    `;
+  }
+
   const totalCurrent = investments.reduce((sum, investment) => sum + investment.current, 0);
   const totalInvested = investments.reduce((sum, investment) => sum + investment.invested, 0);
   const totalProfit = totalCurrent - totalInvested;
@@ -1672,6 +1554,15 @@ function goalsView() {
 }
 
 function profileView() {
+  const userName = currentUser?.name || "Usuario FinSight";
+  const userEmail = currentUser?.email || "sem-email@finsight.local";
+  const initials = userName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return `
     <section class="app-page">
       <div class="page-hero">
@@ -1685,10 +1576,10 @@ function profileView() {
       <div class="profile-grid">
         <section class="form-card">
           <div class="item-left">
-            <span class="profile-picture">MS</span>
+            <span class="profile-picture">${initials}</span>
             <div>
-              <h2>Michael Silva</h2>
-              <p class="item-meta">michael@email.com</p>
+              <h2>${userName}</h2>
+              <p class="item-meta">${userEmail}</p>
             </div>
           </div>
           <div class="form-grid">
@@ -1720,7 +1611,7 @@ function profileView() {
             </div>
           </div>
           <div class="form-actions">
-            <button class="btn-primary" type="button" data-action="show-toast"><i class="fa-solid fa-check"></i> Salvar alterações</button>
+            <button class="btn-primary" type="button" data-action="save-profile"><i class="fa-solid fa-check"></i> Salvar alterações</button>
           </div>
         </section>
 
@@ -1734,7 +1625,7 @@ function profileView() {
               </div>
               <span class="switch" aria-hidden="true"></span>
             </div>
-            <button class="setting-row" type="button" data-action="show-toast">
+            <button class="setting-row" type="button" data-action="change-password">
               <div>
                 <strong class="item-title">Alterar senha</strong>
                 <p class="item-meta">Atualize sua senha de acesso.</p>
@@ -1755,7 +1646,7 @@ function profileView() {
   `;
 }
 
-function renderRoute() {
+async function renderRoute() {
   const route = getRoute();
   const viewRoute = route === "investimento-novo" ? "patrimonio" : route;
   setActiveRoute(viewRoute);
@@ -1767,26 +1658,26 @@ function renderRoute() {
     </section>
   `;
 
-  window.setTimeout(() => {
-    const views = {
-      dashboard: dashboardView,
-      transacoes: transactionsView,
-      patrimonio: wealthView,
-      "investimento-detalhe": investmentDetailView,
-      "contas-resumo": billsSummaryView,
-      "contas-despesas": billsView,
-      "contas-cartoes": cardsView,
-      "cartao-detalhe": cardDetailView,
-      metas: goalsView,
-      perfil: profileView,
-    };
+  await loadAppData();
 
-    app.innerHTML = views[viewRoute]();
+  const views = {
+    dashboard: dashboardView,
+    transacoes: transactionsView,
+    patrimonio: wealthView,
+    "investimento-detalhe": investmentDetailView,
+    "contas-resumo": billsSummaryView,
+    "contas-despesas": billsView,
+    "contas-cartoes": cardsView,
+    "cartao-detalhe": cardDetailView,
+    metas: goalsView,
+    perfil: profileView,
+  };
 
-    if (viewRoute === "transacoes") renderTransactionsTable();
-    if (viewRoute === "contas-despesas") renderBillsList();
-    if (route === "investimento-novo") openInvestmentModal();
-  }, 120);
+  app.innerHTML = views[viewRoute]();
+
+  if (viewRoute === "transacoes") renderTransactionsTable();
+  if (viewRoute === "contas-despesas") renderBillsList();
+  if (route === "investimento-novo") openInvestmentModal();
 }
 
 document.addEventListener("input", (event) => {
@@ -1799,32 +1690,32 @@ document.addEventListener("change", (event) => {
   if (event.target.closest("#billFilters")) renderBillsList();
 });
 
-document.addEventListener("submit", (event) => {
+document.addEventListener("submit", async (event) => {
   if (event.target.matches("#expenseForm")) {
     event.preventDefault();
-    addExpenseFromForm();
+    await addExpenseFromForm();
     return;
   }
 
   if (event.target.matches("#investmentForm")) {
     event.preventDefault();
-    addInvestmentFromForm();
+    await addInvestmentFromForm();
     return;
   }
 
   if (event.target.matches("#billForm")) {
     event.preventDefault();
-    addBillFromForm();
+    await addBillFromForm();
     return;
   }
 
   if (event.target.matches("#cardForm")) {
     event.preventDefault();
-    addCardFromForm();
+    await addCardFromForm();
   }
 });
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const investmentCalendarTrigger = event.target.closest("[data-investment-calendar-trigger]");
   const investmentCalendarNav = event.target.closest("[data-investment-calendar-nav]");
   const investmentCalendarDay = event.target.closest("[data-investment-calendar-day]");
@@ -2030,12 +1921,13 @@ document.addEventListener("click", (event) => {
   }
 
   if (action === "toggle-bill-paid") {
-    const bill = bills.find((item) => item.id === Number(event.target.closest("[data-bill-id]")?.dataset.billId));
+    const billId = event.target.closest("[data-bill-id]")?.dataset.billId;
+    const bill = bills.find((item) => String(item.id) === String(billId));
     if (bill) {
-      bill.paid = !bill.paid;
-      showToast(bill.paid ? "Conta marcada como paga." : "Conta voltou para pendente.");
-      if (getRoute() === "contas-despesas") renderBillsList();
-      if (getRoute() === "contas-resumo") renderRoute();
+      const nextPaid = !bill.paid;
+      await billsService.markPaid(bill.id, nextPaid);
+      showToast(nextPaid ? "Conta marcada como paga." : "Conta voltou para pendente.");
+      await reloadAndRender();
     }
     return;
   }
@@ -2043,11 +1935,10 @@ document.addEventListener("click", (event) => {
   if (action === "delete-bill") {
     const confirmed = window.confirm("Tem certeza que deseja excluir esta conta?");
     if (confirmed) {
-      const billIndex = bills.findIndex((item) => item.id === Number(event.target.closest("[data-bill-id]")?.dataset.billId));
-      if (billIndex >= 0) bills.splice(billIndex, 1);
+      const billId = event.target.closest("[data-bill-id]")?.dataset.billId;
+      await billsService.remove(billId);
       showToast("Conta excluída com segurança.");
-      if (getRoute() === "contas-despesas") renderBillsList();
-      if (getRoute() === "contas-resumo") renderRoute();
+      await reloadAndRender();
     }
     return;
   }
@@ -2055,16 +1946,36 @@ document.addEventListener("click", (event) => {
   if (action === "delete-card") {
     const confirmed = window.confirm("Tem certeza que deseja excluir este cartão?");
     if (confirmed) {
-      const cardIndex = creditCards.findIndex((card) => card.name === event.target.closest("[data-card-name]")?.dataset.cardName);
-      if (cardIndex >= 0) creditCards.splice(cardIndex, 1);
+      const cardId = event.target.closest("[data-card-id]")?.dataset.cardId;
+      await cardsService.remove(cardId);
       showToast("Cartão excluído com segurança.");
-      if (["contas-cartoes", "cartao-detalhe"].includes(getRoute())) renderRoute();
+      await reloadAndRender();
     }
     return;
   }
 
   if (action === "edit-bill") {
-    showToast("Edição da conta pronta para ajuste.");
+    showToast("A edição desta conta ainda será habilitada.");
+    return;
+  }
+
+  if (action === "edit-card") {
+    showToast("A edição deste cartão ainda será habilitada.");
+    return;
+  }
+
+  if (action === "open-transaction-actions") {
+    showToast("As ações desta transação ainda serão habilitadas.");
+    return;
+  }
+
+  if (action === "save-profile") {
+    showToast("Nenhuma alteração foi salva. Edição de perfil ainda será habilitada.");
+    return;
+  }
+
+  if (action === "change-password") {
+    showToast("Alteração de senha ficará para a etapa de autenticação.");
     return;
   }
 
@@ -2094,8 +2005,6 @@ document.addEventListener("click", (event) => {
     showToast("Nova meta pronta para cadastro.");
     return;
   }
-
-  showToast();
 });
 
 quickAction.addEventListener("click", () => {
