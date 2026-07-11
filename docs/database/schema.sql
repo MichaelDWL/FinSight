@@ -156,12 +156,15 @@ CREATE TABLE cartoes (
     usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     conta_pagamento_id UUID REFERENCES contas(id) ON DELETE SET NULL,
     nome VARCHAR(120) NOT NULL,
+    banco VARCHAR(120),
     bandeira VARCHAR(40) NOT NULL,
+    ultimos_digitos CHAR(3),
     limite_total NUMERIC(14,2) NOT NULL,
     limite_disponivel NUMERIC(14,2) NOT NULL,
     dia_fechamento SMALLINT NOT NULL,
     dia_vencimento SMALLINT NOT NULL,
     cor VARCHAR(7) DEFAULT '#0d6efd',
+    observacao TEXT,
     status status_enum NOT NULL DEFAULT 'ativa',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -172,6 +175,7 @@ CREATE TABLE cartoes (
     CONSTRAINT chk_cartoes_dia_fechamento CHECK (dia_fechamento BETWEEN 1 AND 31),
     CONSTRAINT chk_cartoes_dia_vencimento CHECK (dia_vencimento BETWEEN 1 AND 31),
     CONSTRAINT chk_cartoes_cor_hex CHECK (cor IS NULL OR cor ~ '^#[0-9A-Fa-f]{6}$'),
+    CONSTRAINT chk_cartoes_ultimos_digitos CHECK (ultimos_digitos IS NULL OR ultimos_digitos ~ '^[0-9]{3}$'),
     CONSTRAINT chk_cartoes_status CHECK (status IN ('ativa', 'inativa'))
 );
 
@@ -539,13 +543,15 @@ VALUES
     ('10000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', 'Reserva de Emergencia', 'poupanca', 8000.00, 8800.00, '#2CA02C', 'piggy-bank');
 
 -- 7.6 Um cartao de credito
-INSERT INTO cartoes (id, usuario_id, conta_pagamento_id, nome, bandeira, limite_total, limite_disponivel, dia_fechamento, dia_vencimento)
+INSERT INTO cartoes (id, usuario_id, conta_pagamento_id, nome, banco, bandeira, ultimos_digitos, limite_total, limite_disponivel, dia_fechamento, dia_vencimento)
 VALUES (
     '30000000-0000-0000-0000-000000000001',
     '00000000-0000-0000-0000-000000000001',
     '10000000-0000-0000-0000-000000000001',
     'Cartao Gold',
+    'Banco Exemplo',
     'Visa',
+    '001',
     8000.00,
     5360.00,
     20,

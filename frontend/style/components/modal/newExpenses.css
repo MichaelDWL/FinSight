@@ -202,6 +202,42 @@
   font-weight: 700;
 }
 
+.card-color-picker {
+  position: relative;
+  cursor: pointer;
+}
+
+.card-color-picker input[type="color"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.card-color-preview {
+  width: 2.1rem;
+  height: 1.45rem;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), transparent),
+    var(--selected-card-color, #0d6efd);
+  box-shadow:
+    0 0 0 1px rgba(15, 45, 79, 0.12),
+    0 8px 18px color-mix(in srgb, var(--selected-card-color, #0d6efd) 34%, transparent);
+}
+
+.card-color-value {
+  color: var(--pw7);
+  font-family: "Inter", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
 .new-expense-form .input-select {
   position: relative;
   height: auto;

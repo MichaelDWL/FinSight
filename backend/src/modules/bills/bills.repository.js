@@ -67,13 +67,20 @@ async function update(userId, id, payload) {
         descricao = COALESCE($3, descricao),
         valor = COALESCE($4, valor),
         data_transacao = COALESCE($5, data_transacao),
+        data_competencia = COALESCE(date_trunc('month', $5::date)::date, data_competencia),
         forma_pagamento = COALESCE($6, forma_pagamento),
         status = COALESCE($7, status),
+        recorrente = COALESCE($8, recorrente),
+        recorrencia_intervalo = CASE
+          WHEN COALESCE($8, recorrente) THEN 'mensal'
+          ELSE NULL
+        END,
+        observacao = COALESCE($9, observacao),
         updated_at = now()
       WHERE usuario_id = $1 AND id = $2
       RETURNING id
     `,
-    [userId, id, payload.name, payload.value, payload.dueDate, payload.paymentMethod, payload.status]
+    [userId, id, payload.name, payload.value, payload.dueDate, payload.paymentMethod, payload.status, payload.recurrence, payload.notes]
   );
 
   return rows[0] || null;

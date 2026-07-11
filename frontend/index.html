@@ -463,15 +463,17 @@
             <span class="font-label">Últimos 3 números</span>
             <div class="expense-input-wrapper">
               <i class="fa-solid fa-hashtag"></i>
-              <input id="cardLastDigits" name="lastDigits" type="text" class="input-basic" required maxlength="3" inputmode="numeric" placeholder="458">
+              <input id="cardLastDigits" name="lastDigits" type="text" class="input-basic" required maxlength="3" minlength="3" inputmode="numeric" pattern="[0-9]{3}" placeholder="458">
             </div>
           </label>
 
           <label class="expense-field" for="cardColor">
             <span class="font-label">Cor do cartão</span>
-            <div class="expense-input-wrapper">
+            <div class="expense-input-wrapper card-color-picker" style="--selected-card-color: #0d6efd">
               <i class="fa-solid fa-palette"></i>
               <input id="cardColor" name="color" type="color" class="input-basic" value="#0d6efd">
+              <span class="card-color-preview" aria-hidden="true"></span>
+              <span class="card-color-value">#0d6efd</span>
             </div>
           </label>
 

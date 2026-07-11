@@ -25,9 +25,7 @@
 .form-card {
   border: var(--border-card);
   border-radius: var(--border-radius-xl);
-  background:
-    var(--surface-card),
-    var(--surface-card-accent);
+  background: var(--surface-card), var(--surface-card-accent);
   box-shadow: var(--bx-shadow-card-elevated);
 }
 
@@ -257,7 +255,6 @@
 
 .bill-card:hover,
 .credit-card-panel:hover {
-  border-color: rgba(13, 110, 253, 0.18);
   box-shadow: var(--bx-shadow-item-elevated);
   transform: translateY(-2px);
 }
@@ -357,7 +354,11 @@
   border-radius: var(--border-radius-xl);
   color: var(--pw);
   background:
-    radial-gradient(circle at 85% 0%, rgba(255, 255, 255, 0.24), transparent 34%),
+    radial-gradient(
+      circle at 85% 0%,
+      rgba(255, 255, 255, 0.24),
+      transparent 34%
+    ),
     linear-gradient(135deg, var(--card-accent), var(--brand-900));
   box-shadow: var(--bx-shadow-card-elevated);
   transition:
@@ -928,7 +929,6 @@
   .goals-page-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
 }
 
 @media (max-width: 860px) {
