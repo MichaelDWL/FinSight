@@ -174,7 +174,9 @@
   width: 100%;
   min-height: 2.15rem;
   padding: 0.46rem 0.75rem;
+  border: 0;
   border-radius: 10px;
+  appearance: none;
   color: var(--pw2);
   background: transparent;
   font-family: "Inter", sans-serif;
@@ -190,6 +192,7 @@
 .nav-submenu a::before,
 .nav-submenu button::before {
   content: "";
+  flex: 0 0 0.28rem;
   width: 0.28rem;
   height: 0.28rem;
   margin-right: 0.65rem;

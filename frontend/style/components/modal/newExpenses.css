@@ -1,8 +1,16 @@
 .modal {
   padding: 1rem;
   background:
-    radial-gradient(circle at 18% 18%, rgba(13, 110, 253, 0.22), transparent 30%),
-    radial-gradient(circle at 82% 76%, rgba(99, 230, 190, 0.16), transparent 28%),
+    radial-gradient(
+      circle at 18% 18%,
+      rgba(13, 110, 253, 0.22),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 82% 76%,
+      rgba(99, 230, 190, 0.16),
+      transparent 28%
+    ),
     rgba(15, 45, 79, 0.58);
   backdrop-filter: blur(8px);
 }
@@ -17,8 +25,11 @@
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 20px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 251, 255, 0.98) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(248, 251, 255, 0.98) 100%
+  );
   box-shadow: 0 22px 58px rgba(15, 45, 79, 0.28);
   overflow-y: auto;
   overflow-x: hidden;
@@ -40,7 +51,12 @@
   position: absolute;
   inset: 0;
   height: 6px;
-  background: linear-gradient(90deg, var(--brand-accent), #63e6be, var(--brand-600));
+  background: linear-gradient(
+    90deg,
+    var(--brand-accent),
+    #63e6be,
+    var(--brand-600)
+  );
 }
 
 .new-expense-header {
@@ -51,7 +67,11 @@
   padding: 1.45rem 1.6rem 1rem;
   color: var(--pw8);
   background:
-    radial-gradient(circle at 10% 0%, rgba(13, 110, 253, 0.12), transparent 34%),
+    radial-gradient(
+      circle at 10% 0%,
+      rgba(13, 110, 253, 0.12),
+      transparent 34%
+    ),
     linear-gradient(135deg, rgba(13, 110, 253, 0.08), rgba(255, 255, 255, 0));
 }
 
@@ -90,7 +110,10 @@
   background-color: var(--pw);
   box-shadow: var(--bx-shadow-item);
   cursor: pointer;
-  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .expense-modal-close:hover {
@@ -138,7 +161,10 @@
   border-radius: 12px;
   background-color: var(--pw);
   box-shadow: var(--bx-shadow-field);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .expense-input-wrapper:focus-within {
@@ -157,6 +183,7 @@
   padding: 0;
   border: 0;
   border-radius: 0;
+  outline: none;
   color: var(--pw8);
   background: transparent;
   box-shadow: none;
@@ -186,7 +213,10 @@
   background-color: var(--pw);
   box-shadow: var(--bx-shadow-field);
   cursor: pointer;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .new-expense-form .input-select::after {
@@ -243,7 +273,9 @@
   font-family: "Inter", sans-serif;
   font-size: 0.9rem;
   line-height: 1.5;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .obs-expense textarea:focus {
@@ -342,7 +374,11 @@
     bottom: 0;
     margin-inline: -1.1rem;
     padding: 0.85rem 1.1rem 0;
-    background: linear-gradient(180deg, rgba(248, 251, 255, 0), rgba(248, 251, 255, 0.98) 28%);
+    background: linear-gradient(
+      180deg,
+      rgba(248, 251, 255, 0),
+      rgba(248, 251, 255, 0.98) 28%
+    );
   }
 }
 
