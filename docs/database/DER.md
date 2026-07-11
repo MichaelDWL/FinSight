@@ -4,7 +4,9 @@
 erDiagram
     usuarios ||--o{ contas : possui
     usuarios ||--o{ categorias : personaliza
-    usuarios ||--o{ transacoes : registra
+    usuarios ||--o{ movimentacoes : registra
+    usuarios ||--o{ recorrencias : agenda
+    recorrencias ||--o{ movimentacoes : gera
     usuarios ||--o{ cartoes : possui
     usuarios ||--o{ metas : define
     usuarios ||--o{ investimentos : acompanha
@@ -14,20 +16,20 @@ erDiagram
     usuarios ||--o{ notificacoes : recebe
     usuarios ||--|| configuracoes : configura
 
-    contas ||--o{ transacoes : origem
-    contas ||--o{ transacoes : destino_transferencia
+    contas ||--o{ movimentacoes : origem
+    contas ||--o{ movimentacoes : destino_transferencia
     contas ||--o{ cartoes : pagamento_padrao
-    categorias ||--o{ transacoes : classifica
+    categorias ||--o{ movimentacoes : classifica
     categorias ||--o{ orcamentos : limita
     categorias_investimentos ||--o{ investimentos : classifica
     cartoes ||--o{ faturas : gera
-    cartoes ||--o{ transacoes : cobra
-    faturas ||--o{ transacoes : agrupa
+    cartoes ||--o{ movimentacoes : cobra
+    faturas ||--o{ movimentacoes : agrupa
     faturas ||--o{ parcelas : contem
-    transacoes ||--o{ parcelas : parcela
-    transacoes ||--o{ transacao_tags : recebe
-    tags ||--o{ transacao_tags : marca
-    transacoes ||--o{ anexos : comprova
+    movimentacoes ||--o{ parcelas : parcela
+    movimentacoes ||--o{ movimentacao_tags : recebe
+    tags ||--o{ movimentacao_tags : marca
+    movimentacoes ||--o{ anexos : comprova
 
     usuarios {
         uuid id PK
@@ -88,7 +90,7 @@ erDiagram
         timestamptz updated_at
     }
 
-    transacoes {
+    movimentacoes {
         uuid id PK
         uuid usuario_id FK
         uuid conta_id FK
@@ -96,8 +98,10 @@ erDiagram
         uuid categoria_id FK
         uuid cartao_id FK
         uuid fatura_id FK
-        uuid transacao_pai_id FK
+        uuid movimentacao_pai_id FK
+        uuid recorrencia_id FK
         tipo_transacao_enum tipo
+        origem_movimentacao_enum origem
         forma_pagamento_enum forma_pagamento
         status_enum status
         numeric valor
@@ -138,10 +142,27 @@ erDiagram
         timestamptz updated_at
     }
 
+    recorrencias {
+        uuid id PK
+        uuid usuario_id FK
+        uuid conta_id FK
+        uuid categoria_id FK
+        tipo_transacao_enum tipo
+        forma_pagamento_enum forma_pagamento
+        varchar descricao
+        numeric valor
+        intervalo_recorrencia_enum intervalo
+        smallint dia_vencimento
+        date proxima_geracao
+        boolean ativa
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
     parcelas {
         uuid id PK
         uuid usuario_id FK
-        uuid transacao_id FK
+        uuid movimentacao_id FK
         uuid fatura_id FK
         integer numero
         integer total
@@ -187,9 +208,9 @@ erDiagram
         timestamptz updated_at
     }
 
-    transacao_tags {
+    movimentacao_tags {
         uuid id PK
-        uuid transacao_id FK
+        uuid movimentacao_id FK
         uuid tag_id FK
         timestamptz created_at
         timestamptz updated_at
@@ -198,7 +219,7 @@ erDiagram
     anexos {
         uuid id PK
         uuid usuario_id FK
-        uuid transacao_id FK
+        uuid movimentacao_id FK
         varchar nome_arquivo
         text url
         varchar mime_type
