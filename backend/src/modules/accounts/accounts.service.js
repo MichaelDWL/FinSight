@@ -5,6 +5,12 @@ async function list(userId) {
   return repository.findAll(userId);
 }
 
+async function detail(userId, id) {
+  const account = await repository.findById(userId, id);
+  if (!account) throw new AppError("Conta nao encontrada.", 404);
+  return account;
+}
+
 async function create(userId, payload) {
   return repository.create(userId, payload);
 }
@@ -21,4 +27,4 @@ async function remove(userId, id) {
   return { id };
 }
 
-module.exports = { list, create, update, remove };
+module.exports = { list, detail, create, update, remove };

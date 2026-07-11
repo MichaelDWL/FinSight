@@ -7,9 +7,11 @@ const idParam = z.object({
 const body = z.object({
   name: z.string().trim().min(1, "Nome obrigatorio."),
   type: z.enum(["corrente", "poupanca", "investimento", "carteira", "dinheiro", "outros"]).optional(),
+  institution: z.string().trim().max(120, "Instituicao muito longa.").optional().nullable(),
   balance: z.coerce.number().min(0, "Saldo nao pode ser negativo.").optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Cor invalida.").optional().nullable(),
   icon: z.string().optional().nullable(),
+  notes: z.string().max(2000, "Observacao muito longa.").optional().nullable(),
 });
 
 const createAccount = z.object({ body, params: z.object({}).optional(), query: z.object({}).optional() });

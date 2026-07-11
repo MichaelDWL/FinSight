@@ -7,6 +7,7 @@ const { createAccount, idParam, updateAccount } = require("./accounts.validator"
 const router = Router();
 
 router.get("/", controller.list);
+router.get("/:id", validate(idParam), controller.detail);
 router.post("/", validate(createAccount), controller.create);
 router.put("/:id", validate(updateAccount), controller.update);
 router.delete("/:id", validate(idParam), controller.remove);
