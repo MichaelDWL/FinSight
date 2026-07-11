@@ -1,9 +1,13 @@
+import { accountsService } from "./services/accounts.js";
 import { billsService } from "./services/bills.js";
 import { cardsService } from "./services/cards.js";
 import { dashboardService } from "./services/dashboard.js";
 import { investmentsService } from "./services/investments.js";
 import { transactionsService } from "./services/transactions.js";
 import { usersService } from "./services/users.js";
+import { invoicesService } from "./services/invoices.js";
+import { createMovementModal } from "./ui/movementModal.js";
+import { confirmDialog } from "./ui/confirmModal.js";
 
 const app = document.querySelector("#app");
 const pageTitle = document.querySelector("#pageTitle");
@@ -25,6 +29,8 @@ const billModal = document.querySelector("#billModal");
 const billForm = document.querySelector("#billForm");
 const cardModal = document.querySelector("#cardModal");
 const cardForm = document.querySelector("#cardForm");
+const accountModal = document.querySelector("#accountModal");
+const accountForm = document.querySelector("#accountForm");
 
 let calendarVisibleDate = new Date();
 let investmentCalendarVisibleDate = new Date();
@@ -38,7 +44,9 @@ const formatCurrency = (value) =>
 const formatDateLabel = (isoDate) => {
   if (!isoDate) return "";
 
-  const [year, month, day] = isoDate.split("-").map(Number);
+  const [year, month, day] = String(isoDate).slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return "";
+
   return new Intl.DateTimeFormat("pt-BR").format(
     new Date(year, month - 1, day),
   );
@@ -64,6 +72,11 @@ let editingTransactionId = null;
 let editingInvestmentId = null;
 let editingBillId = null;
 let editingCardId = null;
+let selectedCardId = null;
+let cardDetailData = null;
+let editingAccountId = null;
+let selectedAccountId = null;
+let accountDetailData = null;
 
 const routeTitles = {
   dashboard: "Dashboard",
@@ -72,12 +85,40 @@ const routeTitles = {
   "investimento-novo": "Adicionar investimento",
   "investimento-detalhe": "Detalhes do investimento",
   "contas-resumo": "Contas",
+  "contas-bancos": "Minhas Contas",
   "contas-despesas": "Despesas",
   "contas-cartoes": "Cartões",
   "cartao-detalhe": "Detalhes do cartão",
+  "conta-detalhe": "Detalhes da conta",
   metas: "Metas financeiras",
   perfil: "Perfil",
 };
+
+const ACCOUNT_TYPE_LABELS = {
+  corrente: "Conta Corrente",
+  poupanca: "Conta Poupança",
+  investimento: "Conta Investimento",
+  carteira: "Carteira",
+  dinheiro: "Dinheiro",
+  outros: "Outro",
+};
+
+function accountTypeLabel(type) {
+  return ACCOUNT_TYPE_LABELS[type] || "Conta";
+}
+
+function relativeDayLabel(isoDate) {
+  if (!isoDate) return "Sem movimentações";
+  const iso = String(isoDate).slice(0, 10);
+  const today = toIsoDate(new Date());
+  if (iso === today) return "Hoje";
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (iso === toIsoDate(yesterday)) return "Ontem";
+
+  return formatDateLabel(iso);
+}
 
 function showToast(message = "Tudo certo. Sua ação foi registrada.") {
   toast.textContent = message;
@@ -131,6 +172,86 @@ function normalizeCardLastDigits(value) {
   return digits.padStart(3, "0");
 }
 
+function updateAccountColorPreview(color = "#0d6efd") {
+  const picker = accountForm?.querySelector(".card-color-picker");
+  const valueLabel = accountForm?.querySelector(".card-color-value");
+  if (!picker) return;
+
+  picker.style.setProperty("--selected-card-color", color);
+  if (valueLabel) valueLabel.textContent = color.toUpperCase();
+}
+
+function setAccountIcon(icon = "fa-building-columns") {
+  const resolved = resolveIcon(icon, "fa-building-columns");
+  const hiddenInput = accountForm?.querySelector("#accountIcon");
+  if (hiddenInput) hiddenInput.value = resolved;
+
+  accountForm?.querySelectorAll(".account-icon-option").forEach((option) => {
+    option.classList.toggle(
+      "is-selected",
+      option.dataset.accountIcon === resolved,
+    );
+  });
+}
+
+const ICON_ALIASES = {
+  "shopping-cart": "fa-cart-shopping",
+  "shopping-bag": "fa-bag-shopping",
+  cart: "fa-cart-shopping",
+  home: "fa-house",
+  house: "fa-house",
+  car: "fa-car",
+  heart: "fa-heart",
+  gamepad: "fa-gamepad",
+  "book-open": "fa-book-open",
+  book: "fa-book",
+  repeat: "fa-repeat",
+  briefcase: "fa-briefcase",
+  laptop: "fa-laptop",
+  "trending-up": "fa-arrow-trend-up",
+  "trending-down": "fa-arrow-trend-down",
+  bank: "fa-building-columns",
+  "piggy-bank": "fa-piggy-bank",
+  landmark: "fa-landmark",
+  "credit-card": "fa-credit-card",
+  wallet: "fa-wallet",
+  bitcoin: "fa-bitcoin",
+  layers: "fa-layer-group",
+  umbrella: "fa-umbrella",
+  "shield-check": "fa-shield-halved",
+  "building-2": "fa-building",
+  "circle-dollar-sign": "fa-circle-dollar",
+  receipt: "fa-receipt",
+  plane: "fa-plane",
+  utensils: "fa-utensils",
+  "heart-pulse": "fa-heart-pulse",
+};
+
+function resolveIcon(rawIcon, fallback = "fa-wallet") {
+  if (!rawIcon) return fallback;
+
+  const value = String(rawIcon).trim();
+  if (value.startsWith("fa-") || value.includes("fa-")) return value;
+
+  return ICON_ALIASES[value] || fallback;
+}
+
+function normalizeTransaction(transaction) {
+  const category = transaction.category || transaction.type || "Outros";
+  const isIncome = String(transaction.type || "")
+    .toLowerCase()
+    .includes("receita");
+
+  return {
+    ...transaction,
+    category,
+    icon: resolveIcon(
+      transaction.icon,
+      getExpenseIcon(category) || (isIncome ? "fa-arrow-trend-up" : "fa-wallet"),
+    ),
+  };
+}
+
 function normalizeInvestment(investment) {
   const category = investment.category || investment.type || "Investimento";
 
@@ -160,7 +281,7 @@ function normalizeGoal(goal) {
 function normalizeBill(bill) {
   return {
     ...bill,
-    icon: bill.icon || getBillIcon(bill.category),
+    icon: resolveIcon(bill.icon, getBillIcon(bill.category)),
     account: bill.account || "Conta principal",
     payment: bill.payment || bill.paymentMethod || "Pix",
     recurring: Boolean(bill.recurring ?? bill.recurrence),
@@ -171,9 +292,14 @@ function normalizeBill(bill) {
 
 function applyDashboardData(data) {
   dashboardData = data;
-  transactions = data.transactions || data.latestTransactions || [];
+  transactions = (data.transactions || data.latestTransactions || []).map(
+    normalizeTransaction,
+  );
   investments = (data.investments || []).map(normalizeInvestment);
-  accounts = data.accounts || [];
+  accounts = (data.accounts || []).map((account) => ({
+    ...account,
+    icon: resolveIcon(account.icon, "fa-building-columns"),
+  }));
   creditCards = data.cards || [];
   bills = (data.bills || data.pendingBills || []).map(normalizeBill);
   goals = (data.goals || []).map(normalizeGoal);
@@ -472,6 +598,60 @@ function closeCardDialog({ reset = false } = {}) {
   }
 }
 
+function openAccountModal(account = null) {
+  if (!accountModal || !accountForm) return;
+
+  closeQuickActionMenu();
+  setAccountsMenuExpanded(true);
+  accountForm.reset();
+  editingAccountId = account?.id || null;
+
+  if (account) {
+    setModalCopy(accountModal, {
+      tag: "Editar conta",
+      title: "Editar Conta",
+      description:
+        "Atualize nome, tipo, instituição, cor e saldo desta conta.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar alterações",
+    });
+    setFieldValue(accountForm, "#accountName", account.name);
+    setFieldValue(accountForm, "#accountType", account.type || "corrente");
+    setFieldValue(accountForm, "#accountInstitution", account.institution || "");
+    setFieldValue(accountForm, "#accountColor", account.color || "#0d6efd");
+    updateAccountColorPreview(account.color || "#0d6efd");
+    setAccountIcon(account.icon || "fa-building-columns");
+    setFieldValue(accountForm, "#accountBalance", account.balance);
+    setFieldValue(accountForm, "#accountNotes", account.notes || "");
+  } else {
+    updateAccountColorPreview("#0d6efd");
+    setAccountIcon("fa-building-columns");
+    setModalCopy(accountModal, {
+      tag: "Nova conta",
+      title: "Adicionar Conta",
+      description:
+        "Cadastre apenas onde você guarda seu dinheiro. Nunca pedimos agência, número da conta, CPF ou PIX.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar conta",
+    });
+  }
+
+  accountModal.classList.remove("isHidden");
+  accountModal.setAttribute("aria-hidden", "false");
+  accountForm.querySelector("#accountName")?.focus();
+}
+
+function closeAccountDialog({ reset = false } = {}) {
+  if (!accountModal) return;
+
+  accountModal.classList.add("isHidden");
+  accountModal.setAttribute("aria-hidden", "true");
+  if (reset) {
+    accountForm?.reset();
+    editingAccountId = null;
+  }
+}
+
 function closeQuickActionMenu() {
   quickActionMenu?.classList.add("is-hidden");
   quickAction?.setAttribute("aria-expanded", "false");
@@ -683,13 +863,13 @@ function initializeExpenseSelects() {
 
 function getExpenseIcon(category) {
   const icons = {
+    Moradia: "fa-house",
     Alimentação: "fa-cart-shopping",
-    Casa: "fa-house-chimney",
-    Lazer: "fa-utensils",
-    Saúde: "fa-heart-pulse",
-    Viagem: "fa-plane",
     Transporte: "fa-car",
-    Assinaturas: "fa-receipt",
+    Saúde: "fa-heart",
+    Lazer: "fa-gamepad",
+    Educação: "fa-book-open",
+    Assinaturas: "fa-repeat",
   };
 
   return icons[category] || "fa-wallet";
@@ -740,6 +920,7 @@ async function addExpenseFromForm() {
     value: Math.abs(value),
     date: formData.get("date") || new Date().toISOString().slice(0, 10),
     type: editingTransactionId ? transactionType : "despesa",
+    category: formData.get("category") || null,
     payment: mapPaymentMethod(formData.get("payment")),
     status: currentTransaction?.status || "confirmada",
     notes: formData.get("notes") || "",
@@ -901,9 +1082,40 @@ function cardSummary(card) {
       </div>
       <p class="item-meta">${formatCurrency(available)} disponível</p>
       <div class="card-actions">
-        <a class="btn-secondary" href="#cartao-detalhe" data-route="cartao-detalhe">Ver detalhes</a>
+        <button class="btn-secondary" type="button" data-action="view-card" data-card-id="${card.id}">Ver detalhes</button>
         <button class="btn-secondary" type="button" data-action="edit-card" data-card-id="${card.id}">Editar</button>
         <button class="btn-danger" type="button" data-action="delete-card" data-card-id="${card.id}">Excluir</button>
+      </div>
+    </article>
+  `;
+}
+
+function accountSummary(account) {
+  const icon = resolveIcon(account.icon, "fa-building-columns");
+
+  return `
+    <article class="credit-card-panel account-panel" style="--card-accent: ${account.color || "#0d6efd"}">
+      <div class="credit-card-top">
+        <div>
+          <span class="page-eyebrow">${accountTypeLabel(account.type)}</span>
+          <h3>${account.name}</h3>
+          <p>${account.institution || accountTypeLabel(account.type)}</p>
+        </div>
+        <i class="fa-solid ${icon}"></i>
+      </div>
+      <div class="account-balance">
+        <span>Saldo Atual</span>
+        <strong>${formatCurrency(account.balance)}</strong>
+      </div>
+      <div class="credit-card-info">
+        <div><span>Receitas</span><strong>${formatCurrency(account.monthIncome || 0)}</strong></div>
+        <div><span>Despesas</span><strong>${formatCurrency(account.monthExpenses || 0)}</strong></div>
+      </div>
+      <p class="item-meta">Última movimentação • ${relativeDayLabel(account.lastMovement)}</p>
+      <div class="card-actions">
+        <button class="btn-secondary" type="button" data-action="view-account" data-account-id="${account.id}">Ver detalhes</button>
+        <button class="btn-secondary" type="button" data-action="edit-account" data-account-id="${account.id}">Editar</button>
+        <button class="btn-danger" type="button" data-action="remove-account" data-account-id="${account.id}">Excluir</button>
       </div>
     </article>
   `;
@@ -990,6 +1202,47 @@ async function addCardFromForm() {
   }
 }
 
+async function addAccountFromForm() {
+  if (!accountForm) return;
+
+  try {
+    const formData = new FormData(accountForm);
+    const balanceRaw = formData.get("balance");
+    const payload = {
+      name: formData.get("name") || "Nova conta",
+      type: formData.get("type") || "corrente",
+      institution: (formData.get("institution") || "").trim(),
+      color: formData.get("color") || "#0d6efd",
+      icon: formData.get("icon") || "fa-building-columns",
+      notes: (formData.get("notes") || "").trim(),
+    };
+
+    if (!editingAccountId) {
+      payload.balance = Number(balanceRaw) || 0;
+    } else if (balanceRaw !== null && balanceRaw !== "") {
+      payload.balance = Number(balanceRaw) || 0;
+    }
+
+    if (editingAccountId) {
+      await accountsService.update(editingAccountId, payload);
+    } else {
+      await accountsService.create(payload);
+    }
+
+    const wasEditing = Boolean(editingAccountId);
+    closeAccountDialog({ reset: true });
+    showToast(
+      wasEditing
+        ? "Conta atualizada com sucesso."
+        : "Conta cadastrada com sucesso.",
+    );
+    await reloadAndRender();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Não foi possível salvar a conta.");
+  }
+}
+
 function getRoute() {
   const route = window.location.hash.replace("#", "") || "dashboard";
   return routeTitles[route] ? route : "dashboard";
@@ -998,9 +1251,11 @@ function getRoute() {
 function setActiveRoute(route) {
   const accountRoutes = [
     "contas-resumo",
+    "contas-bancos",
     "contas-despesas",
     "contas-cartoes",
     "cartao-detalhe",
+    "conta-detalhe",
   ];
   const activeRoute = ["investimento-novo", "investimento-detalhe"].includes(
     route,
@@ -1036,10 +1291,16 @@ function setActiveRoute(route) {
     ?.classList.toggle("nav-active", isAccountRoute);
   if (isAccountRoute && !document.body.classList.contains("sidebar-closed"))
     setAccountsMenuExpanded(true);
-  setAccountSubroute(route === "cartao-detalhe" ? "contas-cartoes" : route);
+  const accountSubroute =
+    route === "cartao-detalhe"
+      ? "contas-cartoes"
+      : route === "conta-detalhe"
+        ? "contas-bancos"
+        : route;
+  setAccountSubroute(accountSubroute);
 
   pageTitle.textContent = routeTitles[route];
-  quickAction.querySelector(".fab-add-label").textContent = "Adicionar";
+  quickAction.querySelector(".fab-add-label").textContent = "Nova Movimentação";
 }
 
 function metricCard(label, value, icon, caption, tone = "brand") {
@@ -1132,6 +1393,58 @@ function investmentCard(investment, compact = false) {
   `;
 }
 
+function accountsOverviewCard() {
+  const header = `
+    <div class="card-title-row">
+      <h2>Suas contas</h2>
+      <a class="btn-secondary" href="#contas-bancos">Abrir</a>
+    </div>`;
+
+  if (!accounts.length) {
+    return `
+      <section class="premium-card">
+        ${header}
+        <div class="empty-state compact">
+          <div>
+            <i class="fa-solid fa-building-columns"></i>
+            <p>Cadastre uma conta para ver os destaques aqui.</p>
+          </div>
+        </div>
+      </section>`;
+  }
+
+  const topBalance = accounts.reduce(
+    (best, account) => (account.balance > (best?.balance ?? -Infinity) ? account : best),
+    null,
+  );
+  const mostUsed = accounts.reduce(
+    (best, account) =>
+      (account.movementsCount || 0) > (best?.movementsCount ?? -1) ? account : best,
+    null,
+  );
+
+  const highlight = (account, caption, valueHtml) => `
+    <div class="list-item">
+      <div class="item-left">
+        <span class="item-icon text-brand"><i class="fa-solid ${resolveIcon(account.icon, "fa-building-columns")}"></i></span>
+        <div>
+          <p class="item-title">${account.name}</p>
+          <p class="item-meta">${caption}</p>
+        </div>
+      </div>
+      ${valueHtml}
+    </div>`;
+
+  return `
+    <section class="premium-card">
+      ${header}
+      <div class="mini-list">
+        ${highlight(topBalance, "Conta com maior saldo", `<strong class="amount-positive">${formatCurrency(topBalance.balance)}</strong>`)}
+        ${highlight(mostUsed, "Conta mais utilizada", `<span class="pill">${mostUsed.movementsCount || 0} mov.</span>`)}
+      </div>
+    </section>`;
+}
+
 function dashboardView() {
   const balance = Number(dashboardData?.balance || 0);
   const income = Number(dashboardData?.income || 0);
@@ -1153,7 +1466,7 @@ function dashboardView() {
       </div>
 
       <div class="metrics-grid">
-        ${metricCard("Saldo atual", formatCurrency(balance), "fa-wallet", "Contas ativas no PostgreSQL")}
+        ${metricCard("Saldo total", formatCurrency(balance), "fa-wallet", "Somatório de todas as contas")}
         ${metricCard("Receitas", formatCurrency(income), "fa-arrow-trend-up", "Entradas registradas", "income")}
         ${metricCard("Despesas", formatCurrency(expenses), "fa-arrow-trend-down", "Saídas registradas", "expense")}
         ${metricCard("Patrimônio", formatCurrency(netWorth), "fa-gem", "Contas e investimentos")}
@@ -1221,6 +1534,8 @@ function dashboardView() {
               </div>
             </div>
           </section>
+
+          ${accountsOverviewCard()}
 
           <section class="premium-card">
             <div class="card-title-row">
@@ -1553,8 +1868,152 @@ function cardsView() {
   `;
 }
 
+function accountsView() {
+  const cards = accounts.length
+    ? `<div class="cards-grid">${accounts.map(accountSummary).join("")}</div>`
+    : `<div class="empty-state">
+        <div>
+          <i class="fa-solid fa-building-columns"></i>
+          <h2 class="font-title-md">Nenhuma conta cadastrada</h2>
+          <p>Cadastre onde você guarda seu dinheiro para organizar saldos e movimentações.</p>
+          <button class="btn-primary" type="button" data-action="add-account"><i class="fa-solid fa-plus"></i> Nova Conta</button>
+        </div>
+      </div>`;
+
+  return `
+    <section class="app-page">
+      <div class="page-hero">
+        <div>
+          <span class="page-eyebrow">Contas</span>
+          <h1 class="page-title">Seu dinheiro organizado em um só lugar.</h1>
+          <p class="page-subtitle">Acompanhe onde seu dinheiro está, movimentações, saldo e histórico de forma simples.</p>
+        </div>
+        <button class="btn-primary" type="button" data-action="add-account"><i class="fa-solid fa-plus"></i> Nova Conta</button>
+      </div>
+
+      ${cards}
+    </section>
+  `;
+}
+
+function formatMonthYear(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  const label = date.toLocaleDateString("pt-BR", {
+    month: "long",
+    year: "numeric",
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function invoiceStatusMeta(status) {
+  const map = {
+    aberta: { label: "Aberta", className: "status-pending" },
+    fechada: { label: "Fechada", className: "status-today" },
+    atrasada: { label: "Atrasada", className: "status-late" },
+    paga: { label: "Paga", className: "status-paid" },
+  };
+  return map[status] || { label: status || "-", className: "status-pending" };
+}
+
+function invoiceCard(invoice) {
+  const meta = invoiceStatusMeta(invoice.status);
+  const remaining = Math.max(Number(invoice.total) - Number(invoice.paid), 0);
+  const isPaid = invoice.status === "paga";
+  const canPay = !isPaid && Number(invoice.total) > 0;
+
+  const monthLabel = formatMonthYear(invoice.referenceMonth);
+
+  return `
+    <article class="invoice-card" data-invoice-card="${invoice.id}" data-action="select-invoice" data-invoice-id="${invoice.id}" data-month="${monthLabel}" role="button" tabindex="0" title="Ver compras desta fatura">
+      <div class="invoice-card-head">
+        <div>
+          <strong class="invoice-month">${monthLabel}</strong>
+          <p class="item-meta">Vencimento ${formatDateLabel(invoice.dueDate)}</p>
+        </div>
+        <div class="invoice-head-right">
+          <span class="status-pill ${meta.className}">${meta.label}</span>
+          <span class="invoice-selected-mark"><i class="fa-solid fa-check"></i></span>
+        </div>
+      </div>
+      <div class="invoice-values">
+        <div><span>Total</span><strong>${formatCurrency(invoice.total)}</strong></div>
+        <div><span>Pago</span><strong class="text-income">${formatCurrency(invoice.paid)}</strong></div>
+        <div><span>Restante</span><strong class="${remaining > 0 ? "amount-negative" : ""}">${formatCurrency(remaining)}</strong></div>
+      </div>
+      ${
+        canPay
+          ? `<button class="btn-primary invoice-pay-btn" type="button" data-action="pay-invoice" data-invoice-id="${invoice.id}"><i class="fa-solid fa-check"></i> Pagar fatura</button>`
+          : isPaid
+            ? `<p class="invoice-paid-note"><i class="fa-solid fa-circle-check"></i> Fatura quitada</p>`
+            : ""
+      }
+    </article>
+  `;
+}
+
+function purchaseRow({ name, category, date, value, meta }) {
+  return `
+    <div class="history-item">
+      <div>
+        <strong class="item-title">${name}</strong>
+        <p class="item-meta">${category} • ${formatDateLabel(date)}${meta || ""}</p>
+      </div>
+      <strong class="amount-negative">${formatCurrency(value)}</strong>
+    </div>`;
+}
+
+function renderPurchasesList(purchases) {
+  if (!purchases || !purchases.length) {
+    return `<div class="empty-state compact"><div><i class="fa-solid fa-cart-shopping"></i><p>Nenhuma compra registrada neste cartão.</p></div></div>`;
+  }
+  return `<div class="mini-list">${purchases.map((purchase) => purchaseRow(purchase)).join("")}</div>`;
+}
+
+function renderInvoiceItems(items) {
+  if (!items || !items.length) {
+    return `<div class="empty-state compact"><div><i class="fa-solid fa-receipt"></i><p>Nenhuma compra vinculada a esta fatura.</p></div></div>`;
+  }
+  return `<div class="mini-list">${items
+    .map((item) =>
+      purchaseRow({
+        name: item.name,
+        category: item.category,
+        date: item.date,
+        value: item.value,
+        meta:
+          item.installmentsTotal > 1
+            ? ` • Parcela ${item.installmentNumber}/${item.installmentsTotal}`
+            : "",
+      }),
+    )
+    .join("")}</div>`;
+}
+
+function swapPurchasesContent(html) {
+  const list = document.querySelector("#purchasesList");
+  if (!list) return;
+  list.innerHTML = html;
+  list.classList.remove("purchases-swap");
+  void list.offsetWidth;
+  list.classList.add("purchases-swap");
+}
+
+function restoreAllPurchases() {
+  const title = document.querySelector("#purchasesTitle");
+  const countPill = document.querySelector("#purchasesCount");
+  const clearBtn = document.querySelector("#purchasesClear");
+  const purchases = cardDetailData?.purchases || [];
+  if (title) title.textContent = "Compras cadastradas";
+  if (countPill)
+    countPill.textContent = `${purchases.length} ${purchases.length === 1 ? "compra" : "compras"}`;
+  clearBtn?.classList.add("is-hidden");
+  swapPurchasesContent(renderPurchasesList(purchases));
+}
+
 function cardDetailView() {
-  const card = creditCards[0];
+  const card = cardDetailData || creditCards[0];
   if (!card) {
     return `
       <section class="app-page">
@@ -1571,6 +2030,13 @@ function cardDetailView() {
   }
 
   const available = card.totalLimit - card.usedLimit;
+  const invoices = (card.invoices || [])
+    .slice()
+    .sort((a, b) => new Date(b.referenceMonth) - new Date(a.referenceMonth));
+  const openTotal = invoices
+    .filter((invoice) => invoice.status !== "paga")
+    .reduce((sum, invoice) => sum + Math.max(invoice.total - invoice.paid, 0), 0);
+  const purchases = card.purchases || [];
 
   return `
     <section class="app-page">
@@ -1578,7 +2044,7 @@ function cardDetailView() {
         <div>
           <span class="page-eyebrow">Detalhes do cartão</span>
           <h1 class="page-title">${card.name} ••• ${card.lastDigits}</h1>
-          <p class="page-subtitle">${card.notes || "Acompanhe limite, vencimentos e compras cadastradas neste cartão."}</p>
+          <p class="page-subtitle">${card.notes || "Acompanhe limite, vencimentos e faturas cadastradas neste cartão."}</p>
         </div>
         <div class="hero-actions">
           <button class="btn-secondary" type="button" data-action="edit-card" data-card-id="${card.id}"><i class="fa-solid fa-pen"></i> Editar</button>
@@ -1594,30 +2060,143 @@ function cardDetailView() {
         <div class="detail-stat"><span>Fechamento</span><strong>Dia ${card.closingDay}</strong></div>
         <div class="detail-stat"><span>Vencimento</span><strong>Dia ${card.dueDay}</strong></div>
         <div class="detail-stat"><span>Fatura Atual</span><strong>${formatCurrency(card.invoiceCurrent)}</strong></div>
-        <div class="detail-stat"><span>Próxima Fatura</span><strong>${formatCurrency(card.nextInvoice)}</strong></div>
+        <div class="detail-stat"><span>Em aberto</span><strong class="${openTotal > 0 ? "amount-negative" : ""}">${formatCurrency(openTotal)}</strong></div>
       </div>
 
       <section class="premium-card">
         <div class="card-title-row">
-          <h2>Compras cadastradas</h2>
-          <span class="pill">${card.purchases.length} compras</span>
+          <h2>Faturas</h2>
+          <span class="pill">${invoices.length} ${invoices.length === 1 ? "fatura" : "faturas"}</span>
         </div>
-        <div class="mini-list">
-          ${card.purchases
-            .map(
-              (purchase) => `
-                <div class="history-item">
-                  <div>
-                    <strong class="item-title">${purchase.name}</strong>
-                    <p class="item-meta">${purchase.category} • ${formatDateLabel(purchase.date)}</p>
-                  </div>
-                  <strong class="amount-negative">${formatCurrency(purchase.value)}</strong>
-                </div>
-              `,
-            )
-            .join("")}
+        ${
+          invoices.length
+            ? `<div class="invoices-grid">${invoices.map(invoiceCard).join("")}</div>`
+            : `<div class="empty-state compact"><div><i class="fa-solid fa-file-invoice-dollar"></i><p>Nenhuma fatura gerada ainda. Faça uma compra neste cartão para gerar a primeira fatura.</p></div></div>`
+        }
+      </section>
+
+      <section class="premium-card">
+        <div class="card-title-row">
+          <h2 id="purchasesTitle">Compras cadastradas</h2>
+          <div class="purchases-head-right">
+            <button class="purchases-clear is-hidden" id="purchasesClear" type="button" data-action="clear-invoice-filter"><i class="fa-solid fa-xmark"></i> Ver todas</button>
+            <span class="pill" id="purchasesCount">${purchases.length} ${purchases.length === 1 ? "compra" : "compras"}</span>
+          </div>
+        </div>
+        <div id="purchasesList">${renderPurchasesList(purchases)}</div>
+      </section>
+    </section>
+  `;
+}
+
+const MOVEMENT_TYPE_LABELS = {
+  receita: "Receita",
+  despesa: "Despesa",
+  transferencia: "Transferência",
+  pagamento_fatura: "Pagamento de fatura",
+  compra_parcelada: "Compra no cartão",
+  recorrencia: "Recorrência",
+};
+
+function movementTypeLabel(type) {
+  return MOVEMENT_TYPE_LABELS[type] || "Movimentação";
+}
+
+function accountMovementRow(movement) {
+  const amountClass =
+    movement.flow === "in" ? "amount-positive" : "amount-negative";
+
+  return `
+    <div class="history-item">
+      <div>
+        <strong class="item-title">${movement.description}</strong>
+        <p class="item-meta">${movement.category || movementTypeLabel(movement.type)} • ${formatDateLabel(movement.date)}</p>
+      </div>
+      <strong class="${amountClass}">${formatCurrency(movement.value)}</strong>
+    </div>`;
+}
+
+function accountDetailView() {
+  const account = accountDetailData;
+  if (!account) {
+    return `
+      <section class="app-page">
+        <div class="empty-state">
+          <div>
+            <i class="fa-solid fa-building-columns"></i>
+            <h2 class="font-title-md">Conta não encontrada</h2>
+            <p>Selecione uma conta na lista para ver os detalhes.</p>
+            <a class="btn-primary" href="#contas-bancos"><i class="fa-solid fa-arrow-left"></i> Voltar para Minhas Contas</a>
+          </div>
         </div>
       </section>
+    `;
+  }
+
+  const income = Number(account.monthIncome || 0);
+  const expenses = Number(account.monthExpenses || 0);
+  const flow = income - expenses;
+  const maxValue = Math.max(income, expenses, Math.abs(flow), 1);
+  const barHeight = (value) =>
+    Math.max(Math.round((Math.abs(value) / maxValue) * 88), 6);
+  const movements = account.movements || [];
+  const icon = resolveIcon(account.icon, "fa-building-columns");
+
+  return `
+    <section class="app-page">
+      <div class="page-hero">
+        <div>
+          <span class="page-eyebrow"><i class="fa-solid ${icon}"></i> Detalhes da conta</span>
+          <h1 class="page-title">${account.name}</h1>
+          <p class="page-subtitle">${account.notes || `${accountTypeLabel(account.type)}${account.institution ? ` • ${account.institution}` : ""}`}</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn-secondary" type="button" data-action="edit-account" data-account-id="${account.id}"><i class="fa-solid fa-pen"></i> Editar</button>
+          <button class="btn-danger" type="button" data-action="remove-account" data-account-id="${account.id}"><i class="fa-solid fa-trash"></i> Excluir</button>
+        </div>
+      </div>
+
+      <div class="detail-stat-grid">
+        <div class="detail-stat"><span>Instituição</span><strong>${account.institution || "-"}</strong></div>
+        <div class="detail-stat"><span>Tipo</span><strong>${accountTypeLabel(account.type)}</strong></div>
+        <div class="detail-stat"><span>Saldo Atual</span><strong>${formatCurrency(account.balance)}</strong></div>
+        <div class="detail-stat"><span>Receitas do mês</span><strong class="text-income">${formatCurrency(income)}</strong></div>
+        <div class="detail-stat"><span>Despesas do mês</span><strong class="text-expense">${formatCurrency(expenses)}</strong></div>
+        <div class="detail-stat"><span>Última movimentação</span><strong>${relativeDayLabel(account.lastMovement)}</strong></div>
+        <div class="detail-stat"><span>Movimentações</span><strong>${account.movementsCount || movements.length}</strong></div>
+        <div class="detail-stat"><span>Fluxo do mês</span><strong class="${flow >= 0 ? "text-income" : "text-expense"}">${formatCurrency(flow)}</strong></div>
+      </div>
+
+      <div class="wealth-grid">
+        <section class="chart-card">
+          <div class="card-title-row">
+            <h2>Fluxo do mês</h2>
+            <span class="pill">${formatCurrency(flow)}</span>
+          </div>
+          <div class="bar-chart" aria-label="Entradas, saídas e fluxo de caixa do mês">
+            <span style="height: ${barHeight(income)}%" data-label="Entradas"></span>
+            <span style="height: ${barHeight(expenses)}%" data-label="Saídas"></span>
+            <span style="height: ${barHeight(flow)}%" data-label="Fluxo"></span>
+          </div>
+          <div class="mini-list patrimony-breakdown">
+            <div class="history-item"><span>Entradas</span><strong class="text-income">${formatCurrency(income)}</strong></div>
+            <div class="history-item"><span>Saídas</span><strong class="text-expense">${formatCurrency(expenses)}</strong></div>
+            <div class="history-item"><span>Fluxo de caixa</span><strong class="${flow >= 0 ? "text-income" : "text-expense"}">${formatCurrency(flow)}</strong></div>
+          </div>
+        </section>
+
+        <section class="premium-card">
+          <div class="card-title-row">
+            <h2>Histórico completo</h2>
+            <span class="pill">${movements.length} ${movements.length === 1 ? "movimentação" : "movimentações"}</span>
+          </div>
+          ${
+            movements.length
+              ? `<div class="mini-list">${movements.map(accountMovementRow).join("")}</div>`
+              : `<div class="empty-state compact"><div><i class="fa-solid fa-receipt"></i><p>Nenhuma movimentação registrada nesta conta ainda.</p></div></div>`
+          }
+        </section>
+      </div>
     </section>
   `;
 }
@@ -2116,15 +2695,31 @@ async function renderRoute() {
 
   await loadAppData();
 
+  if (viewRoute === "cartao-detalhe") {
+    const cardId = selectedCardId || creditCards[0]?.id || null;
+    cardDetailData = cardId
+      ? await cardsService.detail(cardId).catch(() => null)
+      : null;
+  }
+
+  if (viewRoute === "conta-detalhe") {
+    const accountId = selectedAccountId || accounts[0]?.id || null;
+    accountDetailData = accountId
+      ? await accountsService.detail(accountId).catch(() => null)
+      : null;
+  }
+
   const views = {
     dashboard: dashboardView,
     transacoes: transactionsView,
     patrimonio: wealthView,
     "investimento-detalhe": investmentDetailView,
     "contas-resumo": billsSummaryView,
+    "contas-bancos": accountsView,
     "contas-despesas": billsView,
     "contas-cartoes": cardsView,
     "cartao-detalhe": cardDetailView,
+    "conta-detalhe": accountDetailView,
     metas: goalsView,
     perfil: profileView,
   };
@@ -2141,6 +2736,8 @@ document.addEventListener("input", (event) => {
   if (event.target.closest("#billFilters")) renderBillsList();
   if (event.target.matches("#cardColor"))
     updateCardColorPreview(event.target.value);
+  if (event.target.matches("#accountColor"))
+    updateAccountColorPreview(event.target.value);
 });
 
 document.addEventListener("change", (event) => {
@@ -2170,6 +2767,12 @@ document.addEventListener("submit", async (event) => {
   if (event.target.matches("#cardForm")) {
     event.preventDefault();
     await addCardFromForm();
+    return;
+  }
+
+  if (event.target.matches("#accountForm")) {
+    event.preventDefault();
+    await addAccountFromForm();
   }
 });
 
@@ -2338,6 +2941,27 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  if (event.target === accountModal) {
+    closeAccountDialog();
+    return;
+  }
+
+  if (event.target.closest("#closeAccountModal")) {
+    closeAccountDialog();
+    return;
+  }
+
+  if (event.target.closest("#cancelAccountForm")) {
+    closeAccountDialog({ reset: true });
+    return;
+  }
+
+  const accountIconOption = event.target.closest("[data-account-icon]");
+  if (accountIconOption) {
+    setAccountIcon(accountIconOption.dataset.accountIcon);
+    return;
+  }
+
   const quickAdd = event.target.closest("[data-quick-add]")?.dataset.quickAdd;
   if (quickAdd === "expense") {
     openExpenseModal();
@@ -2382,12 +3006,90 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "add-bill") {
-    openBillModal();
+    movementModal.openType("conta");
     return;
   }
 
   if (action === "add-card") {
     openCardModal();
+    return;
+  }
+
+  if (action === "view-card") {
+    selectedCardId =
+      event.target.closest("[data-card-id]")?.dataset.cardId || null;
+    window.location.hash = "cartao-detalhe";
+    return;
+  }
+
+  if (action === "select-invoice") {
+    const invoiceId = event.target.closest("[data-invoice-id]")?.dataset
+      .invoiceId;
+    if (!invoiceId) return;
+    const card = document.querySelector(`[data-invoice-card="${invoiceId}"]`);
+    const wasSelected = card?.classList.contains("is-selected");
+
+    document
+      .querySelectorAll(".invoice-card.is-selected")
+      .forEach((el) => el.classList.remove("is-selected"));
+
+    if (wasSelected) {
+      restoreAllPurchases();
+      return;
+    }
+
+    card?.classList.add("is-selected");
+    const title = document.querySelector("#purchasesTitle");
+    const countPill = document.querySelector("#purchasesCount");
+    const clearBtn = document.querySelector("#purchasesClear");
+    if (title) title.textContent = `Compras • ${card?.dataset.month || "fatura"}`;
+    clearBtn?.classList.remove("is-hidden");
+    swapPurchasesContent(
+      `<div class="empty-state compact"><div><i class="fa-solid fa-spinner fa-spin"></i><p>Carregando compras da fatura...</p></div></div>`,
+    );
+
+    try {
+      const items = await invoicesService.items(invoiceId);
+      if (countPill)
+        countPill.textContent = `${items.length} ${items.length === 1 ? "compra" : "compras"}`;
+      swapPurchasesContent(renderInvoiceItems(items));
+    } catch (error) {
+      swapPurchasesContent(
+        `<p class="invoice-items-empty">${error?.message || "Não foi possível carregar as compras."}</p>`,
+      );
+    }
+    return;
+  }
+
+  if (action === "clear-invoice-filter") {
+    document
+      .querySelectorAll(".invoice-card.is-selected")
+      .forEach((el) => el.classList.remove("is-selected"));
+    restoreAllPurchases();
+    return;
+  }
+
+  if (action === "pay-invoice") {
+    const invoiceId = event.target.closest("[data-invoice-id]")?.dataset
+      .invoiceId;
+    if (!invoiceId) return;
+    const confirmed = await confirmDialog({
+      title: "Pagar fatura",
+      message:
+        "Todas as parcelas desta fatura serão marcadas como pagas e o limite do cartão será restaurado.",
+      confirmText: "Pagar fatura",
+      tone: "primary",
+      icon: "fa-circle-check",
+    });
+    if (confirmed) {
+      try {
+        await invoicesService.pay(invoiceId);
+        showToast("Fatura paga com sucesso.");
+        await reloadAndRender();
+      } catch (error) {
+        showToast(error?.message || "Não foi possível pagar a fatura.");
+      }
+    }
     return;
   }
 
@@ -2406,9 +3108,11 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "delete-bill") {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir esta conta?",
-    );
+    const confirmed = await confirmDialog({
+      title: "Excluir conta",
+      message: "Tem certeza que deseja excluir esta conta? Essa ação não pode ser desfeita.",
+      confirmText: "Excluir",
+    });
     if (confirmed) {
       const billId = event.target.closest("[data-bill-id]")?.dataset.billId;
       await billsService.remove(billId);
@@ -2419,14 +3123,70 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "delete-card") {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir este cartão?",
-    );
+    const confirmed = await confirmDialog({
+      title: "Excluir cartão",
+      message: "Tem certeza que deseja excluir este cartão? Faturas e compras vinculadas serão perdidas.",
+      confirmText: "Excluir",
+    });
     if (confirmed) {
       const cardId = event.target.closest("[data-card-id]")?.dataset.cardId;
       await cardsService.remove(cardId);
       showToast("Cartão excluído com segurança.");
       await reloadAndRender();
+    }
+    return;
+  }
+
+  if (action === "add-account") {
+    openAccountModal();
+    return;
+  }
+
+  if (action === "view-account") {
+    selectedAccountId =
+      event.target.closest("[data-account-id]")?.dataset.accountId || null;
+    window.location.hash = "conta-detalhe";
+    return;
+  }
+
+  if (action === "edit-account") {
+    const accountId = event.target.closest("[data-account-id]")?.dataset
+      .accountId;
+    const account = accounts.find(
+      (item) => String(item.id) === String(accountId),
+    );
+    if (account) openAccountModal(account);
+    return;
+  }
+
+  if (action === "remove-account") {
+    const accountId = event.target.closest("[data-account-id]")?.dataset
+      .accountId;
+    const account = accounts.find(
+      (item) => String(item.id) === String(accountId),
+    );
+    const confirmed = await confirmDialog({
+      title: "Excluir conta",
+      message: `Tem certeza que deseja excluir ${account?.name ? `a conta "${account.name}"` : "esta conta"}? Essa ação não pode ser desfeita.`,
+      confirmText: "Excluir",
+    });
+    if (confirmed) {
+      try {
+        await accountsService.remove(accountId);
+        showToast("Conta excluída com segurança.");
+        if (String(selectedAccountId) === String(accountId)) {
+          selectedAccountId = null;
+          accountDetailData = null;
+        }
+        if (getRoute() === "conta-detalhe") {
+          await loadAppData({ force: true });
+          window.location.hash = "contas-bancos";
+        } else {
+          await reloadAndRender();
+        }
+      } catch (error) {
+        showToast(error?.message || "Não foi possível excluir a conta.");
+      }
     }
     return;
   }
@@ -2437,7 +3197,7 @@ document.addEventListener("click", async (event) => {
     const transaction = transactions.find(
       (item) => String(item.id) === String(transactionId),
     );
-    if (transaction) openExpenseModal(transaction);
+    if (transaction) movementModal.openEdit(transaction);
     return;
   }
 
@@ -2454,7 +3214,7 @@ document.addEventListener("click", async (event) => {
   if (action === "edit-bill") {
     const billId = event.target.closest("[data-bill-id]")?.dataset.billId;
     const bill = bills.find((item) => String(item.id) === String(billId));
-    if (bill) openBillModal(bill);
+    if (bill) movementModal.openEdit(bill, "conta");
     return;
   }
 
@@ -2483,23 +3243,27 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "delete-investment") {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir este investimento?",
-    );
+    const confirmed = await confirmDialog({
+      title: "Excluir investimento",
+      message: "Tem certeza que deseja excluir este investimento? Essa ação não pode ser desfeita.",
+      confirmText: "Excluir",
+    });
     if (confirmed) showToast("Investimento excluído com segurança.");
     return;
   }
 
   if (action === "delete-account") {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir sua conta? Essa ação exige confirmação.",
-    );
+    const confirmed = await confirmDialog({
+      title: "Excluir conta",
+      message: "Tem certeza que deseja excluir sua conta? Essa ação é permanente e exige confirmação.",
+      confirmText: "Excluir conta",
+    });
     if (confirmed) showToast("Solicitação de exclusão registrada.");
     return;
   }
 
   if (action === "add-transaction") {
-    openExpenseModal();
+    movementModal.open();
     return;
   }
 
@@ -2514,8 +3278,18 @@ document.addEventListener("click", async (event) => {
   }
 });
 
+const movementModal = createMovementModal({
+  getAccounts: () => accounts,
+  getCards: () => creditCards,
+  onSaved: async (message) => {
+    showToast(message);
+    await reloadAndRender();
+  },
+  showToast,
+});
+
 quickAction.addEventListener("click", () => {
-  toggleQuickActionMenu();
+  movementModal.open();
 });
 
 document.addEventListener("keydown", (event) => {
@@ -2541,6 +3315,10 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape" && !cardModal?.classList.contains("isHidden")) {
     closeCardDialog();
+  }
+
+  if (event.key === "Escape" && !accountModal?.classList.contains("isHidden")) {
+    closeAccountDialog();
   }
 });
 
