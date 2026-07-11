@@ -161,6 +161,7 @@ CREATE TABLE cartoes (
     limite_disponivel NUMERIC(14,2) NOT NULL,
     dia_fechamento SMALLINT NOT NULL,
     dia_vencimento SMALLINT NOT NULL,
+    cor VARCHAR(7) DEFAULT '#0d6efd',
     status status_enum NOT NULL DEFAULT 'ativa',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -170,6 +171,7 @@ CREATE TABLE cartoes (
     CONSTRAINT chk_cartoes_limite_disponivel CHECK (limite_disponivel >= 0 AND limite_disponivel <= limite_total),
     CONSTRAINT chk_cartoes_dia_fechamento CHECK (dia_fechamento BETWEEN 1 AND 31),
     CONSTRAINT chk_cartoes_dia_vencimento CHECK (dia_vencimento BETWEEN 1 AND 31),
+    CONSTRAINT chk_cartoes_cor_hex CHECK (cor IS NULL OR cor ~ '^#[0-9A-Fa-f]{6}$'),
     CONSTRAINT chk_cartoes_status CHECK (status IN ('ativa', 'inativa'))
 );
 
