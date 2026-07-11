@@ -1,8 +1,10 @@
 const { z } = require("zod");
 
+const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "ID invalido.");
+
 const idParam = z.object({
   params: z.object({
-    id: z.string().uuid("ID invalido."),
+    id: uuid,
   }),
 });
 
@@ -13,7 +15,7 @@ const body = z.object({
     type: z.enum(["receita", "despesa", "transferencia", "pagamento_fatura", "compra_parcelada", "recorrencia"]).optional(),
     payment: z.enum(["dinheiro", "pix", "debito", "credito", "boleto", "transferencia", "cartao_credito", "outros"]).optional(),
     status: z.enum(["pendente", "confirmada", "cancelada", "paga"]).optional(),
-    accountId: z.string().uuid().optional().nullable(),
+    accountId: uuid.optional().nullable(),
     notes: z.string().optional().nullable(),
   });
 

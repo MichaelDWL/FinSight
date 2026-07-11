@@ -39,7 +39,9 @@ const formatDateLabel = (isoDate) => {
   if (!isoDate) return "";
 
   const [year, month, day] = isoDate.split("-").map(Number);
-  return new Intl.DateTimeFormat("pt-BR").format(new Date(year, month - 1, day));
+  return new Intl.DateTimeFormat("pt-BR").format(
+    new Date(year, month - 1, day),
+  );
 };
 
 const toIsoDate = (date) => {
@@ -58,6 +60,10 @@ let bills = [];
 let goals = [];
 let currentUser = null;
 let isLoadingData = false;
+let editingTransactionId = null;
+let editingInvestmentId = null;
+let editingBillId = null;
+let editingCardId = null;
 
 const routeTitles = {
   dashboard: "Dashboard",
@@ -82,6 +88,49 @@ function showToast(message = "Tudo certo. Sua ação foi registrada.") {
   }, 2600);
 }
 
+function setModalCopy(
+  modal,
+  { tag, title, description, buttonIcon, buttonText },
+) {
+  modal
+    ?.querySelector(".new-expense-tag")
+    ?.replaceChildren(document.createTextNode(tag));
+  modal
+    ?.querySelector(".new-expense-header h2")
+    ?.replaceChildren(document.createTextNode(title));
+  modal
+    ?.querySelector(".new-expense-header p")
+    ?.replaceChildren(document.createTextNode(description));
+
+  const primaryButton = modal?.querySelector(".expense-primary-btn");
+  if (primaryButton) {
+    primaryButton.innerHTML = `<i class="fa-solid ${buttonIcon}"></i>${buttonText}`;
+  }
+}
+
+function setFieldValue(form, selector, value) {
+  const field = form?.querySelector(selector);
+  if (field) field.value = value ?? "";
+}
+
+function getIsoDateValue(value) {
+  return value ? String(value).slice(0, 10) : toIsoDate(new Date());
+}
+
+function updateCardColorPreview(color = "#0d6efd") {
+  const picker = cardForm?.querySelector(".card-color-picker");
+  const valueLabel = cardForm?.querySelector(".card-color-value");
+  if (!picker) return;
+
+  picker.style.setProperty("--selected-card-color", color);
+  if (valueLabel) valueLabel.textContent = color.toUpperCase();
+}
+
+function normalizeCardLastDigits(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(-3);
+  return digits.padStart(3, "0");
+}
+
 function normalizeInvestment(investment) {
   const category = investment.category || investment.type || "Investimento";
 
@@ -100,7 +149,11 @@ function normalizeGoal(goal) {
     ...goal,
     desired: Number(goal.desired ?? goal.target ?? 0),
     current: Number(goal.current ?? 0),
-    date: goal.date || (goal.deadline ? formatDateLabel(String(goal.deadline).slice(0, 10)) : "Sem prazo"),
+    date:
+      goal.date ||
+      (goal.deadline
+        ? formatDateLabel(String(goal.deadline).slice(0, 10))
+        : "Sem prazo"),
   };
 }
 
@@ -151,7 +204,10 @@ async function loadAppData({ force = false } = {}) {
 
   isLoadingData = true;
   try {
-    const [dashboard, user] = await Promise.all([dashboardService.getDashboard(), usersService.profile()]);
+    const [dashboard, user] = await Promise.all([
+      dashboardService.getDashboard(),
+      usersService.profile(),
+    ]);
     applyDashboardData(dashboard);
     currentUser = user;
     updateUserHeader();
@@ -168,10 +224,49 @@ async function reloadAndRender() {
   renderRoute();
 }
 
-function openExpenseModal() {
+function openExpenseModal(transaction = null) {
   if (!expenseModal || !expenseForm) return;
 
   closeQuickActionMenu();
+  expenseForm.reset();
+  resetExpenseSelects();
+
+  editingTransactionId = transaction?.id || null;
+
+  if (transaction) {
+    const isIncome = String(transaction.type || "")
+      .toLowerCase()
+      .includes("receita");
+    setModalCopy(expenseModal, {
+      tag: isIncome ? "Editar entrada" : "Editar saída",
+      title: isIncome ? "Editar Receita" : "Editar Despesa",
+      description:
+        "Atualize os dados salvos e mantenha seu histórico financeiro correto.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar alterações",
+    });
+    setFieldValue(expenseForm, "#desc-expense", transaction.description);
+    setFieldValue(
+      expenseForm,
+      "#value-expense",
+      Math.abs(Number(transaction.value) || 0),
+    );
+    setExpenseDate(getIsoDateValue(transaction.date));
+    setExpenseSelectValue("category", transaction.category || "Alimentação");
+    setExpenseSelectValue("payment", mapPaymentLabel(transaction.payment));
+    setExpenseSelectValue("account", transaction.account || "Nubank");
+    setFieldValue(expenseForm, "#obs-expense", transaction.notes || "");
+  } else {
+    setModalCopy(expenseModal, {
+      tag: "Nova saída",
+      title: "Adicionar Despesa",
+      description:
+        "Registre uma despesa e mantenha seus gastos sempre organizados.",
+      buttonIcon: "fa-plus",
+      buttonText: "Adicionar despesa",
+    });
+    setExpenseDate(toIsoDate(new Date()));
+  }
 
   const dateInput = expenseForm.querySelector("#date-expense");
   if (dateInput && !dateInput.value) {
@@ -193,16 +288,59 @@ function closeExpenseDialog({ reset = false } = {}) {
   if (reset) {
     expenseForm?.reset();
     resetExpenseSelects();
+    editingTransactionId = null;
   }
 }
 
-function openInvestmentModal() {
+function openInvestmentModal(investment = null) {
   if (!investmentModal || !investmentForm) return;
 
   closeQuickActionMenu();
   setInvestmentsMenuExpanded(true);
-  setInvestmentSubroute("investimento-novo");
-  setInvestmentDate(investmentForm.querySelector("#investmentDate")?.value || toIsoDate(new Date()));
+  investmentForm.reset();
+  editingInvestmentId = investment?.id || null;
+
+  if (investment) {
+    setModalCopy(investmentModal, {
+      tag: "Editar ativo",
+      title: "Editar Investimento",
+      description:
+        "Atualize as informações principais do investimento cadastrado.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar alterações",
+    });
+    setFieldValue(investmentForm, "#investmentName", investment.name);
+    setFieldValue(
+      investmentForm,
+      "#investmentCategory",
+      investment.category || investment.type || "Poupança",
+    );
+    setFieldValue(
+      investmentForm,
+      "#investmentInstitution",
+      investment.institution,
+    );
+    setFieldValue(investmentForm, "#investmentInvested", investment.invested);
+    setFieldValue(
+      investmentForm,
+      "#investmentCurrent",
+      investment.current ?? investment.value ?? investment.invested,
+    );
+    setFieldValue(investmentForm, "#investmentNotes", investment.notes || "");
+    setInvestmentDate(getIsoDateValue(investment.date));
+  } else {
+    setInvestmentSubroute("investimento-novo");
+    setModalCopy(investmentModal, {
+      tag: "Novo ativo",
+      title: "Adicionar Investimento",
+      description:
+        "Cadastre um investimento com as informações principais da sua carteira.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar investimento",
+    });
+    setInvestmentDate(toIsoDate(new Date()));
+  }
+
   investmentModal.classList.remove("isHidden");
   investmentModal.setAttribute("aria-hidden", "false");
   investmentForm.querySelector("#investmentName")?.focus();
@@ -215,15 +353,54 @@ function closeInvestmentDialog({ reset = false } = {}) {
   investmentModal.classList.add("isHidden");
   investmentModal.setAttribute("aria-hidden", "true");
 
-  if (reset) investmentForm?.reset();
-  setActiveRoute(getRoute() === "investimento-novo" ? "patrimonio" : getRoute());
+  if (reset) {
+    investmentForm?.reset();
+    editingInvestmentId = null;
+  }
+  setActiveRoute(
+    getRoute() === "investimento-novo" ? "patrimonio" : getRoute(),
+  );
 }
 
-function openBillModal() {
+function openBillModal(bill = null) {
   if (!billModal || !billForm) return;
 
   closeQuickActionMenu();
   setAccountsMenuExpanded(true);
+  billForm.reset();
+  editingBillId = bill?.id || null;
+
+  if (bill) {
+    setModalCopy(billModal, {
+      tag: "Editar conta",
+      title: "Editar Conta",
+      description: "Atualize vencimento, valor e pagamento da conta salva.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar alterações",
+    });
+    setFieldValue(billForm, "#billName", bill.name);
+    setFieldValue(billForm, "#billCategory", bill.category || "Moradia");
+    setFieldValue(billForm, "#billValue", bill.value);
+    setFieldValue(billForm, "#billDueDate", getIsoDateValue(bill.dueDate));
+    setFieldValue(billForm, "#billAccount", bill.account || "Nubank");
+    setFieldValue(
+      billForm,
+      "#billPayment",
+      mapPaymentLabel(bill.payment || bill.paymentMethod),
+    );
+    setFieldValue(billForm, "#billRecurring", bill.recurring ? "Sim" : "Não");
+    setFieldValue(billForm, "#billNotes", bill.notes || "");
+  } else {
+    setModalCopy(billModal, {
+      tag: "Nova conta",
+      title: "Adicionar Conta",
+      description:
+        "Cadastre uma conta para acompanhar vencimento, pagamento e valor do mês.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar conta",
+    });
+  }
+
   billModal.classList.remove("isHidden");
   billModal.setAttribute("aria-hidden", "false");
   billForm.querySelector("#billName")?.focus();
@@ -234,14 +411,51 @@ function closeBillDialog({ reset = false } = {}) {
 
   billModal.classList.add("isHidden");
   billModal.setAttribute("aria-hidden", "true");
-  if (reset) billForm?.reset();
+  if (reset) {
+    billForm?.reset();
+    editingBillId = null;
+  }
 }
 
-function openCardModal() {
+function openCardModal(card = null) {
   if (!cardModal || !cardForm) return;
 
   closeQuickActionMenu();
   setAccountsMenuExpanded(true);
+  cardForm.reset();
+  editingCardId = card?.id || null;
+
+  if (card) {
+    setModalCopy(cardModal, {
+      tag: "Editar cartão",
+      title: "Editar Cartão",
+      description:
+        "Atualize identificação, limite e vencimentos do cartão salvo.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar alterações",
+    });
+    setFieldValue(cardForm, "#cardName", card.name);
+    setFieldValue(cardForm, "#cardBank", card.bank);
+    setFieldValue(cardForm, "#cardBrand", card.brand || "Mastercard");
+    setFieldValue(cardForm, "#cardLastDigits", normalizeCardLastDigits(card.lastDigits));
+    setFieldValue(cardForm, "#cardColor", card.color || "#0d6efd");
+    updateCardColorPreview(card.color || "#0d6efd");
+    setFieldValue(cardForm, "#cardLimit", card.totalLimit);
+    setFieldValue(cardForm, "#cardClosingDay", card.closingDay);
+    setFieldValue(cardForm, "#cardDueDay", card.dueDay);
+    setFieldValue(cardForm, "#cardNotes", card.notes || "");
+  } else {
+    updateCardColorPreview("#0d6efd");
+    setModalCopy(cardModal, {
+      tag: "Novo cartão",
+      title: "Adicionar Cartão",
+      description:
+        "Informe apenas dados de identificação. Nunca pedimos o número completo do cartão.",
+      buttonIcon: "fa-check",
+      buttonText: "Salvar cartão",
+    });
+  }
+
   cardModal.classList.remove("isHidden");
   cardModal.setAttribute("aria-hidden", "false");
   cardForm.querySelector("#cardName")?.focus();
@@ -252,7 +466,10 @@ function closeCardDialog({ reset = false } = {}) {
 
   cardModal.classList.add("isHidden");
   cardModal.setAttribute("aria-hidden", "true");
-  if (reset) cardForm?.reset();
+  if (reset) {
+    cardForm?.reset();
+    editingCardId = null;
+  }
 }
 
 function closeQuickActionMenu() {
@@ -269,7 +486,9 @@ function toggleQuickActionMenu() {
 
 function setInvestmentsMenuExpanded(expanded) {
   const group = document.querySelector("[data-nav-group='investments']");
-  const toggle = group?.querySelector("[data-action='toggle-investments-menu']");
+  const toggle = group?.querySelector(
+    "[data-action='toggle-investments-menu']",
+  );
   if (!group || !toggle) return;
 
   group.classList.toggle("nav-group-open", expanded);
@@ -296,16 +515,23 @@ function toggleAccountsMenu() {
 }
 
 function setInvestmentSubroute(activeRoute) {
-  document.querySelectorAll(".nav-submenu [data-route], .nav-submenu [data-subroute]").forEach((item) => {
-    const route = item.dataset.route || item.dataset.subroute;
-    item.classList.toggle("nav-subitem-active", route === activeRoute);
-  });
+  document
+    .querySelectorAll(".nav-submenu [data-route], .nav-submenu [data-subroute]")
+    .forEach((item) => {
+      const route = item.dataset.route || item.dataset.subroute;
+      item.classList.toggle("nav-subitem-active", route === activeRoute);
+    });
 }
 
 function setAccountSubroute(activeRoute) {
-  document.querySelectorAll("[data-nav-group='accounts'] .nav-submenu [data-route]").forEach((item) => {
-    item.classList.toggle("nav-subitem-active", item.dataset.route === activeRoute);
-  });
+  document
+    .querySelectorAll("[data-nav-group='accounts'] .nav-submenu [data-route]")
+    .forEach((item) => {
+      item.classList.toggle(
+        "nav-subitem-active",
+        item.dataset.route === activeRoute,
+      );
+    });
 }
 
 function setExpenseDate(isoDate) {
@@ -401,7 +627,11 @@ function collapseExpenseSelect(select) {
 function resetExpenseSelects() {
   expenseForm?.querySelectorAll("[data-expense-select]").forEach((select) => {
     [...select.children]
-      .sort((first, second) => Number(first.dataset.initialIndex) - Number(second.dataset.initialIndex))
+      .sort(
+        (first, second) =>
+          Number(first.dataset.initialIndex) -
+          Number(second.dataset.initialIndex),
+      )
       .forEach((item) => select.append(item));
 
     select.classList.remove("is-open");
@@ -411,6 +641,34 @@ function resetExpenseSelects() {
     const firstItem = select.querySelector("li");
     if (hiddenInput && firstItem) hiddenInput.value = firstItem.dataset.value;
   });
+}
+
+function setExpenseSelectValue(name, value) {
+  const select = expenseForm?.querySelector(`[data-expense-select="${name}"]`);
+  if (!select) return;
+
+  [...select.children]
+    .sort(
+      (first, second) =>
+        Number(first.dataset.initialIndex) -
+        Number(second.dataset.initialIndex),
+    )
+    .forEach((item) => select.append(item));
+
+  const selectedItem = [...select.children].find(
+    (item) => item.dataset.value === value,
+  );
+  const hiddenInput = select.previousElementSibling;
+
+  if (selectedItem) {
+    select.prepend(selectedItem);
+    if (hiddenInput) hiddenInput.value = selectedItem.dataset.value;
+  } else if (hiddenInput) {
+    hiddenInput.value = value;
+  }
+
+  select.classList.remove("is-open");
+  collapseExpenseSelect(select);
 }
 
 function initializeExpenseSelects() {
@@ -449,22 +707,57 @@ function mapPaymentMethod(payment) {
   return paymentMap[payment] || "pix";
 }
 
+function mapPaymentLabel(payment) {
+  const paymentMap = {
+    pix: "Pix",
+    debito: "Cartão de Débito",
+    credito: "Cartão de Crédito",
+    cartao_credito: "Cartão de Crédito",
+    dinheiro: "Dinheiro",
+    boleto: "Boleto",
+    transferencia: "Pix",
+    outros: "Pix",
+  };
+
+  return paymentMap[payment] || payment || "Pix";
+}
+
 async function addExpenseFromForm() {
   if (!expenseForm) return;
 
   const formData = new FormData(expenseForm);
   const value = Number(formData.get("value")) || 0;
-
-  await transactionsService.create({
+  const currentTransaction = transactions.find(
+    (transaction) => String(transaction.id) === String(editingTransactionId),
+  );
+  const transactionType = String(currentTransaction?.type || "despesa")
+    .toLowerCase()
+    .includes("receita")
+    ? "receita"
+    : "despesa";
+  const payload = {
     description: formData.get("description") || "Nova despesa",
     value: Math.abs(value),
     date: formData.get("date") || new Date().toISOString().slice(0, 10),
-    type: "despesa",
+    type: editingTransactionId ? transactionType : "despesa",
     payment: mapPaymentMethod(formData.get("payment")),
-  });
+    status: currentTransaction?.status || "confirmada",
+    notes: formData.get("notes") || "",
+  };
 
+  if (editingTransactionId) {
+    await transactionsService.update(editingTransactionId, payload);
+  } else {
+    await transactionsService.create(payload);
+  }
+
+  const wasEditing = Boolean(editingTransactionId);
   closeExpenseDialog({ reset: true });
-  showToast("Despesa adicionada com sucesso.");
+  showToast(
+    wasEditing
+      ? "Despesa atualizada com sucesso."
+      : "Despesa adicionada com sucesso.",
+  );
   await reloadAndRender();
 }
 
@@ -486,18 +779,28 @@ async function addInvestmentFromForm() {
   const formData = new FormData(investmentForm);
   const invested = Number(formData.get("invested")) || 0;
   const current = Number(formData.get("current")) || invested;
-
-  await investmentsService.create({
+  const payload = {
     name: formData.get("name") || "Novo investimento",
     institution: formData.get("institution") || "Instituição",
     invested,
     value: current,
     date: formData.get("date") || toIsoDate(new Date()),
     notes: formData.get("notes") || "Investimento cadastrado no FinSight.",
-  });
+  };
 
+  if (editingInvestmentId) {
+    await investmentsService.update(editingInvestmentId, payload);
+  } else {
+    await investmentsService.create(payload);
+  }
+
+  const wasEditing = Boolean(editingInvestmentId);
   closeInvestmentDialog({ reset: true });
-  showToast("Investimento salvo com sucesso.");
+  showToast(
+    wasEditing
+      ? "Investimento atualizado com sucesso."
+      : "Investimento salvo com sucesso.",
+  );
   await reloadAndRender();
 }
 
@@ -512,10 +815,18 @@ function getBillStatus(bill) {
   }
 
   if (bill.dueDate < today) {
-    return { label: "Atrasado", className: "status-late", icon: "fa-circle-exclamation" };
+    return {
+      label: "Atrasado",
+      className: "status-late",
+      icon: "fa-circle-exclamation",
+    };
   }
 
-  return { label: "Pendente", className: "status-pending", icon: "fa-hourglass-half" };
+  return {
+    label: "Pendente",
+    className: "status-pending",
+    icon: "fa-hourglass-half",
+  };
 }
 
 function getBillIcon(category) {
@@ -557,8 +868,7 @@ function billCard(bill, compact = false) {
         compact
           ? ""
           : `<div class="bill-actions">
-              <button class="btn-secondary" type="button" data-action="edit-bill">Editar</button>
-              <button class="btn-secondary" type="button" data-action="toggle-bill-paid" data-bill-id="${bill.id}">${bill.paid ? "Voltar para Pendente" : "Marcar como Pago"}</button>
+              <button class="btn-secondary" type="button" data-action="edit-bill" data-bill-id="${bill.id}">Editar</button>
               <button class="btn-danger" type="button" data-action="delete-bill" data-bill-id="${bill.id}">Excluir</button>
             </div>`
       }
@@ -592,7 +902,7 @@ function cardSummary(card) {
       <p class="item-meta">${formatCurrency(available)} disponível</p>
       <div class="card-actions">
         <a class="btn-secondary" href="#cartao-detalhe" data-route="cartao-detalhe">Ver detalhes</a>
-        <button class="btn-secondary" type="button" data-action="edit-card">Editar</button>
+        <button class="btn-secondary" type="button" data-action="edit-card" data-card-id="${card.id}">Editar</button>
         <button class="btn-danger" type="button" data-action="delete-card" data-card-id="${card.id}">Excluir</button>
       </div>
     </article>
@@ -603,42 +913,81 @@ async function addBillFromForm() {
   if (!billForm) return;
 
   const formData = new FormData(billForm);
-
-  await billsService.create({
+  const currentBill = bills.find(
+    (bill) => String(bill.id) === String(editingBillId),
+  );
+  const payload = {
     name: formData.get("name") || "Nova conta",
+    category: formData.get("category") || "Moradia",
     value: Number(formData.get("value")) || 0,
     dueDate: formData.get("dueDate") || toIsoDate(new Date()),
     paymentMethod: mapPaymentMethod(formData.get("payment")),
     recurrence: formData.get("recurring") === "Sim",
+    status: currentBill?.paid ? "paga" : "pendente",
     notes: formData.get("notes") || "",
-  });
+  };
 
+  if (editingBillId) {
+    await billsService.update(editingBillId, payload);
+  } else {
+    await billsService.create(payload);
+  }
+
+  const wasEditing = Boolean(editingBillId);
   closeBillDialog({ reset: true });
-  showToast("Conta cadastrada com sucesso.");
+  showToast(
+    wasEditing
+      ? "Conta atualizada com sucesso."
+      : "Conta cadastrada com sucesso.",
+  );
   await reloadAndRender();
 }
 
 async function addCardFromForm() {
   if (!cardForm) return;
 
-  const formData = new FormData(cardForm);
-  const totalLimit = Number(formData.get("totalLimit")) || 0;
+  try {
+    const formData = new FormData(cardForm);
+    const totalLimit = Number(formData.get("totalLimit")) || 0;
+    const currentCard = creditCards.find(
+      (card) => String(card.id) === String(editingCardId),
+    );
+    const usedLimit = currentCard ? Number(currentCard.usedLimit || 0) : 0;
+    const availableLimit = Math.min(
+      Math.max(totalLimit - usedLimit, 0),
+      totalLimit,
+    );
+    const payload = {
+      name: formData.get("name") || "Novo cartão",
+      bank: formData.get("bank") || "Banco",
+      brand: formData.get("brand") || "Cartão",
+      lastDigits: normalizeCardLastDigits(formData.get("lastDigits")),
+      color: formData.get("color") || "#0d6efd",
+      closingDay: Number(formData.get("closingDay")) || 1,
+      dueDay: Number(formData.get("dueDay")) || 10,
+      totalLimit,
+      availableLimit: editingCardId ? availableLimit : undefined,
+      notes: formData.get("notes") || "",
+    };
 
-  await cardsService.create({
-    name: formData.get("name") || "Novo cartão",
-    bank: formData.get("bank") || "Banco",
-    brand: formData.get("brand") || "Cartão",
-    lastDigits: String(formData.get("lastDigits") || "000").slice(-3),
-    color: formData.get("color") || "#0d6efd",
-    closingDay: Number(formData.get("closingDay")) || 1,
-    dueDay: Number(formData.get("dueDay")) || 10,
-    totalLimit,
-    notes: formData.get("notes") || "",
-  });
+    if (editingCardId) {
+      await cardsService.update(editingCardId, payload);
+    } else {
+      await cardsService.create(payload);
+    }
 
-  closeCardDialog({ reset: true });
-  showToast("Cartão cadastrado com segurança.");
-  await reloadAndRender();
+    const wasEditing = Boolean(editingCardId);
+    closeCardDialog({ reset: true });
+    showToast(
+      wasEditing
+        ? "Cartão atualizado com sucesso."
+        : "Cartão cadastrado com segurança.",
+    );
+    await reloadAndRender();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Não foi possível salvar o cartão.");
+  }
 }
 
 function getRoute() {
@@ -647,8 +996,15 @@ function getRoute() {
 }
 
 function setActiveRoute(route) {
-  const accountRoutes = ["contas-resumo", "contas-despesas", "contas-cartoes", "cartao-detalhe"];
-  const activeRoute = ["investimento-novo", "investimento-detalhe"].includes(route)
+  const accountRoutes = [
+    "contas-resumo",
+    "contas-despesas",
+    "contas-cartoes",
+    "cartao-detalhe",
+  ];
+  const activeRoute = ["investimento-novo", "investimento-detalhe"].includes(
+    route,
+  )
     ? "patrimonio"
     : accountRoutes.includes(route)
       ? "contas-resumo"
@@ -661,15 +1017,25 @@ function setActiveRoute(route) {
     link.closest(".nav-item")?.classList.toggle("nav-active", isActive);
   });
 
-  const investmentRoutes = ["patrimonio", "investimento-novo", "investimento-detalhe"];
+  const investmentRoutes = [
+    "patrimonio",
+    "investimento-novo",
+    "investimento-detalhe",
+  ];
   const isInvestmentRoute = investmentRoutes.includes(route);
-  document.querySelector("[data-nav-group='investments']")?.classList.toggle("nav-active", isInvestmentRoute);
-  if (isInvestmentRoute && !document.body.classList.contains("sidebar-closed")) setInvestmentsMenuExpanded(true);
+  document
+    .querySelector("[data-nav-group='investments']")
+    ?.classList.toggle("nav-active", isInvestmentRoute);
+  if (isInvestmentRoute && !document.body.classList.contains("sidebar-closed"))
+    setInvestmentsMenuExpanded(true);
   setInvestmentSubroute(route);
 
   const isAccountRoute = accountRoutes.includes(route);
-  document.querySelector("[data-nav-group='accounts']")?.classList.toggle("nav-active", isAccountRoute);
-  if (isAccountRoute && !document.body.classList.contains("sidebar-closed")) setAccountsMenuExpanded(true);
+  document
+    .querySelector("[data-nav-group='accounts']")
+    ?.classList.toggle("nav-active", isAccountRoute);
+  if (isAccountRoute && !document.body.classList.contains("sidebar-closed"))
+    setAccountsMenuExpanded(true);
   setAccountSubroute(route === "cartao-detalhe" ? "contas-cartoes" : route);
 
   pageTitle.textContent = routeTitles[route];
@@ -677,7 +1043,12 @@ function setActiveRoute(route) {
 }
 
 function metricCard(label, value, icon, caption, tone = "brand") {
-  const toneClass = tone === "income" ? "text-income" : tone === "expense" ? "text-expense" : "text-brand";
+  const toneClass =
+    tone === "income"
+      ? "text-income"
+      : tone === "expense"
+        ? "text-expense"
+        : "text-brand";
 
   return `
     <article class="metric-card">
@@ -692,7 +1063,8 @@ function metricCard(label, value, icon, caption, tone = "brand") {
 }
 
 function transactionItem(transaction) {
-  const amountClass = transaction.value >= 0 ? "amount-positive" : "amount-negative";
+  const amountClass =
+    transaction.value >= 0 ? "amount-positive" : "amount-negative";
 
   return `
     <div class="list-item">
@@ -749,6 +1121,13 @@ function investmentCard(investment, compact = false) {
       </div>
       <strong class="investment-value">${formatCurrency(investment.current)}</strong>
       ${compact ? "" : `<p class="item-meta">${investment.institution} • investido em ${new Date(investment.date).toLocaleDateString("pt-BR")}</p>`}
+      ${
+        compact
+          ? ""
+          : `<div class="card-actions">
+              <button class="btn-secondary" type="button" data-action="edit-investment" data-investment-id="${investment.id}">Editar</button>
+            </div>`
+      }
     </article>
   `;
 }
@@ -921,21 +1300,37 @@ function renderTransactionsTable() {
   const table = document.querySelector("#transactionsTable");
   if (!table) return;
 
-  const category = document.querySelector("[data-filter='category']")?.value || "all";
-  const account = document.querySelector("[data-filter='account']")?.value || "all";
+  const category =
+    document.querySelector("[data-filter='category']")?.value || "all";
+  const account =
+    document.querySelector("[data-filter='account']")?.value || "all";
   const type = document.querySelector("[data-filter='type']")?.value || "all";
-  const period = document.querySelector("[data-filter='period']")?.value || "all";
-  const search = document.querySelector("[data-filter='search']")?.value.toLowerCase() || "";
+  const period =
+    document.querySelector("[data-filter='period']")?.value || "all";
+  const search =
+    document.querySelector("[data-filter='search']")?.value.toLowerCase() || "";
 
   const filtered = transactions.filter((transaction) => {
     const month = new Date(transaction.date).getMonth();
-    const matchesPeriod = period === "all" || (period === "july" && month === 6) || (period === "june" && month === 5);
-    const matchesCategory = category === "all" || transaction.category === category;
+    const matchesPeriod =
+      period === "all" ||
+      (period === "july" && month === 6) ||
+      (period === "june" && month === 5);
+    const matchesCategory =
+      category === "all" || transaction.category === category;
     const matchesAccount = account === "all" || transaction.account === account;
     const matchesType = type === "all" || transaction.type === type;
-    const matchesSearch = transaction.description.toLowerCase().includes(search);
+    const matchesSearch = transaction.description
+      .toLowerCase()
+      .includes(search);
 
-    return matchesPeriod && matchesCategory && matchesAccount && matchesType && matchesSearch;
+    return (
+      matchesPeriod &&
+      matchesCategory &&
+      matchesAccount &&
+      matchesType &&
+      matchesSearch
+    );
   });
 
   if (!filtered.length) {
@@ -978,9 +1373,13 @@ function renderTransactionsTable() {
                 <td>${transaction.account}</td>
                 <td><strong class="${transaction.value >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(transaction.value)}</strong></td>
                 <td>${new Date(transaction.date).toLocaleDateString("pt-BR")}</td>
-                <td><button class="icon-button" type="button" data-action="open-transaction-actions" aria-label="Abrir menu de ações"><i class="fa-solid fa-ellipsis"></i></button></td>
+                <td>
+                  <button class="btn-secondary" type="button" data-action="edit-transaction" data-transaction-id="${transaction.id}">
+                    <i class="fa-solid fa-pen"></i> Editar
+                  </button>
+                </td>
               </tr>
-            `
+            `,
           )
           .join("")}
       </tbody>
@@ -990,9 +1389,13 @@ function renderTransactionsTable() {
 
 function billsSummaryView() {
   const total = bills.reduce((sum, bill) => sum + bill.value, 0);
-  const paid = bills.filter((bill) => bill.paid).reduce((sum, bill) => sum + bill.value, 0);
+  const paid = bills
+    .filter((bill) => bill.paid)
+    .reduce((sum, bill) => sum + bill.value, 0);
   const pendingBills = bills.filter((bill) => !bill.paid);
-  const nextBill = [...pendingBills].sort((first, second) => first.dueDate.localeCompare(second.dueDate))[0];
+  const nextBill = [...pendingBills].sort((first, second) =>
+    first.dueDate.localeCompare(second.dueDate),
+  )[0];
 
   return `
     <section class="app-page">
@@ -1017,7 +1420,11 @@ function billsSummaryView() {
           <h2>Próximas contas</h2>
           <a class="btn-secondary" href="#contas-despesas">Ver todas</a>
         </div>
-        <div class="bills-list">${[...bills].sort((first, second) => first.dueDate.localeCompare(second.dueDate)).slice(0, 5).map((bill) => billCard(bill, true)).join("")}</div>
+        <div class="bills-list">${[...bills]
+          .sort((first, second) => first.dueDate.localeCompare(second.dueDate))
+          .slice(0, 5)
+          .map((bill) => billCard(bill, true))
+          .join("")}</div>
       </section>
     </section>
   `;
@@ -1090,22 +1497,38 @@ function renderBillsList() {
   const list = document.querySelector("#billsList");
   if (!list) return;
 
-  const category = document.querySelector("[data-bill-filter='category']")?.value || "all";
-  const status = document.querySelector("[data-bill-filter='status']")?.value || "all";
-  const payment = document.querySelector("[data-bill-filter='payment']")?.value || "all";
-  const period = document.querySelector("[data-bill-filter='period']")?.value || "all";
-  const search = document.querySelector("[data-bill-filter='search']")?.value.toLowerCase() || "";
+  const category =
+    document.querySelector("[data-bill-filter='category']")?.value || "all";
+  const status =
+    document.querySelector("[data-bill-filter='status']")?.value || "all";
+  const payment =
+    document.querySelector("[data-bill-filter='payment']")?.value || "all";
+  const period =
+    document.querySelector("[data-bill-filter='period']")?.value || "all";
+  const search =
+    document
+      .querySelector("[data-bill-filter='search']")
+      ?.value.toLowerCase() || "";
 
   const filtered = bills.filter((bill) => {
     const billStatus = getBillStatus(bill).label;
     const month = new Date(bill.dueDate).getMonth();
-    const matchesPeriod = period === "all" || (period === "july" && month === 6) || (period === "june" && month === 5);
+    const matchesPeriod =
+      period === "all" ||
+      (period === "july" && month === 6) ||
+      (period === "june" && month === 5);
     const matchesCategory = category === "all" || bill.category === category;
     const matchesStatus = status === "all" || billStatus === status;
     const matchesPayment = payment === "all" || bill.payment === payment;
     const matchesSearch = bill.name.toLowerCase().includes(search);
 
-    return matchesPeriod && matchesCategory && matchesStatus && matchesPayment && matchesSearch;
+    return (
+      matchesPeriod &&
+      matchesCategory &&
+      matchesStatus &&
+      matchesPayment &&
+      matchesSearch
+    );
   });
 
   list.innerHTML = filtered.length
@@ -1158,8 +1581,8 @@ function cardDetailView() {
           <p class="page-subtitle">${card.notes || "Acompanhe limite, vencimentos e compras cadastradas neste cartão."}</p>
         </div>
         <div class="hero-actions">
-          <button class="btn-secondary" type="button" data-action="edit-card"><i class="fa-solid fa-pen"></i> Editar</button>
-          <button class="btn-danger" type="button" data-action="delete-card" data-card-name="${card.name}"><i class="fa-solid fa-trash"></i> Excluir</button>
+          <button class="btn-secondary" type="button" data-action="edit-card" data-card-id="${card.id}"><i class="fa-solid fa-pen"></i> Editar</button>
+          <button class="btn-danger" type="button" data-action="delete-card" data-card-id="${card.id}"><i class="fa-solid fa-trash"></i> Excluir</button>
         </div>
       </div>
 
@@ -1190,7 +1613,7 @@ function cardDetailView() {
                   </div>
                   <strong class="amount-negative">${formatCurrency(purchase.value)}</strong>
                 </div>
-              `
+              `,
             )
             .join("")}
         </div>
@@ -1201,9 +1624,18 @@ function cardDetailView() {
 
 function wealthView() {
   const cashTotal = accounts.reduce((sum, account) => sum + account.balance, 0);
-  const investmentsTotal = investments.reduce((sum, investment) => sum + investment.current, 0);
-  const invested = investments.reduce((sum, investment) => sum + investment.invested, 0);
-  const availableCredit = creditCards.reduce((sum, card) => sum + (card.totalLimit - card.usedLimit), 0);
+  const investmentsTotal = investments.reduce(
+    (sum, investment) => sum + investment.current,
+    0,
+  );
+  const invested = investments.reduce(
+    (sum, investment) => sum + investment.invested,
+    0,
+  );
+  const availableCredit = creditCards.reduce(
+    (sum, card) => sum + (card.totalLimit - card.usedLimit),
+    0,
+  );
   const usedCredit = creditCards.reduce((sum, card) => sum + card.usedLimit, 0);
   const totalPatrimony = cashTotal + investmentsTotal;
   const purchasePower = cashTotal + availableCredit;
@@ -1248,7 +1680,7 @@ function wealthView() {
                     </div>
                     <strong class="investment-value">${formatCurrency(account.balance)}</strong>
                   </article>
-                `
+                `,
               )
               .join("")}
           </div>
@@ -1263,7 +1695,9 @@ function wealthView() {
             ${creditCards
               .map((card) => {
                 const available = card.totalLimit - card.usedLimit;
-                const usedPercent = Math.round((card.usedLimit / card.totalLimit) * 100);
+                const usedPercent = Math.round(
+                  (card.usedLimit / card.totalLimit) * 100,
+                );
 
                 return `
                   <article class="credit-card-summary">
@@ -1439,17 +1873,32 @@ function investmentDetailView() {
     `;
   }
 
-  const totalCurrent = investments.reduce((sum, investment) => sum + investment.current, 0);
-  const totalInvested = investments.reduce((sum, investment) => sum + investment.invested, 0);
+  const totalCurrent = investments.reduce(
+    (sum, investment) => sum + investment.current,
+    0,
+  );
+  const totalInvested = investments.reduce(
+    (sum, investment) => sum + investment.invested,
+    0,
+  );
   const totalProfit = totalCurrent - totalInvested;
   const averageReturn = investments.length
-    ? Math.round(investments.reduce((sum, investment) => sum + investment.returnRate, 0) / investments.length)
+    ? Math.round(
+        investments.reduce(
+          (sum, investment) => sum + investment.returnRate,
+          0,
+        ) / investments.length,
+      )
     : 0;
   const highestInvestment = investments.reduce(
-    (highest, investment) => (investment.current > highest.current ? investment : highest),
-    investments[0]
+    (highest, investment) =>
+      investment.current > highest.current ? investment : highest,
+    investments[0],
   );
-  const maxInvestmentValue = Math.max(...investments.map((investment) => investment.current), 1);
+  const maxInvestmentValue = Math.max(
+    ...investments.map((investment) => investment.current),
+    1,
+  );
 
   return `
     <section class="app-page">
@@ -1484,7 +1933,8 @@ function investmentDetailView() {
             ${investments
               .map((investment) => {
                 const profit = investment.current - investment.invested;
-                const returnClass = profit >= 0 ? "text-income" : "text-expense";
+                const returnClass =
+                  profit >= 0 ? "text-income" : "text-expense";
 
                 return `
                   <div class="history-item">
@@ -1498,6 +1948,9 @@ function investmentDetailView() {
                     <div class="detail-investment-values">
                       <strong>${formatCurrency(investment.current)}</strong>
                       <span class="${returnClass}">${profit >= 0 ? "+" : ""}${formatCurrency(profit)} • ${investment.returnRate >= 0 ? "+" : ""}${investment.returnRate}%</span>
+                      <button class="btn-secondary" type="button" data-action="edit-investment" data-investment-id="${investment.id}">
+                        <i class="fa-solid fa-pen"></i> Editar
+                      </button>
                     </div>
                   </div>
                 `;
@@ -1513,7 +1966,10 @@ function investmentDetailView() {
           <div class="bar-chart">
             ${investments
               .map((investment) => {
-                const height = Math.max(Math.round((investment.current / maxInvestmentValue) * 88), 18);
+                const height = Math.max(
+                  Math.round((investment.current / maxInvestmentValue) * 88),
+                  18,
+                );
                 return `<span style="height: ${height}%" data-label="${investment.name.slice(0, 8)}"></span>`;
               })
               .join("")}
@@ -1526,7 +1982,7 @@ function investmentDetailView() {
                     <span>${investment.name}</span>
                     <strong>${Math.round((investment.current / totalCurrent) * 100)}%</strong>
                   </div>
-                `
+                `,
               )
               .join("")}
           </div>
@@ -1683,6 +2139,8 @@ async function renderRoute() {
 document.addEventListener("input", (event) => {
   if (event.target.closest("#transactionFilters")) renderTransactionsTable();
   if (event.target.closest("#billFilters")) renderBillsList();
+  if (event.target.matches("#cardColor"))
+    updateCardColorPreview(event.target.value);
 });
 
 document.addEventListener("change", (event) => {
@@ -1716,9 +2174,15 @@ document.addEventListener("submit", async (event) => {
 });
 
 document.addEventListener("click", async (event) => {
-  const investmentCalendarTrigger = event.target.closest("[data-investment-calendar-trigger]");
-  const investmentCalendarNav = event.target.closest("[data-investment-calendar-nav]");
-  const investmentCalendarDay = event.target.closest("[data-investment-calendar-day]");
+  const investmentCalendarTrigger = event.target.closest(
+    "[data-investment-calendar-trigger]",
+  );
+  const investmentCalendarNav = event.target.closest(
+    "[data-investment-calendar-nav]",
+  );
+  const investmentCalendarDay = event.target.closest(
+    "[data-investment-calendar-day]",
+  );
 
   if (investmentCalendarTrigger) {
     toggleInvestmentCalendar();
@@ -1726,11 +2190,12 @@ document.addEventListener("click", async (event) => {
   }
 
   if (investmentCalendarNav) {
-    const direction = investmentCalendarNav.dataset.investmentCalendarNav === "next" ? 1 : -1;
+    const direction =
+      investmentCalendarNav.dataset.investmentCalendarNav === "next" ? 1 : -1;
     investmentCalendarVisibleDate = new Date(
       investmentCalendarVisibleDate.getFullYear(),
       investmentCalendarVisibleDate.getMonth() + direction,
-      1
+      1,
     );
     renderInvestmentCalendar();
     return;
@@ -1762,7 +2227,11 @@ document.addEventListener("click", async (event) => {
 
   if (calendarNav) {
     const direction = calendarNav.dataset.calendarNav === "next" ? 1 : -1;
-    calendarVisibleDate = new Date(calendarVisibleDate.getFullYear(), calendarVisibleDate.getMonth() + direction, 1);
+    calendarVisibleDate = new Date(
+      calendarVisibleDate.getFullYear(),
+      calendarVisibleDate.getMonth() + direction,
+      1,
+    );
     renderExpenseCalendar();
     return;
   }
@@ -1787,9 +2256,11 @@ document.addEventListener("click", async (event) => {
     const selectedItem = event.target.closest("li");
     const isOpen = expenseSelect.classList.contains("is-open");
 
-    document.querySelectorAll("[data-expense-select].is-open").forEach((select) => {
-      if (select !== expenseSelect) select.classList.remove("is-open");
-    });
+    document
+      .querySelectorAll("[data-expense-select].is-open")
+      .forEach((select) => {
+        if (select !== expenseSelect) select.classList.remove("is-open");
+      });
 
     if (!isOpen) {
       expenseSelect.classList.add("is-open");
@@ -1926,14 +2397,18 @@ document.addEventListener("click", async (event) => {
     if (bill) {
       const nextPaid = !bill.paid;
       await billsService.markPaid(bill.id, nextPaid);
-      showToast(nextPaid ? "Conta marcada como paga." : "Conta voltou para pendente.");
+      showToast(
+        nextPaid ? "Conta marcada como paga." : "Conta voltou para pendente.",
+      );
       await reloadAndRender();
     }
     return;
   }
 
   if (action === "delete-bill") {
-    const confirmed = window.confirm("Tem certeza que deseja excluir esta conta?");
+    const confirmed = window.confirm(
+      "Tem certeza que deseja excluir esta conta?",
+    );
     if (confirmed) {
       const billId = event.target.closest("[data-bill-id]")?.dataset.billId;
       await billsService.remove(billId);
@@ -1944,7 +2419,9 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "delete-card") {
-    const confirmed = window.confirm("Tem certeza que deseja excluir este cartão?");
+    const confirmed = window.confirm(
+      "Tem certeza que deseja excluir este cartão?",
+    );
     if (confirmed) {
       const cardId = event.target.closest("[data-card-id]")?.dataset.cardId;
       await cardsService.remove(cardId);
@@ -1954,13 +2431,37 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "edit-transaction") {
+    const transactionId = event.target.closest("[data-transaction-id]")?.dataset
+      .transactionId;
+    const transaction = transactions.find(
+      (item) => String(item.id) === String(transactionId),
+    );
+    if (transaction) openExpenseModal(transaction);
+    return;
+  }
+
+  if (action === "edit-investment") {
+    const investmentId = event.target.closest("[data-investment-id]")?.dataset
+      .investmentId;
+    const investment = investments.find(
+      (item) => String(item.id) === String(investmentId),
+    );
+    if (investment) openInvestmentModal(investment);
+    return;
+  }
+
   if (action === "edit-bill") {
-    showToast("A edição desta conta ainda será habilitada.");
+    const billId = event.target.closest("[data-bill-id]")?.dataset.billId;
+    const bill = bills.find((item) => String(item.id) === String(billId));
+    if (bill) openBillModal(bill);
     return;
   }
 
   if (action === "edit-card") {
-    showToast("A edição deste cartão ainda será habilitada.");
+    const cardId = event.target.closest("[data-card-id]")?.dataset.cardId;
+    const card = creditCards.find((item) => String(item.id) === String(cardId));
+    if (card) openCardModal(card);
     return;
   }
 
@@ -1970,7 +2471,9 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "save-profile") {
-    showToast("Nenhuma alteração foi salva. Edição de perfil ainda será habilitada.");
+    showToast(
+      "Nenhuma alteração foi salva. Edição de perfil ainda será habilitada.",
+    );
     return;
   }
 
@@ -1980,13 +2483,17 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "delete-investment") {
-    const confirmed = window.confirm("Tem certeza que deseja excluir este investimento?");
+    const confirmed = window.confirm(
+      "Tem certeza que deseja excluir este investimento?",
+    );
     if (confirmed) showToast("Investimento excluído com segurança.");
     return;
   }
 
   if (action === "delete-account") {
-    const confirmed = window.confirm("Tem certeza que deseja excluir sua conta? Essa ação exige confirmação.");
+    const confirmed = window.confirm(
+      "Tem certeza que deseja excluir sua conta? Essa ação exige confirmação.",
+    );
     if (confirmed) showToast("Solicitação de exclusão registrada.");
     return;
   }
@@ -2021,7 +2528,10 @@ document.addEventListener("keydown", (event) => {
     closeExpenseDialog();
   }
 
-  if (event.key === "Escape" && !investmentModal?.classList.contains("isHidden")) {
+  if (
+    event.key === "Escape" &&
+    !investmentModal?.classList.contains("isHidden")
+  ) {
     closeInvestmentDialog();
   }
 
