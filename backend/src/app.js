@@ -1,28 +1,32 @@
-const cors = require("cors");
 const express = require("express");
+const morgan = require("morgan");
 
-const env = require("./config/env");
+const apiRoutes = require("./routes");
 const healthRoutes = require("./routes/healthRoutes");
+const { errorMiddleware, notFoundMiddleware } = require("./middlewares/errorMiddleware");
+const securityMiddleware = require("./middlewares/securityMiddleware");
+const { success } = require("./utils/apiResponse");
 
 const app = express();
 
-app.use(cors({ origin: env.corsOrigin }));
+securityMiddleware(app);
+app.use(morgan("combined"));
 app.use(express.json());
 
 app.get("/", (_req, res) => {
-  res.status(200).json({
-    message: "FinSight API",
-    health: "/health",
+  return success(res, {
+    message: "FinSight API pronta para uso.",
+    data: {
+      health: "/health",
+      api: "/api",
+    },
   });
 });
 
 app.use("/health", healthRoutes);
+app.use("/api", apiRoutes);
 
-app.use((req, res) => {
-  res.status(404).json({
-    error: "Rota nao encontrada",
-    path: req.originalUrl,
-  });
-});
+app.use(notFoundMiddleware);
+app.use(errorMiddleware);
 
 module.exports = app;
