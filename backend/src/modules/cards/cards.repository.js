@@ -1,4 +1,5 @@
 const pool = require("../../database/pool");
+const invoiceService = require("../../services/invoiceService");
 
 function normalizeLastDigits(value, fallbackId) {
   const raw = value || String(fallbackId || "").replaceAll("-", "").slice(-3);
@@ -71,7 +72,7 @@ async function findById(userId, id) {
   const purchases = await pool.query(
     `
       SELECT descricao AS name, valor, data_transacao AS date, COALESCE(cat.nome, 'Cartao') AS category
-      FROM transacoes t
+      FROM movimentacoes t
       LEFT JOIN categorias cat ON cat.id = t.categoria_id
       WHERE t.usuario_id = $1 AND t.cartao_id = $2
       ORDER BY t.data_transacao DESC
@@ -84,6 +85,16 @@ async function findById(userId, id) {
     category: row.category,
     value: Number(row.valor),
     date: row.date,
+  }));
+
+  const invoices = await invoiceService.listByCard(pool, userId, id);
+  card.invoices = invoices.map((row) => ({
+    id: row.id,
+    referenceMonth: row.mes_referencia,
+    dueDate: row.data_vencimento,
+    total: Number(row.valor_total),
+    paid: Number(row.valor_pago),
+    status: row.status,
   }));
 
   return card;
