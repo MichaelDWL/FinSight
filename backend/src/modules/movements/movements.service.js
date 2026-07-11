@@ -1,0 +1,38 @@
+const AppError = require("../../utils/AppError");
+const repository = require("./movements.repository");
+
+async function list(userId) {
+  return repository.listAll(userId);
+}
+
+async function listTransactions(userId) {
+  return repository.listTransactionsView(userId);
+}
+
+async function listBills(userId) {
+  return repository.listBillsView(userId);
+}
+
+async function create(userId, payload) {
+  return repository.create(userId, payload);
+}
+
+async function update(userId, id, payload) {
+  const updated = await repository.update(userId, id, payload);
+  if (!updated) throw new AppError("Movimentacao nao encontrada.", 404);
+  return updated;
+}
+
+async function markPaid(userId, id, paid) {
+  const updated = await repository.markPaid(userId, id, paid);
+  if (!updated) throw new AppError("Movimentacao nao encontrada.", 404);
+  return updated;
+}
+
+async function remove(userId, id) {
+  const removed = await repository.remove(userId, id);
+  if (!removed) throw new AppError("Movimentacao nao encontrada.", 404);
+  return { id };
+}
+
+module.exports = { list, listTransactions, listBills, create, update, markPaid, remove };

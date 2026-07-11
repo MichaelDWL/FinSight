@@ -1,18 +1,22 @@
 const accountsService = require("../accounts/accounts.service");
-const billsService = require("../bills/bills.service");
 const cardsService = require("../cards/cards.service");
 const goalsService = require("../goals/goals.service");
 const investmentsService = require("../investments/investments.service");
-const transactionsService = require("../transactions/transactions.service");
+const movementsService = require("../movements/movements.service");
+const recurrenceService = require("../../services/recurrenceService");
 const repository = require("./dashboard.repository");
 
 async function getDashboard(userId) {
+  // Geracao lazy: garante que as contas recorrentes do mes ja existam
+  // antes de consolidar os numeros exibidos ao usuario.
+  await recurrenceService.ensureGenerated(userId);
+
   const [summary, transactions, accounts, cards, bills, investments, goals] = await Promise.all([
     repository.getFinancialSummary(userId),
-    transactionsService.list(userId),
+    movementsService.listTransactions(userId),
     accountsService.list(userId),
     cardsService.list(userId),
-    billsService.list(userId),
+    movementsService.listBills(userId),
     investmentsService.list(userId),
     goalsService.list(userId),
   ]);
