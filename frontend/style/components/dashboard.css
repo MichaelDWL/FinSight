@@ -1,0 +1,339 @@
+/* Dashboard BI */
+
+.dashboard-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.4rem;
+  border-radius: var(--border-radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--bx-shadow-card);
+}
+
+.dashboard-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  color: var(--pw6);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dashboard-nav-link:hover {
+  background: var(--surface-blue);
+  color: var(--pw8);
+}
+
+.dashboard-nav-link.is-active {
+  background: var(--brand-accent);
+  color: var(--pw);
+  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.22);
+}
+
+.dashboard-nav-link.is-disabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  color: var(--pw5);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.dashboard-metrics-secondary .metric-card {
+  min-height: 132px;
+}
+
+.dashboard-card-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 0.35rem;
+}
+
+.dashboard-card-limit-item {
+  align-items: center;
+}
+
+.dashboard-card-limit-side {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 120px;
+  text-align: right;
+}
+
+.dashboard-card-limit-side strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--pw8);
+}
+
+.dashboard-limit-bar {
+  height: 6px;
+  min-width: 110px;
+}
+
+.dashboard-limit-progress.positive {
+  background: var(--income);
+}
+
+.dashboard-limit-progress.warning {
+  background: var(--warning);
+}
+
+.dashboard-limit-progress.neutral {
+  background: var(--brand-accent);
+}
+
+.dashboard-page {
+  gap: var(--gap-lg);
+}
+
+.dashboard-hero .page-eyebrow {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  color: var(--brand-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dashboard-period-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.35rem;
+  border-radius: var(--border-radius-xl);
+  background: var(--surface);
+  border: 1px solid var(--border-card);
+  box-shadow: var(--bx-shadow-card);
+}
+
+.dashboard-period-btn {
+  border: none;
+  background: transparent;
+  color: var(--pw6);
+  font-family: Inter, sans-serif;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-period-btn:hover {
+  background: var(--surface-blue);
+  color: var(--pw8);
+}
+
+.dashboard-period-btn.is-active {
+  background: var(--brand-accent);
+  color: var(--pw);
+  box-shadow: 0 8px 20px rgba(13, 110, 253, 0.22);
+}
+
+.dashboard-metrics .metric-card {
+  min-height: 148px;
+}
+
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.85fr);
+  gap: var(--gap-lg);
+  align-items: stretch;
+}
+
+.dashboard-chart-host {
+  min-height: 300px;
+}
+
+.dashboard-chart-skeleton {
+  min-height: 320px;
+}
+
+.dashboard-skeleton-hero {
+  height: 120px;
+  border-radius: var(--border-radius-xl);
+}
+
+.dashboard-skeleton-filters {
+  height: 52px;
+  border-radius: 999px;
+}
+
+.dashboard-skeleton-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 0.85fr;
+  gap: var(--gap-lg);
+}
+
+.dashboard-generated-at {
+  text-align: right;
+  margin-top: -0.5rem;
+}
+
+.dashboard-bill-item {
+  text-decoration: none;
+  color: inherit;
+}
+
+.dashboard-bill-item:hover {
+  background: var(--surface-blue);
+}
+
+/* Health Score */
+
+.health-score-card {
+  display: grid;
+  gap: var(--gap-md);
+}
+
+.health-score-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-md);
+}
+
+.health-score-head h2 {
+  margin: 0;
+  font-family: Outfit, sans-serif;
+  font-size: 1.2rem;
+}
+
+.health-score-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.health-score-positive {
+  color: var(--income);
+  background: var(--income-soft);
+}
+
+.health-score-warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.health-score-neutral {
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+.health-score-body {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: var(--gap-lg);
+  align-items: center;
+}
+
+.health-score-ring {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto;
+}
+
+.health-score-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.health-score-track {
+  fill: none;
+  stroke: var(--pw2);
+  stroke-width: 10;
+}
+
+.health-score-progress {
+  fill: none;
+  stroke: var(--brand-accent);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+
+.health-score-ring.health-score-positive .health-score-progress {
+  stroke: var(--income);
+}
+
+.health-score-ring.health-score-warning .health-score-progress {
+  stroke: var(--warning);
+}
+
+.health-score-value {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: Outfit, sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--pw8);
+}
+
+.health-score-factors {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.health-score-factor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.86rem;
+  color: var(--pw8);
+}
+
+.health-score-factor-head strong {
+  color: var(--brand-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.health-score-bar {
+  margin: 0.35rem 0;
+  height: 6px;
+}
+
+@media (max-width: 1080px) {
+  .dashboard-charts-grid,
+  .dashboard-skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .health-score-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard-period-filter {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+  }
+
+  .dashboard-period-filter::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dashboard-period-btn {
+    white-space: nowrap;
+  }
+}
