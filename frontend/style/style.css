@@ -12,9 +12,12 @@
 
 /* Components */
 @import "./components/inputs.css";
+@import "./components/customSelect.css";
+@import "./components/customCalendar.css";
 @import "./components/modal/modal.css";
 @import "./components/modal/newExpenses.css";
 @import "./components/modal/movement.css";
 @import "./components/modal/confirm.css";
 @import "./components/fab.css";
+@import "./components/dashboard.css";
 @import "./pages/app.css";

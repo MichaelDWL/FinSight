@@ -32,7 +32,7 @@ function toUpdatePayload(payload) {
 }
 
 export const billsService = {
-  list: () => api.get("/movements"),
+  list: () => api.get("/movements/bills"),
   create: (payload) => api.post("/movements", toCreatePayload(payload)),
   update: (id, payload) => api.put(`/movements/${id}`, toUpdatePayload(payload)),
   markPaid: (id, paid) => api.patch(`/movements/${id}/paid`, { paid }),

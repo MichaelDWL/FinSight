@@ -1,13 +1,51 @@
 import { accountsService } from "./services/accounts.js";
 import { billsService } from "./services/bills.js";
 import { cardsService } from "./services/cards.js";
-import { dashboardService } from "./services/dashboard.js";
+import { bootstrapService } from "./services/bootstrap.js";
 import { investmentsService } from "./services/investments.js";
-import { transactionsService } from "./services/transactions.js";
 import { usersService } from "./services/users.js";
+import { transactionsService } from "./services/transactions.js";
+import { goalsService } from "./services/goals.js";
 import { invoicesService } from "./services/invoices.js";
+import { analyticsService } from "./services/analyticsService.js";
+import { destroyAllCharts } from "./charts/ChartWrapper.js";
+import { renderDashboardSkeleton } from "./modules/dashboard/shared/DashboardSkeleton.js";
+import {
+  mountGeneralDashboardCharts,
+  renderGeneralDashboard,
+} from "./modules/dashboard/general/generalView.js";
+import {
+  mountExpensesDashboardCharts,
+  renderExpensesDashboard,
+} from "./modules/dashboard/expenses/expensesView.js";
+import {
+  mountCashflowDashboardCharts,
+  renderCashflowDashboard,
+} from "./modules/dashboard/cashflow/cashflowView.js";
+import {
+  mountCardsDashboardCharts,
+  renderCardsDashboard,
+} from "./modules/dashboard/cards/cardsView.js";
+import {
+  mountInvestmentsDashboardCharts,
+  renderInvestmentsDashboard,
+} from "./modules/dashboard/investments/investmentsView.js";
+import { normalizeDashboardRoute } from "./modules/dashboard/shared/periodLabels.js";
 import { createMovementModal } from "./ui/movementModal.js";
 import { confirmDialog } from "./ui/confirmModal.js";
+import {
+  initCustomSelects,
+  refreshCustomSelectValue,
+  setupCustomSelects,
+} from "./ui/customSelect.js";
+import {
+  closeAllCustomCalendars,
+  initCustomCalendars,
+  refreshCustomCalendarValue,
+  setCustomCalendarValue,
+  setupCustomCalendars,
+} from "./ui/customCalendar.js";
+import { hideModal, showModal } from "./ui/modalFocus.js";
 
 const app = document.querySelector("#app");
 const pageTitle = document.querySelector("#pageTitle");
@@ -18,9 +56,6 @@ const expenseModal = document.querySelector("#expenseModal");
 const expenseForm = document.querySelector("#expenseForm");
 const closeExpenseModal = document.querySelector("#closeExpenseModal");
 const cancelExpenseForm = document.querySelector("#cancelExpenseForm");
-const expenseCalendar = document.querySelector("#expenseCalendar");
-const expenseDateInput = document.querySelector("#date-expense");
-const expenseDateDisplay = document.querySelector("#date-expense-display");
 const investmentModal = document.querySelector("#investmentModal");
 const investmentForm = document.querySelector("#investmentForm");
 const closeInvestmentModal = document.querySelector("#closeInvestmentModal");
@@ -31,9 +66,6 @@ const cardModal = document.querySelector("#cardModal");
 const cardForm = document.querySelector("#cardForm");
 const accountModal = document.querySelector("#accountModal");
 const accountForm = document.querySelector("#accountForm");
-
-let calendarVisibleDate = new Date();
-let investmentCalendarVisibleDate = new Date();
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("pt-BR", {
@@ -59,7 +91,13 @@ const toIsoDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-let dashboardData = null;
+let bootstrapReady = false;
+let loadedRouteKey = null;
+let currentInvoices = [];
+let analyticsDashboardData = null;
+let currentDashboardPeriod = "30d";
+let currentAnalyticsRoute = "dashboard/geral";
+let isLoadingAnalyticsDashboard = false;
 let transactions = [];
 let investments = [];
 let accounts = [];
@@ -79,7 +117,12 @@ let selectedAccountId = null;
 let accountDetailData = null;
 
 const routeTitles = {
-  dashboard: "Dashboard",
+  dashboard: "Dashboard Geral",
+  "dashboard/geral": "Dashboard Geral",
+  "dashboard/gastos": "Dashboard de Gastos",
+  "dashboard/fluxo-caixa": "Fluxo de Caixa",
+  "dashboard/cartoes": "Dashboard de Cartões",
+  "dashboard/investimentos": "Dashboard de Investimentos",
   transacoes: "Transações",
   patrimonio: "Patrimônio",
   "investimento-novo": "Adicionar investimento",
@@ -151,7 +194,10 @@ function setModalCopy(
 
 function setFieldValue(form, selector, value) {
   const field = form?.querySelector(selector);
-  if (field) field.value = value ?? "";
+  if (!field) return;
+  field.value = value ?? "";
+  if (field.matches("select")) refreshCustomSelectValue(field);
+  if (field.matches("input.custom-date-native")) refreshCustomCalendarValue(field);
 }
 
 function getIsoDateValue(value) {
@@ -290,19 +336,72 @@ function normalizeBill(bill) {
   };
 }
 
-function applyDashboardData(data) {
-  dashboardData = data;
-  transactions = (data.transactions || data.latestTransactions || []).map(
-    normalizeTransaction,
-  );
-  investments = (data.investments || []).map(normalizeInvestment);
+function applyBootstrapData(data = {}) {
   accounts = (data.accounts || []).map((account) => ({
     ...account,
     icon: resolveIcon(account.icon, "fa-building-columns"),
   }));
   creditCards = data.cards || [];
-  bills = (data.bills || data.pendingBills || []).map(normalizeBill);
-  goals = (data.goals || []).map(normalizeGoal);
+}
+
+const ROUTE_DATA_LOADERS = {
+  transacoes: async () => {
+    transactions = (await transactionsService.list()).map(normalizeTransaction);
+  },
+  "contas-resumo": async () => {
+    const [billsData, invoices] = await Promise.all([
+      billsService.list(),
+      invoicesService.listCurrent(),
+    ]);
+    bills = billsData.map(normalizeBill);
+    currentInvoices = invoices;
+  },
+  "contas-despesas": async () => {
+    bills = (await billsService.list()).map(normalizeBill);
+  },
+  patrimonio: async () => {
+    investments = (await investmentsService.list()).map(normalizeInvestment);
+  },
+  "investimento-detalhe": async () => {
+    investments = (await investmentsService.list()).map(normalizeInvestment);
+  },
+  metas: async () => {
+    goals = (await goalsService.list()).map(normalizeGoal);
+  },
+};
+
+async function loadBootstrap({ force = false } = {}) {
+  if (bootstrapReady && !force) return;
+  if (isLoadingData) return;
+
+  isLoadingData = true;
+  try {
+    const [bootstrap, user] = await Promise.all([
+      bootstrapService.getBootstrap(),
+      usersService.profile(),
+    ]);
+    applyBootstrapData(bootstrap);
+    currentUser = user;
+    bootstrapReady = true;
+    updateUserHeader();
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || "Não foi possível carregar os dados da API.");
+  } finally {
+    isLoadingData = false;
+  }
+}
+
+async function loadRouteData(route, { force = false } = {}) {
+  await loadBootstrap({ force });
+
+  const viewRoute = route === "investimento-novo" ? "patrimonio" : route;
+  const loader = ROUTE_DATA_LOADERS[viewRoute];
+  if (!loader) return;
+
+  if (loadedRouteKey === viewRoute && !force) return;
+  await loader();
+  loadedRouteKey = viewRoute;
 }
 
 function updateUserHeader() {
@@ -324,30 +423,154 @@ function updateUserHeader() {
   if (picture) picture.textContent = initials;
 }
 
-async function loadAppData({ force = false } = {}) {
-  if (dashboardData && !force) return;
-  if (isLoadingData) return;
+const ANALYTICS_DASHBOARD_ROUTES = new Set([
+  "dashboard",
+  "dashboard/geral",
+  "dashboard/gastos",
+  "dashboard/fluxo-caixa",
+  "dashboard/cartoes",
+  "dashboard/investimentos",
+]);
 
-  isLoadingData = true;
+const DASHBOARD_RENDERERS = {
+  "dashboard/geral": {
+    render: renderGeneralDashboard,
+    mount: mountGeneralDashboardCharts,
+    load: (period) => analyticsService.getGeneral({ period }),
+    getProps: () => ({ firstName: getUserFirstName() }),
+  },
+  "dashboard/gastos": {
+    render: renderExpensesDashboard,
+    mount: mountExpensesDashboardCharts,
+    load: (period) => analyticsService.getExpenses({ period }),
+    getProps: () => ({}),
+  },
+  "dashboard/fluxo-caixa": {
+    render: renderCashflowDashboard,
+    mount: mountCashflowDashboardCharts,
+    load: (period) => analyticsService.getCashflow({ period }),
+    getProps: () => ({}),
+  },
+  "dashboard/cartoes": {
+    render: renderCardsDashboard,
+    mount: mountCardsDashboardCharts,
+    load: (period) => analyticsService.getCards({ period }),
+    getProps: () => ({}),
+  },
+  "dashboard/investimentos": {
+    render: renderInvestmentsDashboard,
+    mount: mountInvestmentsDashboardCharts,
+    load: (period) => analyticsService.getInvestments({ period }),
+    getProps: () => ({}),
+  },
+};
+
+function isAnalyticsDashboardRoute(route) {
+  return ANALYTICS_DASHBOARD_ROUTES.has(route);
+}
+
+async function loadAnalyticsDashboard(route = currentAnalyticsRoute, period = currentDashboardPeriod) {
+  const normalizedRoute = normalizeDashboardRoute(route);
+  const renderer = DASHBOARD_RENDERERS[normalizedRoute];
+  if (!renderer) return null;
+
+  if (isLoadingAnalyticsDashboard) return analyticsDashboardData;
+
+  isLoadingAnalyticsDashboard = true;
   try {
-    const [dashboard, user] = await Promise.all([
-      dashboardService.getDashboard(),
-      usersService.profile(),
-    ]);
-    applyDashboardData(dashboard);
-    currentUser = user;
-    updateUserHeader();
+    analyticsDashboardData = await renderer.load(period);
+    currentDashboardPeriod = period;
+    currentAnalyticsRoute = normalizedRoute;
+    return analyticsDashboardData;
   } catch (error) {
     console.error(error);
-    showToast(error.message || "Não foi possível carregar os dados da API.");
+    throw error;
   } finally {
-    isLoadingData = false;
+    isLoadingAnalyticsDashboard = false;
   }
 }
 
+function renderAnalyticsDashboardView(route, data) {
+  const normalizedRoute = normalizeDashboardRoute(route);
+  const renderer = DASHBOARD_RENDERERS[normalizedRoute];
+  if (!renderer) return "";
+
+  return renderer.render(data, {
+    period: currentDashboardPeriod,
+    ...renderer.getProps(),
+  });
+}
+
+function mountAnalyticsDashboardCharts(route, data) {
+  const normalizedRoute = normalizeDashboardRoute(route);
+  const renderer = DASHBOARD_RENDERERS[normalizedRoute];
+  renderer?.mount(data);
+}
+
+async function renderAnalyticsDashboardPage(route = getRoute()) {
+  const normalizedRoute = normalizeDashboardRoute(route);
+  destroyAllCharts();
+  app.innerHTML = renderDashboardSkeleton();
+
+  try {
+    await Promise.all([
+      loadBootstrap(),
+      loadAnalyticsDashboard(normalizedRoute, currentDashboardPeriod),
+    ]);
+
+    if (!currentUser) {
+      currentUser = await usersService.profile();
+      updateUserHeader();
+    }
+
+    app.innerHTML = renderAnalyticsDashboardView(normalizedRoute, analyticsDashboardData);
+    mountAnalyticsDashboardCharts(normalizedRoute, analyticsDashboardData);
+  } catch (error) {
+    app.innerHTML = `
+      <section class="app-page">
+        <div class="empty-state">
+          <div>
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <p>${error.message || "Não foi possível carregar o dashboard."}</p>
+            <button class="btn-primary" type="button" data-action="retry-dashboard">Tentar novamente</button>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+}
+
+async function reloadDashboardWithPeriod(period) {
+  if (period === currentDashboardPeriod && analyticsDashboardData) return;
+
+  currentDashboardPeriod = period;
+  analyticsDashboardData = null;
+  destroyAllCharts();
+  app.innerHTML = renderDashboardSkeleton();
+
+  try {
+    await loadAnalyticsDashboard(currentAnalyticsRoute, period);
+    app.innerHTML = renderAnalyticsDashboardView(currentAnalyticsRoute, analyticsDashboardData);
+    mountAnalyticsDashboardCharts(currentAnalyticsRoute, analyticsDashboardData);
+  } catch (error) {
+    showToast(error.message || "Não foi possível atualizar o período.");
+    await renderAnalyticsDashboardPage(currentAnalyticsRoute);
+  }
+}
+
+async function loadGeneralDashboard(period = currentDashboardPeriod) {
+  return loadAnalyticsDashboard("dashboard/geral", period);
+}
+
+async function renderDashboardPage() {
+  return renderAnalyticsDashboardPage("dashboard/geral");
+}
+
 async function reloadAndRender() {
-  await loadAppData({ force: true });
-  renderRoute();
+  bootstrapReady = false;
+  loadedRouteKey = null;
+  analyticsDashboardData = null;
+  await renderRoute();
 }
 
 function openExpenseModal(transaction = null) {
@@ -355,8 +578,6 @@ function openExpenseModal(transaction = null) {
 
   closeQuickActionMenu();
   expenseForm.reset();
-  resetExpenseSelects();
-
   editingTransactionId = transaction?.id || null;
 
   if (transaction) {
@@ -377,10 +598,10 @@ function openExpenseModal(transaction = null) {
       "#value-expense",
       Math.abs(Number(transaction.value) || 0),
     );
-    setExpenseDate(getIsoDateValue(transaction.date));
-    setExpenseSelectValue("category", transaction.category || "Alimentação");
-    setExpenseSelectValue("payment", mapPaymentLabel(transaction.payment));
-    setExpenseSelectValue("account", transaction.account || "Nubank");
+    setCustomCalendarValue(
+      expenseForm.querySelector("#date-expense"),
+      getIsoDateValue(transaction.date),
+    );
     setFieldValue(expenseForm, "#obs-expense", transaction.notes || "");
   } else {
     setModalCopy(expenseModal, {
@@ -391,29 +612,31 @@ function openExpenseModal(transaction = null) {
       buttonIcon: "fa-plus",
       buttonText: "Adicionar despesa",
     });
-    setExpenseDate(toIsoDate(new Date()));
+    setCustomCalendarValue(
+      expenseForm.querySelector("#date-expense"),
+      toIsoDate(new Date()),
+    );
   }
 
   const dateInput = expenseForm.querySelector("#date-expense");
   if (dateInput && !dateInput.value) {
-    setExpenseDate(toIsoDate(new Date()));
+    setCustomCalendarValue(dateInput, toIsoDate(new Date()));
   }
 
-  expenseModal.classList.remove("isHidden");
-  expenseModal.setAttribute("aria-hidden", "false");
+  showModal(expenseModal);
+  initCustomSelects(expenseForm);
+  initCustomCalendars(expenseForm);
   expenseForm.querySelector("#desc-expense")?.focus();
 }
 
 function closeExpenseDialog({ reset = false } = {}) {
   if (!expenseModal) return;
 
-  closeExpenseCalendar();
-  expenseModal.classList.add("isHidden");
-  expenseModal.setAttribute("aria-hidden", "true");
+  closeAllCustomCalendars();
+  hideModal(expenseModal);
 
   if (reset) {
     expenseForm?.reset();
-    resetExpenseSelects();
     editingTransactionId = null;
   }
 }
@@ -453,7 +676,10 @@ function openInvestmentModal(investment = null) {
       investment.current ?? investment.value ?? investment.invested,
     );
     setFieldValue(investmentForm, "#investmentNotes", investment.notes || "");
-    setInvestmentDate(getIsoDateValue(investment.date));
+    setCustomCalendarValue(
+      investmentForm.querySelector("#investmentDate"),
+      getIsoDateValue(investment.date),
+    );
   } else {
     setInvestmentSubroute("investimento-novo");
     setModalCopy(investmentModal, {
@@ -464,20 +690,23 @@ function openInvestmentModal(investment = null) {
       buttonIcon: "fa-check",
       buttonText: "Salvar investimento",
     });
-    setInvestmentDate(toIsoDate(new Date()));
+    setCustomCalendarValue(
+      investmentForm.querySelector("#investmentDate"),
+      toIsoDate(new Date()),
+    );
   }
 
-  investmentModal.classList.remove("isHidden");
-  investmentModal.setAttribute("aria-hidden", "false");
+  showModal(investmentModal);
+  initCustomSelects(investmentForm);
+  initCustomCalendars(investmentForm);
   investmentForm.querySelector("#investmentName")?.focus();
 }
 
 function closeInvestmentDialog({ reset = false } = {}) {
   if (!investmentModal) return;
 
-  closeInvestmentCalendar();
-  investmentModal.classList.add("isHidden");
-  investmentModal.setAttribute("aria-hidden", "true");
+  closeAllCustomCalendars();
+  hideModal(investmentModal);
 
   if (reset) {
     investmentForm?.reset();
@@ -527,16 +756,17 @@ function openBillModal(bill = null) {
     });
   }
 
-  billModal.classList.remove("isHidden");
-  billModal.setAttribute("aria-hidden", "false");
+  showModal(billModal);
+  initCustomSelects(billForm);
+  initCustomCalendars(billForm);
   billForm.querySelector("#billName")?.focus();
 }
 
 function closeBillDialog({ reset = false } = {}) {
   if (!billModal) return;
 
-  billModal.classList.add("isHidden");
-  billModal.setAttribute("aria-hidden", "true");
+  closeAllCustomCalendars();
+  hideModal(billModal);
   if (reset) {
     billForm?.reset();
     editingBillId = null;
@@ -582,16 +812,15 @@ function openCardModal(card = null) {
     });
   }
 
-  cardModal.classList.remove("isHidden");
-  cardModal.setAttribute("aria-hidden", "false");
+  showModal(cardModal);
+  initCustomSelects(cardForm);
   cardForm.querySelector("#cardName")?.focus();
 }
 
 function closeCardDialog({ reset = false } = {}) {
   if (!cardModal) return;
 
-  cardModal.classList.add("isHidden");
-  cardModal.setAttribute("aria-hidden", "true");
+  hideModal(cardModal);
   if (reset) {
     cardForm?.reset();
     editingCardId = null;
@@ -636,16 +865,15 @@ function openAccountModal(account = null) {
     });
   }
 
-  accountModal.classList.remove("isHidden");
-  accountModal.setAttribute("aria-hidden", "false");
+  showModal(accountModal);
+  initCustomSelects(accountForm);
   accountForm.querySelector("#accountName")?.focus();
 }
 
 function closeAccountDialog({ reset = false } = {}) {
   if (!accountModal) return;
 
-  accountModal.classList.add("isHidden");
-  accountModal.setAttribute("aria-hidden", "true");
+  hideModal(accountModal);
   if (reset) {
     accountForm?.reset();
     editingAccountId = null;
@@ -712,153 +940,6 @@ function setAccountSubroute(activeRoute) {
         item.dataset.route === activeRoute,
       );
     });
-}
-
-function setExpenseDate(isoDate) {
-  if (!expenseDateInput || !expenseDateDisplay) return;
-
-  expenseDateInput.value = isoDate;
-  expenseDateDisplay.value = formatDateLabel(isoDate);
-
-  const [year, month, day] = isoDate.split("-").map(Number);
-  calendarVisibleDate = new Date(year, month - 1, day);
-  renderExpenseCalendar();
-}
-
-function openExpenseCalendar() {
-  if (!expenseCalendar) return;
-
-  expenseCalendar.classList.remove("is-hidden");
-  renderExpenseCalendar();
-}
-
-function closeExpenseCalendar() {
-  expenseCalendar?.classList.add("is-hidden");
-}
-
-function toggleExpenseCalendar() {
-  if (!expenseCalendar) return;
-
-  if (expenseCalendar.classList.contains("is-hidden")) {
-    openExpenseCalendar();
-    return;
-  }
-
-  closeExpenseCalendar();
-}
-
-function renderExpenseCalendar() {
-  if (!expenseCalendar) return;
-
-  const selectedDate = expenseDateInput?.value || toIsoDate(new Date());
-  const year = calendarVisibleDate.getFullYear();
-  const month = calendarVisibleDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startDate = new Date(firstDay);
-  startDate.setDate(firstDay.getDate() - firstDay.getDay());
-
-  const monthTitle = new Intl.DateTimeFormat("pt-BR", {
-    month: "long",
-    year: "numeric",
-  }).format(calendarVisibleDate);
-
-  const todayIso = toIsoDate(new Date());
-  const days = Array.from({ length: 42 }, (_, index) => {
-    const dayDate = new Date(startDate);
-    dayDate.setDate(startDate.getDate() + index);
-
-    const isoDate = toIsoDate(dayDate);
-    const isCurrentMonth = dayDate.getMonth() === month;
-    const classes = [
-      "expense-calendar-day",
-      isCurrentMonth ? "" : "is-muted",
-      isoDate === todayIso ? "is-today" : "",
-      isoDate === selectedDate ? "is-selected" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    return `<button class="${classes}" type="button" data-calendar-day="${isoDate}">${dayDate.getDate()}</button>`;
-  }).join("");
-
-  expenseCalendar.innerHTML = `
-    <div class="expense-calendar-header">
-      <button class="expense-calendar-nav" type="button" data-calendar-nav="prev" aria-label="Mês anterior">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      <strong class="expense-calendar-title">${monthTitle}</strong>
-      <button class="expense-calendar-nav" type="button" data-calendar-nav="next" aria-label="Próximo mês">
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
-    </div>
-    <div class="expense-calendar-weekdays" aria-hidden="true">
-      <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
-    </div>
-    <div class="expense-calendar-grid">${days}</div>
-  `;
-}
-
-function collapseExpenseSelect(select) {
-  select.querySelectorAll("li").forEach((item, index) => {
-    item.style.display = index === 0 ? "flex" : "";
-  });
-}
-
-function resetExpenseSelects() {
-  expenseForm?.querySelectorAll("[data-expense-select]").forEach((select) => {
-    [...select.children]
-      .sort(
-        (first, second) =>
-          Number(first.dataset.initialIndex) -
-          Number(second.dataset.initialIndex),
-      )
-      .forEach((item) => select.append(item));
-
-    select.classList.remove("is-open");
-    collapseExpenseSelect(select);
-
-    const hiddenInput = select.previousElementSibling;
-    const firstItem = select.querySelector("li");
-    if (hiddenInput && firstItem) hiddenInput.value = firstItem.dataset.value;
-  });
-}
-
-function setExpenseSelectValue(name, value) {
-  const select = expenseForm?.querySelector(`[data-expense-select="${name}"]`);
-  if (!select) return;
-
-  [...select.children]
-    .sort(
-      (first, second) =>
-        Number(first.dataset.initialIndex) -
-        Number(second.dataset.initialIndex),
-    )
-    .forEach((item) => select.append(item));
-
-  const selectedItem = [...select.children].find(
-    (item) => item.dataset.value === value,
-  );
-  const hiddenInput = select.previousElementSibling;
-
-  if (selectedItem) {
-    select.prepend(selectedItem);
-    if (hiddenInput) hiddenInput.value = selectedItem.dataset.value;
-  } else if (hiddenInput) {
-    hiddenInput.value = value;
-  }
-
-  select.classList.remove("is-open");
-  collapseExpenseSelect(select);
-}
-
-function initializeExpenseSelects() {
-  expenseForm?.querySelectorAll("[data-expense-select]").forEach((select) => {
-    select.querySelectorAll("li").forEach((item, index) => {
-      item.dataset.initialIndex = String(index);
-    });
-  });
-
-  resetExpenseSelects();
 }
 
 function getExpenseIcon(category) {
@@ -1244,8 +1325,10 @@ async function addAccountFromForm() {
 }
 
 function getRoute() {
-  const route = window.location.hash.replace("#", "") || "dashboard";
-  return routeTitles[route] ? route : "dashboard";
+  const route = window.location.hash.replace("#", "") || "dashboard/geral";
+  if (routeTitles[route]) return route;
+  if (route === "dashboard") return "dashboard/geral";
+  return "dashboard/geral";
 }
 
 function setActiveRoute(route) {
@@ -1261,9 +1344,11 @@ function setActiveRoute(route) {
     route,
   )
     ? "patrimonio"
-    : accountRoutes.includes(route)
-      ? "contas-resumo"
-      : route;
+    : isAnalyticsDashboardRoute(route)
+      ? "dashboard"
+      : accountRoutes.includes(route)
+        ? "contas-resumo"
+        : route;
 
   document.querySelectorAll("[data-route]").forEach((link) => {
     const targetRoute = link.closest(".nav-submenu") ? route : activeRoute;
@@ -1299,17 +1384,19 @@ function setActiveRoute(route) {
         : route;
   setAccountSubroute(accountSubroute);
 
-  pageTitle.textContent = routeTitles[route];
+  pageTitle.textContent = routeTitles[route] || routeTitles[normalizeDashboardRoute(route)];
   quickAction.querySelector(".fab-add-label").textContent = "Nova Movimentação";
 }
 
-function metricCard(label, value, icon, caption, tone = "brand") {
+function metricCard(label, value, icon, caption, tone = "brand", trend = null) {
   const toneClass =
     tone === "income"
       ? "text-income"
       : tone === "expense"
         ? "text-expense"
         : "text-brand";
+
+  const trendHtml = trend ? trendBadge(trend, tone) : "";
 
   return `
     <article class="metric-card">
@@ -1319,8 +1406,73 @@ function metricCard(label, value, icon, caption, tone = "brand") {
       </div>
       <strong class="metric-value">${value}</strong>
       <small class="metric-caption">${caption}</small>
+      ${trendHtml}
     </article>
   `;
+}
+
+function trendBadge(trend, tone = "brand") {
+  if (!trend) return "";
+
+  const invertTone = tone === "expense";
+  let direction = trend.direction || "neutral";
+
+  if (invertTone) {
+    if (direction === "up") direction = "down";
+    else if (direction === "down") direction = "up";
+  }
+
+  const icon =
+    direction === "up"
+      ? "fa-arrow-trend-up"
+      : direction === "down"
+        ? "fa-arrow-trend-down"
+        : "fa-minus";
+
+  const className =
+    direction === "up"
+      ? "metric-trend-up"
+      : direction === "down"
+        ? "metric-trend-down"
+        : "metric-trend-neutral";
+
+  return `
+    <span class="metric-trend ${className}">
+      <i class="fa-solid ${icon}"></i>
+      ${trend.label || "Sem variação"}
+    </span>
+  `;
+}
+
+function getUserFirstName() {
+  const name = currentUser?.name || "Usuário";
+  return name.split(" ")[0];
+}
+
+function getTransactionStatus(transaction) {
+  const status = String(transaction.status || "confirmada").toLowerCase();
+
+  if (status === "paga" || status === "confirmada") {
+    return {
+      label: "Confirmada",
+      className: "status-paid",
+      icon: "fa-circle-check",
+    };
+  }
+
+  if (status === "pendente") {
+    return {
+      label: "Pendente",
+      className: "status-pending",
+      icon: "fa-hourglass-half",
+    };
+  }
+
+  return {
+    label: status,
+    className: "status-pending",
+    icon: "fa-circle",
+  };
 }
 
 function transactionItem(transaction) {
@@ -1390,163 +1542,6 @@ function investmentCard(investment, compact = false) {
             </div>`
       }
     </article>
-  `;
-}
-
-function accountsOverviewCard() {
-  const header = `
-    <div class="card-title-row">
-      <h2>Suas contas</h2>
-      <a class="btn-secondary" href="#contas-bancos">Abrir</a>
-    </div>`;
-
-  if (!accounts.length) {
-    return `
-      <section class="premium-card">
-        ${header}
-        <div class="empty-state compact">
-          <div>
-            <i class="fa-solid fa-building-columns"></i>
-            <p>Cadastre uma conta para ver os destaques aqui.</p>
-          </div>
-        </div>
-      </section>`;
-  }
-
-  const topBalance = accounts.reduce(
-    (best, account) => (account.balance > (best?.balance ?? -Infinity) ? account : best),
-    null,
-  );
-  const mostUsed = accounts.reduce(
-    (best, account) =>
-      (account.movementsCount || 0) > (best?.movementsCount ?? -1) ? account : best,
-    null,
-  );
-
-  const highlight = (account, caption, valueHtml) => `
-    <div class="list-item">
-      <div class="item-left">
-        <span class="item-icon text-brand"><i class="fa-solid ${resolveIcon(account.icon, "fa-building-columns")}"></i></span>
-        <div>
-          <p class="item-title">${account.name}</p>
-          <p class="item-meta">${caption}</p>
-        </div>
-      </div>
-      ${valueHtml}
-    </div>`;
-
-  return `
-    <section class="premium-card">
-      ${header}
-      <div class="mini-list">
-        ${highlight(topBalance, "Conta com maior saldo", `<strong class="amount-positive">${formatCurrency(topBalance.balance)}</strong>`)}
-        ${highlight(mostUsed, "Conta mais utilizada", `<span class="pill">${mostUsed.movementsCount || 0} mov.</span>`)}
-      </div>
-    </section>`;
-}
-
-function dashboardView() {
-  const balance = Number(dashboardData?.balance || 0);
-  const income = Number(dashboardData?.income || 0);
-  const expenses = Number(dashboardData?.expenses || 0);
-  const netWorth = Number(dashboardData?.netWorth || 0);
-
-  return `
-    <section class="app-page">
-      <div class="page-hero">
-        <div>
-          <span class="page-eyebrow">Visão simples do seu dinheiro</span>
-          <h1 class="page-title">Sua vida financeira clara, bonita e sob controle.</h1>
-          <p class="page-subtitle">Acompanhe saldo, gastos, patrimônio e metas sem complexidade. Tudo organizado para decisões rápidas e tranquilas.</p>
-        </div>
-        <div class="hero-actions">
-          <a class="btn-secondary" href="#transacoes"><i class="fa-solid fa-filter"></i> Ver transações</a>
-          <button class="btn-primary" type="button" data-action="add-investment"><i class="fa-solid fa-plus"></i> Novo investimento</button>
-        </div>
-      </div>
-
-      <div class="metrics-grid">
-        ${metricCard("Saldo total", formatCurrency(balance), "fa-wallet", "Somatório de todas as contas")}
-        ${metricCard("Receitas", formatCurrency(income), "fa-arrow-trend-up", "Entradas registradas", "income")}
-        ${metricCard("Despesas", formatCurrency(expenses), "fa-arrow-trend-down", "Saídas registradas", "expense")}
-        ${metricCard("Patrimônio", formatCurrency(netWorth), "fa-gem", "Contas e investimentos")}
-      </div>
-
-      <div class="dashboard-grid">
-        <div class="stack">
-          <section class="premium-card">
-            <div class="card-title-row">
-              <h2>Últimas movimentações</h2>
-              <a class="btn-secondary" href="#transacoes">Ver todas</a>
-            </div>
-            <div class="mini-list">${transactions.slice(0, 4).map(transactionItem).join("")}</div>
-          </section>
-
-          <div class="charts-grid">
-            <section class="chart-card">
-              <h2>Gastos por categoria</h2>
-              <div class="bar-chart" aria-label="Gráfico de gastos por categoria">
-                <span style="height: 74%" data-label="Casa"></span>
-                <span style="height: 52%" data-label="Alim."></span>
-                <span style="height: 42%" data-label="Lazer"></span>
-                <span style="height: 34%" data-label="Transp."></span>
-                <span style="height: 24%" data-label="Saúde"></span>
-              </div>
-            </section>
-
-            <section class="chart-card">
-              <h2>Evolução financeira</h2>
-              <div class="line-chart" aria-label="Gráfico de evolução financeira">
-                <span style="height: 34%" data-label="Fev"></span>
-                <span style="height: 46%" data-label="Mar"></span>
-                <span style="height: 58%" data-label="Abr"></span>
-                <span style="height: 63%" data-label="Mai"></span>
-                <span style="height: 76%" data-label="Jun"></span>
-              </div>
-            </section>
-          </div>
-        </div>
-
-        <div class="stack">
-          <section class="premium-card">
-            <div class="card-title-row">
-              <h2>Insights</h2>
-              <span class="pill">Hoje</span>
-            </div>
-            <div class="mini-list">
-              <div class="list-item insight-soft">
-                <div class="item-left">
-                  <span class="item-icon text-warning"><i class="fa-solid fa-circle-exclamation"></i></span>
-                  <div>
-                    <p class="item-title">Lazer subiu 35%</p>
-                    <p class="item-meta">Você ainda está dentro do limite mensal.</p>
-                  </div>
-                </div>
-              </div>
-              <div class="list-item insight-soft">
-                <div class="item-left">
-                  <span class="item-icon text-income"><i class="fa-solid fa-circle-check"></i></span>
-                  <div>
-                    <p class="item-title">Alimentação abaixo do orçamento</p>
-                    <p class="item-meta">Boa consistência nesta semana.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          ${accountsOverviewCard()}
-
-          <section class="premium-card">
-            <div class="card-title-row">
-              <h2>Metas financeiras</h2>
-              <a class="btn-secondary" href="#metas">Abrir</a>
-            </div>
-            <div class="mini-list">${goals.slice(0, 2).map(goalCard).join("")}</div>
-          </section>
-        </div>
-      </div>
-    </section>
   `;
 }
 
@@ -1702,6 +1697,58 @@ function renderTransactionsTable() {
   `;
 }
 
+function invoiceSummaryCard(entry) {
+  const invoice = entry.invoice;
+  const monthLabel = formatMonthYear(
+    invoice?.referenceMonth || new Date().toISOString().slice(0, 10),
+  );
+  const meta = invoice
+    ? invoiceStatusMeta(invoice.status)
+    : { label: "Sem compras", className: "status-pending" };
+  const total = Number(invoice?.total || 0);
+  const paid = Number(invoice?.paid || 0);
+  const remaining = Math.max(total - paid, 0);
+  const dueDate = invoice?.dueDate || null;
+  const canPay = invoice && invoice.status !== "paga" && total > 0;
+
+  return `
+    <article class="invoice-summary-card" style="--card-accent: ${entry.cardColor || "#0d6efd"}">
+      <div class="invoice-summary-head">
+        <div class="item-left">
+          <span class="item-icon"><i class="fa-solid fa-credit-card"></i></span>
+          <div>
+            <p class="item-title">${entry.cardName}</p>
+            <p class="item-meta">${entry.cardBrand || "Cartão"} · ••• ${entry.lastDigits || "---"}</p>
+          </div>
+        </div>
+        <span class="status-pill ${meta.className}">${meta.label}</span>
+      </div>
+      <div class="invoice-summary-values">
+        <div>
+          <span>Fatura de ${monthLabel}</span>
+          <strong class="${total > 0 ? "amount-negative" : ""}">${formatCurrency(total)}</strong>
+        </div>
+        <div>
+          <span>Vencimento</span>
+          <strong>${dueDate ? formatDateLabel(dueDate) : `Dia ${entry.dueDay || "-"}`}</strong>
+        </div>
+        <div>
+          <span>Restante</span>
+          <strong class="${remaining > 0 ? "amount-negative" : "text-income"}">${formatCurrency(remaining)}</strong>
+        </div>
+      </div>
+      <div class="card-actions">
+        ${
+          canPay
+            ? `<button class="btn-primary" type="button" data-action="pay-invoice" data-invoice-id="${invoice.id}"><i class="fa-solid fa-check"></i> Pagar</button>`
+            : ""
+        }
+        <button class="btn-secondary" type="button" data-action="view-card" data-card-id="${entry.cardId}">Ver cartão</button>
+      </div>
+    </article>
+  `;
+}
+
 function billsSummaryView() {
   const total = bills.reduce((sum, bill) => sum + bill.value, 0);
   const paid = bills
@@ -1711,6 +1758,15 @@ function billsSummaryView() {
   const nextBill = [...pendingBills].sort((first, second) =>
     first.dueDate.localeCompare(second.dueDate),
   )[0];
+  const invoicesTotal = currentInvoices.reduce(
+    (sum, entry) => sum + Number(entry.invoice?.total || 0),
+    0,
+  );
+  const invoicesRemaining = currentInvoices.reduce((sum, entry) => {
+    const total = Number(entry.invoice?.total || 0);
+    const paidAmount = Number(entry.invoice?.paid || 0);
+    return sum + Math.max(total - paidAmount, 0);
+  }, 0);
 
   return `
     <section class="app-page">
@@ -1740,6 +1796,23 @@ function billsSummaryView() {
           .slice(0, 5)
           .map((bill) => billCard(bill, true))
           .join("")}</div>
+      </section>
+
+      <section class="premium-card">
+        <div class="card-title-row">
+          <h2>Faturas do mês</h2>
+          <span class="pill">${formatCurrency(invoicesRemaining)} em aberto</span>
+        </div>
+        ${
+          currentInvoices.length
+            ? `<div class="invoices-summary-grid">${currentInvoices.map(invoiceSummaryCard).join("")}</div>`
+            : `<div class="empty-state compact"><div><i class="fa-solid fa-credit-card"></i><p>Nenhum cartão cadastrado. Adicione um cartão para acompanhar as faturas aqui.</p></div></div>`
+        }
+        ${
+          currentInvoices.length
+            ? `<p class="item-meta summary-invoices-total">Total das faturas do mês: <strong class="amount-negative">${formatCurrency(invoicesTotal)}</strong></p>`
+            : ""
+        }
       </section>
     </section>
   `;
@@ -2332,110 +2405,6 @@ function wealthView() {
   `;
 }
 
-function getInvestmentCalendarElements() {
-  return {
-    calendar: document.querySelector("#investmentCalendar"),
-    dateInput: document.querySelector("#investmentDate"),
-    dateDisplay: document.querySelector("#investmentDateDisplay"),
-  };
-}
-
-function setInvestmentDate(isoDate) {
-  const { dateInput, dateDisplay } = getInvestmentCalendarElements();
-  if (!dateInput || !dateDisplay) return;
-
-  dateInput.value = isoDate;
-  dateDisplay.value = formatDateLabel(isoDate);
-
-  const [year, month, day] = isoDate.split("-").map(Number);
-  investmentCalendarVisibleDate = new Date(year, month - 1, day);
-  renderInvestmentCalendar();
-}
-
-function openInvestmentCalendar() {
-  const { calendar } = getInvestmentCalendarElements();
-  if (!calendar) return;
-
-  calendar.classList.remove("is-hidden");
-  renderInvestmentCalendar();
-}
-
-function closeInvestmentCalendar() {
-  getInvestmentCalendarElements().calendar?.classList.add("is-hidden");
-}
-
-function toggleInvestmentCalendar() {
-  const { calendar } = getInvestmentCalendarElements();
-  if (!calendar) return;
-
-  if (calendar.classList.contains("is-hidden")) {
-    openInvestmentCalendar();
-    return;
-  }
-
-  closeInvestmentCalendar();
-}
-
-function renderInvestmentCalendar() {
-  const { calendar, dateInput } = getInvestmentCalendarElements();
-  if (!calendar) return;
-
-  const selectedDate = dateInput?.value || toIsoDate(new Date());
-  const year = investmentCalendarVisibleDate.getFullYear();
-  const month = investmentCalendarVisibleDate.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startDate = new Date(firstDay);
-  startDate.setDate(firstDay.getDate() - firstDay.getDay());
-
-  const monthTitle = new Intl.DateTimeFormat("pt-BR", {
-    month: "long",
-    year: "numeric",
-  }).format(investmentCalendarVisibleDate);
-
-  const todayIso = toIsoDate(new Date());
-  const days = Array.from({ length: 42 }, (_, index) => {
-    const dayDate = new Date(startDate);
-    dayDate.setDate(startDate.getDate() + index);
-
-    const isoDate = toIsoDate(dayDate);
-    const isCurrentMonth = dayDate.getMonth() === month;
-    const classes = [
-      "investment-calendar-day",
-      isCurrentMonth ? "" : "is-muted",
-      isoDate === todayIso ? "is-today" : "",
-      isoDate === selectedDate ? "is-selected" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-
-    return `<button class="${classes}" type="button" data-investment-calendar-day="${isoDate}">${dayDate.getDate()}</button>`;
-  }).join("");
-
-  calendar.innerHTML = `
-    <div class="investment-calendar-header">
-      <button class="investment-calendar-nav" type="button" data-investment-calendar-nav="prev" aria-label="Mês anterior">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      <strong class="investment-calendar-title">${monthTitle}</strong>
-      <button class="investment-calendar-nav" type="button" data-investment-calendar-nav="next" aria-label="Próximo mês">
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
-    </div>
-    <div class="investment-calendar-weekdays" aria-hidden="true">
-      <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
-    </div>
-    <div class="investment-calendar-grid">${days}</div>
-  `;
-}
-
-function initializeInvestmentCalendar() {
-  const { dateInput } = getInvestmentCalendarElements();
-  if (!dateInput) return;
-
-  setInvestmentDate(dateInput.value || toIsoDate(new Date()));
-  closeInvestmentCalendar();
-}
-
 function investmentDetailView() {
   if (!investments.length) {
     return `
@@ -2686,6 +2655,12 @@ async function renderRoute() {
   const viewRoute = route === "investimento-novo" ? "patrimonio" : route;
   setActiveRoute(viewRoute);
 
+  if (isAnalyticsDashboardRoute(viewRoute)) {
+    await renderAnalyticsDashboardPage(route);
+    return;
+  }
+
+  destroyAllCharts();
   app.innerHTML = `
     <section class="app-page">
       <div class="skeleton"></div>
@@ -2693,7 +2668,8 @@ async function renderRoute() {
     </section>
   `;
 
-  await loadAppData();
+  await loadBootstrap();
+  await loadRouteData(route);
 
   if (viewRoute === "cartao-detalhe") {
     const cardId = selectedCardId || creditCards[0]?.id || null;
@@ -2710,7 +2686,6 @@ async function renderRoute() {
   }
 
   const views = {
-    dashboard: dashboardView,
     transacoes: transactionsView,
     patrimonio: wealthView,
     "investimento-detalhe": investmentDetailView,
@@ -2728,6 +2703,7 @@ async function renderRoute() {
 
   if (viewRoute === "transacoes") renderTransactionsTable();
   if (viewRoute === "contas-despesas") renderBillsList();
+  initCustomSelects(app);
   if (route === "investimento-novo") openInvestmentModal();
 }
 
@@ -2777,110 +2753,6 @@ document.addEventListener("submit", async (event) => {
 });
 
 document.addEventListener("click", async (event) => {
-  const investmentCalendarTrigger = event.target.closest(
-    "[data-investment-calendar-trigger]",
-  );
-  const investmentCalendarNav = event.target.closest(
-    "[data-investment-calendar-nav]",
-  );
-  const investmentCalendarDay = event.target.closest(
-    "[data-investment-calendar-day]",
-  );
-
-  if (investmentCalendarTrigger) {
-    toggleInvestmentCalendar();
-    return;
-  }
-
-  if (investmentCalendarNav) {
-    const direction =
-      investmentCalendarNav.dataset.investmentCalendarNav === "next" ? 1 : -1;
-    investmentCalendarVisibleDate = new Date(
-      investmentCalendarVisibleDate.getFullYear(),
-      investmentCalendarVisibleDate.getMonth() + direction,
-      1,
-    );
-    renderInvestmentCalendar();
-    return;
-  }
-
-  if (investmentCalendarDay) {
-    setInvestmentDate(investmentCalendarDay.dataset.investmentCalendarDay);
-    closeInvestmentCalendar();
-    return;
-  }
-
-  if (
-    investmentModal &&
-    !investmentModal.classList.contains("isHidden") &&
-    !event.target.closest("#investmentCalendar") &&
-    !event.target.closest("[data-investment-calendar-trigger]")
-  ) {
-    closeInvestmentCalendar();
-  }
-
-  const calendarTrigger = event.target.closest("[data-calendar-trigger]");
-  const calendarNav = event.target.closest("[data-calendar-nav]");
-  const calendarDay = event.target.closest("[data-calendar-day]");
-
-  if (calendarTrigger) {
-    toggleExpenseCalendar();
-    return;
-  }
-
-  if (calendarNav) {
-    const direction = calendarNav.dataset.calendarNav === "next" ? 1 : -1;
-    calendarVisibleDate = new Date(
-      calendarVisibleDate.getFullYear(),
-      calendarVisibleDate.getMonth() + direction,
-      1,
-    );
-    renderExpenseCalendar();
-    return;
-  }
-
-  if (calendarDay) {
-    setExpenseDate(calendarDay.dataset.calendarDay);
-    closeExpenseCalendar();
-    return;
-  }
-
-  if (
-    expenseModal &&
-    !expenseModal.classList.contains("isHidden") &&
-    !event.target.closest("#expenseCalendar") &&
-    !event.target.closest("[data-calendar-trigger]")
-  ) {
-    closeExpenseCalendar();
-  }
-
-  const expenseSelect = event.target.closest("[data-expense-select]");
-  if (expenseSelect) {
-    const selectedItem = event.target.closest("li");
-    const isOpen = expenseSelect.classList.contains("is-open");
-
-    document
-      .querySelectorAll("[data-expense-select].is-open")
-      .forEach((select) => {
-        if (select !== expenseSelect) select.classList.remove("is-open");
-      });
-
-    if (!isOpen) {
-      expenseSelect.classList.add("is-open");
-      return;
-    }
-
-    if (selectedItem) {
-      const hiddenInput = expenseSelect.previousElementSibling;
-      if (hiddenInput) hiddenInput.value = selectedItem.dataset.value;
-      expenseSelect.prepend(selectedItem);
-    }
-
-    expenseSelect.classList.remove("is-open");
-    collapseExpenseSelect(expenseSelect);
-    return;
-  }
-
   if (event.target === expenseModal) {
     closeExpenseDialog();
     return;
@@ -3002,6 +2874,18 @@ document.addEventListener("click", async (event) => {
 
   if (action === "toggle-accounts-menu") {
     toggleAccountsMenu();
+    return;
+  }
+
+  if (action === "dashboard-period") {
+    const period = event.target.closest("[data-period]")?.dataset.period;
+    if (period) await reloadDashboardWithPeriod(period);
+    return;
+  }
+
+  if (action === "retry-dashboard") {
+    analyticsDashboardData = null;
+    await renderAnalyticsDashboardPage(currentAnalyticsRoute);
     return;
   }
 
@@ -3179,7 +3063,7 @@ document.addEventListener("click", async (event) => {
           accountDetailData = null;
         }
         if (getRoute() === "conta-detalhe") {
-          await loadAppData({ force: true });
+          await reloadAndRender();
           window.location.hash = "contas-bancos";
         } else {
           await reloadAndRender();
@@ -3294,7 +3178,7 @@ quickAction.addEventListener("click", () => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    closeInvestmentCalendar();
+    closeAllCustomCalendars();
     closeQuickActionMenu();
   }
 
@@ -3322,7 +3206,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-initializeExpenseSelects();
-initializeInvestmentCalendar();
+setupCustomSelects();
+setupCustomCalendars();
 window.addEventListener("hashchange", renderRoute);
 renderRoute();

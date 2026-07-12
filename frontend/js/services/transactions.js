@@ -21,7 +21,7 @@ function toCreatePayload(payload) {
 }
 
 export const transactionsService = {
-  list: () => api.get("/movements"),
+  list: () => api.get("/movements/transactions"),
   create: (payload) => api.post("/movements", toCreatePayload(payload)),
   update: (id, payload) => api.put(`/movements/${id}`, payload),
   remove: (id) => api.delete(`/movements/${id}`),

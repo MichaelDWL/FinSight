@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@4.5.0/dist/apexcharts.min.js" defer></script>
   <title>FinSight - Gerenciamento Financeiro</title>
   <link rel="stylesheet" href="style/style.css">
 </head>
@@ -16,12 +17,12 @@
   <header class="header c-pw font-title-sm">
     <div class="header-brand">
       <span class="header-kicker">FinSight</span>
-      <strong id="pageTitle">Dashboard</strong>
+      <strong id="pageTitle">Home</strong>
     </div>
 
     <nav class="nav" aria-label="Navegação principal">
       <ul>
-        <li><a class="nav-link nav-link-active" href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i>Dashboard</a></li>
+        <li><a class="nav-link nav-link-active" href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i>Home</a></li>
         <li><a class="nav-link" href="#transacoes" data-route="transacoes"><i class="fa-solid fa-arrow-right-arrow-left"></i>Transações</a></li>
         <li><a class="nav-link" href="#patrimonio" data-route="patrimonio"><i class="fa-solid fa-wallet"></i>Patrimônio</a></li>
         <li><a class="nav-link" href="#contas-resumo" data-route="contas-resumo"><i class="fa-solid fa-credit-card"></i>Contas</a></li>
@@ -48,7 +49,7 @@
       </div>
 
       <ul class="nav-list">
-        <li class="nav-item nav-active"><a href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+        <li class="nav-item nav-active"><a href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i> Home</a></li>
         <li class="nav-item"><a href="#transacoes" data-route="transacoes"><i class="fa-solid fa-arrow-right-arrow-left"></i> Transações</a></li>
         <li class="nav-item nav-group" data-nav-group="investments">
           <button class="nav-group-toggle" type="button" data-action="toggle-investments-menu" aria-expanded="false" aria-controls="investmentsSubmenu">
@@ -145,7 +146,7 @@
             </div>
           </label>
 
-          <label class="expense-field" for="investmentCategory">
+          <label class="expense-field">
             <span class="font-label">Categoria</span>
             <div class="expense-input-wrapper">
               <i class="fa-solid fa-layer-group"></i>
@@ -167,14 +168,14 @@
             </div>
           </label>
 
-          <label class="expense-field investment-date-field" for="investmentDateDisplay">
+          <label class="expense-field custom-date-field">
             <span class="font-label">Data</span>
-            <div class="expense-input-wrapper investment-date-input" data-investment-calendar-trigger>
+            <div class="expense-input-wrapper custom-date-input" data-custom-calendar-trigger>
               <i class="fa-regular fa-calendar-days"></i>
-              <input id="investmentDateDisplay" type="text" class="input-basic" readonly required placeholder="Selecione a data">
-              <input id="investmentDate" name="date" type="hidden" required>
+              <input id="investmentDateDisplay" type="text" class="input-basic custom-date-display" readonly required placeholder="Selecione a data">
+              <input id="investmentDate" name="date" type="hidden" class="custom-date-native" required>
             </div>
-            <div class="investment-calendar is-hidden" id="investmentCalendar" aria-label="Calendário do investimento"></div>
+            <div class="custom-calendar is-hidden" id="investmentCalendar" aria-label="Calendário"></div>
           </label>
 
           <label class="expense-field" for="investmentInvested">
@@ -242,7 +243,7 @@
             </div>
           </label>
 
-          <label class="expense-field" for="cardBrand">
+          <label class="expense-field">
             <span class="font-label">Bandeira</span>
             <div class="expense-input-wrapper">
               <i class="fa-regular fa-credit-card"></i>
@@ -338,7 +339,7 @@
             </div>
           </label>
 
-          <label class="expense-field" for="accountType">
+          <label class="expense-field">
             <span class="font-label">Tipo</span>
             <div class="expense-input-wrapper">
               <i class="fa-solid fa-layer-group"></i>
