@@ -1,11 +1,3 @@
-.input-select li {
-  display: none;
-}
-
-.input-select li:first-child {
-  display: block;
-}
-
 /* Chrome, Edge e Safari */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {

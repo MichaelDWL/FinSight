@@ -2,6 +2,8 @@
 // Uso: const ok = await confirmDialog({ title, message, confirmText, tone });
 // Retorna uma Promise<boolean>.
 
+import { hideModal, showModal } from "./modalFocus.js";
+
 let modalEl = null;
 let els = null;
 let resolver = null;
@@ -12,8 +14,7 @@ function onKey(event) {
 
 function close(result) {
   if (!modalEl) return;
-  modalEl.classList.add("isHidden");
-  modalEl.setAttribute("aria-hidden", "true");
+  hideModal(modalEl);
   document.removeEventListener("keydown", onKey);
   const resolve = resolver;
   resolver = null;
@@ -83,8 +84,7 @@ export function confirmDialog({
     els.icon.className = `fa-solid ${icon || defaultIcon}`;
     els.ok.className = `confirm-btn confirm-ok ${isDanger ? "is-danger" : "is-primary"}`;
 
-    modalEl.classList.remove("isHidden");
-    modalEl.setAttribute("aria-hidden", "false");
+    showModal(modalEl);
     els.card.classList.remove("confirm-pop");
     void els.card.offsetWidth;
     els.card.classList.add("confirm-pop");

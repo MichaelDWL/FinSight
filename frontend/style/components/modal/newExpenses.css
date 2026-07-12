@@ -275,64 +275,6 @@
   box-shadow: 0 10px 20px rgba(13, 110, 253, 0.28);
 }
 
-.new-expense-form .input-select {
-  position: relative;
-  height: auto;
-  min-height: 2.75rem;
-  padding: 0.28rem;
-  border: var(--border-field);
-  border-radius: 12px;
-  color: var(--pw8);
-  background-color: var(--pw);
-  box-shadow: var(--bx-shadow-field);
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
-}
-
-.new-expense-form .input-select::after {
-  content: "\f078";
-  position: absolute;
-  top: 0.86rem;
-  right: 0.9rem;
-  color: var(--brand-accent);
-  font-family: "Font Awesome 7 Free";
-  font-size: 0.8rem;
-  font-weight: 900;
-  pointer-events: none;
-}
-
-.new-expense-form .input-select:hover,
-.new-expense-form .input-select:focus-within {
-  border-color: var(--brand-accent);
-  box-shadow: var(--bx-shadow-field-focus);
-  transform: translateY(-1px);
-}
-
-.new-expense-form .input-select li:first-child {
-  display: flex;
-}
-
-.new-expense-form .input-select li {
-  align-items: center;
-  min-height: 2.15rem;
-  padding: 0 2.2rem 0 0.65rem;
-  border-radius: 9px;
-  font-family: "Inter", sans-serif;
-  font-size: 0.9rem;
-}
-
-.new-expense-form .input-select.is-open li {
-  display: flex;
-}
-
-.new-expense-form .input-select.is-open li:hover {
-  color: var(--brand-accent);
-  background-color: var(--brand-accent-soft);
-}
-
 .obs-expense textarea {
   width: 100%;
   min-height: 5.25rem;
@@ -357,16 +299,8 @@
   box-shadow: var(--bx-shadow-field-focus);
 }
 
-.expense-date-field {
-  position: relative;
-}
-
-.expense-date-field .input-basic {
+.custom-date-field .custom-date-display {
   cursor: pointer;
-}
-
-.expense-calendar {
-  z-index: 6;
 }
 
 .new-expense-actions {
@@ -500,24 +434,10 @@
     font-size: 0.82rem;
   }
 
-  .expense-input-wrapper,
-  .new-expense-form .input-select {
+  .expense-input-wrapper {
     min-height: 2.55rem;
     border-radius: 11px;
-  }
-
-  .expense-calendar {
-    position: static;
-    width: 100%;
-    margin-top: 0.55rem;
-  }
-
-  .expense-input-wrapper {
     height: 2.55rem;
-  }
-
-  .new-expense-form .input-select::after {
-    top: 0.78rem;
   }
 
   .obs-expense textarea {
@@ -575,12 +495,8 @@
     display: none;
   }
 
-  .expense-input-wrapper,
-  .new-expense-form .input-select {
-    min-height: 2.45rem;
-  }
-
   .expense-input-wrapper {
+    min-height: 2.45rem;
     height: 2.45rem;
   }
 

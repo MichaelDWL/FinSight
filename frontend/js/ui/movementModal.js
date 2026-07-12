@@ -1,4 +1,7 @@
 import { movementsService } from "../services/movements.js";
+import { initCustomSelects } from "./customSelect.js";
+import { initCustomCalendars, closeAllCustomCalendars } from "./customCalendar.js";
+import { hideModal, showModal } from "./modalFocus.js";
 
 // Modal dinamico unico de "Nova Movimentacao".
 // Fluxo: (1) escolha do tipo -> (2) formulario dinamico -> (3) resumo -> salvar.
@@ -382,8 +385,10 @@ export function createMovementModal({
         </form>
       </div>`;
     animate();
+    initCustomSelects(body);
+    initCustomCalendars(body);
     if (type === "despesa") wireDespesaPaymentToggle();
-    body.querySelector("input, select")?.focus();
+    body.querySelector('input:not([type="hidden"]):not([disabled]), textarea')?.focus();
   }
 
   // Despesa no cartao de credito espelha a compra no cartao: troca a "Conta"
@@ -684,13 +689,14 @@ export function createMovementModal({
   }
 
   function openModal() {
-    modal.classList.remove("isHidden");
-    modal.setAttribute("aria-hidden", "false");
+    showModal(modal);
   }
 
   function close() {
-    modal.classList.add("isHidden");
-    modal.setAttribute("aria-hidden", "true");
+    closeAllCustomCalendars();
+    hideModal(modal, {
+      returnFocusTo: document.querySelector("#quickAction"),
+    });
     state.type = null;
     state.editId = null;
     state.pending = null;

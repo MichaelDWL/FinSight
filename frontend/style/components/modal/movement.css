@@ -104,17 +104,8 @@
   display: none !important;
 }
 
-.movement-form .expense-input-wrapper select.input-basic {
+.movement-form .expense-input-wrapper .custom-select.is-embedded {
   width: 100%;
-  height: auto;
-  padding: 0;
-  border: 0;
-  outline: none;
-  color: var(--pw8);
-  background: transparent;
-  font-family: "Inter", sans-serif;
-  font-size: 0.9rem;
-  cursor: pointer;
 }
 
 .movement-warning {
