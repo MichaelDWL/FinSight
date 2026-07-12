@@ -8,6 +8,11 @@ const listByCard = asyncHandler(async (req, res) => {
   return success(res, { message: "Faturas carregadas.", data });
 });
 
+const listCurrent = asyncHandler(async (req, res) => {
+  const data = await service.listCurrent(getCurrentUserId(req));
+  return success(res, { message: "Faturas do mes carregadas.", data });
+});
+
 const listItems = asyncHandler(async (req, res) => {
   const data = await service.listItems(getCurrentUserId(req), req.params.id);
   return success(res, { message: "Compras da fatura carregadas.", data });
@@ -18,4 +23,4 @@ const pay = asyncHandler(async (req, res) => {
   return success(res, { message: "Fatura paga com sucesso.", data });
 });
 
-module.exports = { listByCard, listItems, pay };
+module.exports = { listByCard, listCurrent, listItems, pay };
