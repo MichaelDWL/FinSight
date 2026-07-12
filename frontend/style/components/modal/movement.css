@@ -1,0 +1,180 @@
+.movement-body {
+  padding: 0 1.6rem 1.5rem;
+}
+
+.movement-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.movement-step-in {
+  animation: movement-fade 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes movement-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Passo 1 - escolha do tipo */
+.movement-type-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.movement-type-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid rgba(13, 110, 253, 0.12);
+  border-radius: 16px;
+  background: var(--pw);
+  box-shadow: var(--bx-shadow-field);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.movement-type-card:hover {
+  border-color: var(--type-accent, var(--brand-accent));
+  transform: translateY(-2px);
+  box-shadow: 0 14px 26px rgba(15, 45, 79, 0.12);
+}
+
+.movement-type-icon {
+  display: grid;
+  flex-shrink: 0;
+  width: 2.9rem;
+  height: 2.9rem;
+  place-items: center;
+  border-radius: 14px;
+  font-size: 1.4rem;
+  background: color-mix(in srgb, var(--type-accent, #0d6efd) 14%, transparent);
+}
+
+.movement-type-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.movement-type-info strong {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+}
+
+.movement-type-info span {
+  color: var(--pw6);
+  font-family: "Inter", sans-serif;
+  font-size: 0.82rem;
+}
+
+.movement-type-chevron {
+  color: var(--type-accent, var(--brand-accent));
+  font-size: 0.85rem;
+  transition: transform 0.2s ease;
+}
+
+.movement-type-card:hover .movement-type-chevron {
+  transform: translateX(3px);
+}
+
+/* Passo 2 - formulario */
+.movement-form {
+  padding: 0;
+}
+
+.movement-hidden {
+  display: none !important;
+}
+
+.movement-form .expense-input-wrapper select.input-basic {
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border: 0;
+  outline: none;
+  color: var(--pw8);
+  background: transparent;
+  font-family: "Inter", sans-serif;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.movement-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 12px;
+  color: #9a6700;
+  background: rgba(245, 158, 11, 0.12);
+  font-family: "Inter", sans-serif;
+  font-size: 0.85rem;
+}
+
+/* Passo 3 - resumo */
+.movement-summary {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(13, 110, 253, 0.12);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--pw);
+}
+
+.movement-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.1rem;
+  border-bottom: 1px solid rgba(15, 45, 79, 0.06);
+}
+
+.movement-summary-row:last-child {
+  border-bottom: 0;
+}
+
+.movement-summary-row span {
+  color: var(--pw6);
+  font-family: "Inter", sans-serif;
+  font-size: 0.82rem;
+}
+
+.movement-summary-row strong {
+  color: var(--brand-900);
+  font-family: "Manrope", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .movement-body {
+    padding-inline: 1.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movement-step-in {
+    animation: none;
+  }
+}

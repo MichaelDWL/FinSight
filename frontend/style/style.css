@@ -14,5 +14,7 @@
 @import "./components/inputs.css";
 @import "./components/modal/modal.css";
 @import "./components/modal/newExpenses.css";
+@import "./components/modal/movement.css";
+@import "./components/modal/confirm.css";
 @import "./components/fab.css";
 @import "./pages/app.css";

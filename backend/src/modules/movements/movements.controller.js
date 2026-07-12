@@ -1,26 +1,31 @@
 const asyncHandler = require("../../utils/asyncHandler");
 const { getCurrentUserId } = require("../../utils/demoUser");
 const { success } = require("../../utils/apiResponse");
-const service = require("./transactions.service");
+const service = require("./movements.service");
 
 const list = asyncHandler(async (req, res) => {
   const data = await service.list(getCurrentUserId(req));
-  return success(res, { message: "Transacoes carregadas.", data });
+  return success(res, { message: "Movimentacoes carregadas.", data });
 });
 
 const create = asyncHandler(async (req, res) => {
   const data = await service.create(getCurrentUserId(req), req.validated.body);
-  return success(res, { statusCode: 201, message: "Transacao cadastrada com sucesso.", data });
+  return success(res, { statusCode: 201, message: "Movimentacao registrada com sucesso.", data });
 });
 
 const update = asyncHandler(async (req, res) => {
   const data = await service.update(getCurrentUserId(req), req.params.id, req.validated.body);
-  return success(res, { message: "Transacao atualizada com sucesso.", data });
+  return success(res, { message: "Movimentacao atualizada com sucesso.", data });
+});
+
+const markPaid = asyncHandler(async (req, res) => {
+  const data = await service.markPaid(getCurrentUserId(req), req.params.id, req.validated.body.paid);
+  return success(res, { message: "Status da movimentacao atualizado.", data });
 });
 
 const remove = asyncHandler(async (req, res) => {
   const data = await service.remove(getCurrentUserId(req), req.params.id);
-  return success(res, { message: "Transacao excluida com sucesso.", data });
+  return success(res, { message: "Movimentacao excluida com sucesso.", data });
 });
 
-module.exports = { list, create, update, remove };
+module.exports = { list, create, update, markPaid, remove };

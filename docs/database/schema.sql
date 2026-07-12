@@ -53,6 +53,22 @@ CREATE TYPE forma_pagamento_enum AS ENUM (
     'outros'
 );
 
+-- Origem da movimentacao: como ela foi criada no sistema.
+CREATE TYPE origem_movimentacao_enum AS ENUM (
+    'manual',
+    'recorrente',
+    'cartao',
+    'transferencia'
+);
+
+-- Intervalo de recorrencia utilizado para gerar movimentacoes automaticamente.
+CREATE TYPE intervalo_recorrencia_enum AS ENUM (
+    'diario',
+    'semanal',
+    'mensal',
+    'anual'
+);
+
 -- ------------------------------------------------------------
 -- 3. Funcao e triggers de updated_at
 -- ------------------------------------------------------------
@@ -88,10 +104,12 @@ CREATE TABLE contas (
     usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     nome VARCHAR(120) NOT NULL,
     tipo tipo_conta_enum NOT NULL,
+    instituicao VARCHAR(120),
     saldo_inicial NUMERIC(14,2) NOT NULL DEFAULT 0,
     saldo_atual NUMERIC(14,2) NOT NULL DEFAULT 0,
     cor VARCHAR(7),
     icone VARCHAR(80),
+    observacao TEXT,
     status status_enum NOT NULL DEFAULT 'ativa',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -199,7 +217,7 @@ CREATE TABLE faturas (
     CONSTRAINT chk_faturas_status CHECK (status IN ('aberta', 'fechada', 'paga', 'atrasada'))
 );
 
-CREATE TABLE transacoes (
+CREATE TABLE movimentacoes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
     conta_id UUID REFERENCES contas(id) ON DELETE RESTRICT,
@@ -207,8 +225,10 @@ CREATE TABLE transacoes (
     categoria_id UUID REFERENCES categorias(id) ON DELETE SET NULL,
     cartao_id UUID REFERENCES cartoes(id) ON DELETE SET NULL,
     fatura_id UUID REFERENCES faturas(id) ON DELETE SET NULL,
-    transacao_pai_id UUID REFERENCES transacoes(id) ON DELETE SET NULL,
+    movimentacao_pai_id UUID REFERENCES movimentacoes(id) ON DELETE SET NULL,
+    recorrencia_id UUID,
     tipo tipo_transacao_enum NOT NULL,
+    origem origem_movimentacao_enum NOT NULL DEFAULT 'manual',
     forma_pagamento forma_pagamento_enum NOT NULL,
     status status_enum NOT NULL DEFAULT 'confirmada',
     descricao VARCHAR(180) NOT NULL,
@@ -224,25 +244,25 @@ CREATE TABLE transacoes (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    CONSTRAINT chk_transacoes_valor CHECK (valor > 0),
-    CONSTRAINT chk_transacoes_status CHECK (status IN ('pendente', 'confirmada', 'cancelada', 'paga')),
-    CONSTRAINT chk_transacoes_transferencia
+    CONSTRAINT chk_movimentacoes_valor CHECK (valor > 0),
+    CONSTRAINT chk_movimentacoes_status CHECK (status IN ('pendente', 'confirmada', 'cancelada', 'paga')),
+    CONSTRAINT chk_movimentacoes_transferencia
         CHECK (tipo <> 'transferencia' OR (conta_id IS NOT NULL AND conta_destino_id IS NOT NULL AND conta_destino_id <> conta_id)),
-    CONSTRAINT chk_transacoes_pagamento_fatura
+    CONSTRAINT chk_movimentacoes_pagamento_fatura
         CHECK (tipo <> 'pagamento_fatura' OR fatura_id IS NOT NULL),
-    CONSTRAINT chk_transacoes_compra_parcelada
+    CONSTRAINT chk_movimentacoes_compra_parcelada
         CHECK (tipo <> 'compra_parcelada' OR (cartao_id IS NOT NULL AND total_parcelas IS NOT NULL AND total_parcelas > 1)),
-    CONSTRAINT chk_transacoes_recorrencia
+    CONSTRAINT chk_movimentacoes_recorrencia
         CHECK (tipo <> 'recorrencia' OR recorrente = true),
-    CONSTRAINT chk_transacoes_parcelas_total CHECK (total_parcelas IS NULL OR total_parcelas >= 1),
-    CONSTRAINT chk_transacoes_parcela_atual
+    CONSTRAINT chk_movimentacoes_parcelas_total CHECK (total_parcelas IS NULL OR total_parcelas >= 1),
+    CONSTRAINT chk_movimentacoes_parcela_atual
         CHECK (parcela_atual IS NULL OR (total_parcelas IS NOT NULL AND parcela_atual BETWEEN 1 AND total_parcelas))
 );
 
 CREATE TABLE parcelas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    transacao_id UUID NOT NULL REFERENCES transacoes(id) ON DELETE CASCADE,
+    movimentacao_id UUID NOT NULL REFERENCES movimentacoes(id) ON DELETE CASCADE,
     fatura_id UUID REFERENCES faturas(id) ON DELETE SET NULL,
     numero INTEGER NOT NULL,
     total INTEGER NOT NULL,
@@ -253,12 +273,41 @@ CREATE TABLE parcelas (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    CONSTRAINT uq_parcelas_transacao_numero UNIQUE (transacao_id, numero),
+    CONSTRAINT uq_parcelas_movimentacao_numero UNIQUE (movimentacao_id, numero),
     CONSTRAINT chk_parcelas_numero CHECK (numero BETWEEN 1 AND total),
     CONSTRAINT chk_parcelas_total CHECK (total > 1),
     CONSTRAINT chk_parcelas_valor CHECK (valor > 0),
     CONSTRAINT chk_parcelas_status CHECK (status IN ('pendente', 'paga', 'cancelada'))
 );
+
+-- Modelos de recorrencia. Responsaveis por gerar automaticamente as
+-- proximas movimentacoes (ex.: contas mensais como energia, internet, aluguel).
+CREATE TABLE recorrencias (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    conta_id UUID REFERENCES contas(id) ON DELETE SET NULL,
+    categoria_id UUID REFERENCES categorias(id) ON DELETE SET NULL,
+    tipo tipo_transacao_enum NOT NULL DEFAULT 'despesa',
+    forma_pagamento forma_pagamento_enum NOT NULL DEFAULT 'boleto',
+    descricao VARCHAR(180) NOT NULL,
+    valor NUMERIC(14,2) NOT NULL,
+    intervalo intervalo_recorrencia_enum NOT NULL DEFAULT 'mensal',
+    dia_vencimento SMALLINT,
+    proxima_geracao DATE NOT NULL,
+    ativa BOOLEAN NOT NULL DEFAULT true,
+    observacao TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT chk_recorrencias_valor CHECK (valor > 0),
+    CONSTRAINT chk_recorrencias_dia_vencimento
+        CHECK (dia_vencimento IS NULL OR dia_vencimento BETWEEN 1 AND 31)
+);
+
+-- Vinculo opcional da movimentacao com a recorrencia que a gerou.
+ALTER TABLE movimentacoes
+    ADD CONSTRAINT fk_movimentacoes_recorrencia
+    FOREIGN KEY (recorrencia_id) REFERENCES recorrencias(id) ON DELETE SET NULL;
 
 CREATE TABLE metas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -319,20 +368,20 @@ CREATE TABLE tags (
     CONSTRAINT chk_tags_cor_hex CHECK (cor IS NULL OR cor ~ '^#[0-9A-Fa-f]{6}$')
 );
 
-CREATE TABLE transacao_tags (
+CREATE TABLE movimentacao_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    transacao_id UUID NOT NULL REFERENCES transacoes(id) ON DELETE CASCADE,
+    movimentacao_id UUID NOT NULL REFERENCES movimentacoes(id) ON DELETE CASCADE,
     tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    CONSTRAINT uq_transacao_tags_transacao_tag UNIQUE (transacao_id, tag_id)
+    CONSTRAINT uq_movimentacao_tags_transacao_tag UNIQUE (movimentacao_id, tag_id)
 );
 
 CREATE TABLE anexos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
-    transacao_id UUID NOT NULL REFERENCES transacoes(id) ON DELETE CASCADE,
+    movimentacao_id UUID NOT NULL REFERENCES movimentacoes(id) ON DELETE CASCADE,
     nome_arquivo VARCHAR(180) NOT NULL,
     url TEXT NOT NULL,
     mime_type VARCHAR(120) NOT NULL,
@@ -397,10 +446,13 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_faturas_updated_at BEFORE UPDATE ON faturas
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER trg_transacoes_updated_at BEFORE UPDATE ON transacoes
+CREATE TRIGGER trg_movimentacoes_updated_at BEFORE UPDATE ON movimentacoes
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TRIGGER trg_parcelas_updated_at BEFORE UPDATE ON parcelas
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER trg_recorrencias_updated_at BEFORE UPDATE ON recorrencias
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TRIGGER trg_metas_updated_at BEFORE UPDATE ON metas
@@ -412,7 +464,7 @@ FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_tags_updated_at BEFORE UPDATE ON tags
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-CREATE TRIGGER trg_transacao_tags_updated_at BEFORE UPDATE ON transacao_tags
+CREATE TRIGGER trg_movimentacao_tags_updated_at BEFORE UPDATE ON movimentacao_tags
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TRIGGER trg_anexos_updated_at BEFORE UPDATE ON anexos
@@ -445,19 +497,24 @@ CREATE INDEX idx_cartoes_conta_pagamento ON cartoes (conta_pagamento_id);
 CREATE INDEX idx_faturas_usuario_status ON faturas (usuario_id, status);
 CREATE INDEX idx_faturas_cartao_vencimento ON faturas (cartao_id, data_vencimento);
 
-CREATE INDEX idx_transacoes_usuario_data ON transacoes (usuario_id, data_transacao DESC);
-CREATE INDEX idx_transacoes_usuario_tipo_data ON transacoes (usuario_id, tipo, data_transacao DESC);
-CREATE INDEX idx_transacoes_conta_data ON transacoes (conta_id, data_transacao DESC);
-CREATE INDEX idx_transacoes_conta_destino ON transacoes (conta_destino_id);
-CREATE INDEX idx_transacoes_categoria_data ON transacoes (categoria_id, data_transacao DESC);
-CREATE INDEX idx_transacoes_cartao ON transacoes (cartao_id);
-CREATE INDEX idx_transacoes_fatura ON transacoes (fatura_id);
-CREATE INDEX idx_transacoes_pai ON transacoes (transacao_pai_id);
-CREATE INDEX idx_transacoes_recorrentes ON transacoes (usuario_id, recorrencia_ate)
+CREATE INDEX idx_movimentacoes_usuario_data ON movimentacoes (usuario_id, data_transacao DESC);
+CREATE INDEX idx_movimentacoes_usuario_tipo_data ON movimentacoes (usuario_id, tipo, data_transacao DESC);
+CREATE INDEX idx_movimentacoes_conta_data ON movimentacoes (conta_id, data_transacao DESC);
+CREATE INDEX idx_movimentacoes_conta_destino ON movimentacoes (conta_destino_id);
+CREATE INDEX idx_movimentacoes_categoria_data ON movimentacoes (categoria_id, data_transacao DESC);
+CREATE INDEX idx_movimentacoes_cartao ON movimentacoes (cartao_id);
+CREATE INDEX idx_movimentacoes_fatura ON movimentacoes (fatura_id);
+CREATE INDEX idx_movimentacoes_pai ON movimentacoes (movimentacao_pai_id);
+CREATE INDEX idx_movimentacoes_recorrentes ON movimentacoes (usuario_id, recorrencia_ate)
 WHERE recorrente = true;
+CREATE INDEX idx_movimentacoes_usuario_origem ON movimentacoes (usuario_id, origem);
+CREATE INDEX idx_movimentacoes_recorrencia ON movimentacoes (recorrencia_id);
 
 CREATE INDEX idx_parcelas_usuario_vencimento ON parcelas (usuario_id, data_vencimento);
 CREATE INDEX idx_parcelas_fatura_status ON parcelas (fatura_id, status);
+
+CREATE INDEX idx_recorrencias_usuario_ativa ON recorrencias (usuario_id, ativa);
+CREATE INDEX idx_recorrencias_proxima_geracao ON recorrencias (proxima_geracao) WHERE ativa = true;
 
 CREATE INDEX idx_metas_usuario_status ON metas (usuario_id, status);
 CREATE INDEX idx_metas_usuario_prazo ON metas (usuario_id, prazo);
@@ -466,9 +523,9 @@ CREATE INDEX idx_orcamentos_usuario_mes ON orcamentos (usuario_id, mes_referenci
 CREATE INDEX idx_orcamentos_categoria_mes ON orcamentos (categoria_id, mes_referencia);
 
 CREATE INDEX idx_tags_usuario_nome ON tags (usuario_id, nome);
-CREATE INDEX idx_transacao_tags_tag ON transacao_tags (tag_id);
+CREATE INDEX idx_movimentacao_tags_tag ON movimentacao_tags (tag_id);
 
-CREATE INDEX idx_anexos_transacao ON anexos (transacao_id);
+CREATE INDEX idx_anexos_movimentacao ON anexos (movimentacao_id);
 CREATE INDEX idx_notificacoes_usuario_lida ON notificacoes (usuario_id, lida, created_at DESC);
 
 -- ------------------------------------------------------------
@@ -564,10 +621,10 @@ VALUES
     ('40000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', '2026-01-01', '2026-01-20', '2026-01-28', 1280.00, 1280.00, 'paga'),
     ('40000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001', '2026-02-01', '2026-02-20', '2026-02-28', 1640.00, 0.00, 'aberta');
 
--- 7.8 Trinta transacoes cobrindo receitas, despesas, transferencias, faturas, parcelamentos e recorrencias
-INSERT INTO transacoes (
+-- 7.8 Trinta movimentacoes cobrindo receitas, despesas, transferencias, faturas, parcelamentos e recorrencias
+INSERT INTO movimentacoes (
     id, usuario_id, conta_id, conta_destino_id, categoria_id, cartao_id, fatura_id,
-    transacao_pai_id, tipo, forma_pagamento, status, descricao, valor, data_transacao,
+    movimentacao_pai_id, tipo, forma_pagamento, status, descricao, valor, data_transacao,
     data_competencia, recorrente, recorrencia_intervalo, recorrencia_ate, parcela_atual,
     total_parcelas, observacao
 )

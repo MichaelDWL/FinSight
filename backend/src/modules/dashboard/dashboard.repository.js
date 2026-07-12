@@ -5,10 +5,10 @@ async function getFinancialSummary(userId) {
     `
       SELECT
         COALESCE((SELECT SUM(saldo_atual) FROM contas WHERE usuario_id = $1 AND status = 'ativa'), 0) AS balance,
-        COALESCE((SELECT SUM(valor) FROM transacoes WHERE usuario_id = $1 AND tipo = 'receita' AND status IN ('confirmada', 'paga')), 0) AS income,
-        COALESCE((SELECT SUM(valor) FROM transacoes WHERE usuario_id = $1 AND tipo IN ('despesa', 'recorrencia', 'compra_parcelada') AND status IN ('confirmada', 'paga', 'pendente')), 0) AS expenses,
+        COALESCE((SELECT SUM(valor) FROM movimentacoes WHERE usuario_id = $1 AND tipo = 'receita' AND status IN ('confirmada', 'paga')), 0) AS income,
+        COALESCE((SELECT SUM(valor) FROM movimentacoes WHERE usuario_id = $1 AND tipo IN ('despesa', 'recorrencia', 'compra_parcelada') AND status IN ('confirmada', 'paga', 'pendente')), 0) AS expenses,
         COALESCE((SELECT SUM(valor_atual) FROM investimentos WHERE usuario_id = $1), 0) AS investments,
-        COALESCE((SELECT SUM(valor) FROM transacoes WHERE usuario_id = $1 AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura') AND status = 'pendente'), 0) AS pending_bills
+        COALESCE((SELECT SUM(valor) FROM movimentacoes WHERE usuario_id = $1 AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura') AND status = 'pendente'), 0) AS pending_bills
     `,
     [userId]
   );
