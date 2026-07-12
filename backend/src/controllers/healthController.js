@@ -1,6 +1,7 @@
 const pool = require("../database/pool");
 const asyncHandler = require("../utils/asyncHandler");
 const { success } = require("../utils/apiResponse");
+const { cacheAdapter } = require("../modules/analytics/analytics.cache");
 
 const getHealth = asyncHandler(async (_req, res) => {
   await pool.query("SELECT 1");
@@ -11,6 +12,7 @@ const getHealth = asyncHandler(async (_req, res) => {
       status: "ok",
       service: "finsight-backend",
       database: "connected",
+      cache: cacheAdapter.getStatus(),
       timestamp: new Date().toISOString(),
     },
   });
