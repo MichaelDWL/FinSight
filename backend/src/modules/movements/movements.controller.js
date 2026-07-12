@@ -8,6 +8,16 @@ const list = asyncHandler(async (req, res) => {
   return success(res, { message: "Movimentacoes carregadas.", data });
 });
 
+const listTransactions = asyncHandler(async (req, res) => {
+  const data = await service.listTransactions(getCurrentUserId(req));
+  return success(res, { message: "Transacoes carregadas.", data });
+});
+
+const listBills = asyncHandler(async (req, res) => {
+  const data = await service.listBills(getCurrentUserId(req));
+  return success(res, { message: "Contas carregadas.", data });
+});
+
 const create = asyncHandler(async (req, res) => {
   const data = await service.create(getCurrentUserId(req), req.validated.body);
   return success(res, { statusCode: 201, message: "Movimentacao registrada com sucesso.", data });
@@ -28,4 +38,4 @@ const remove = asyncHandler(async (req, res) => {
   return success(res, { message: "Movimentacao excluida com sucesso.", data });
 });
 
-module.exports = { list, create, update, markPaid, remove };
+module.exports = { list, listTransactions, listBills, create, update, markPaid, remove };

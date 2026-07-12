@@ -6,6 +6,8 @@ const { createMovement, idParam, updateMovement, payMovement } = require("./move
 
 const router = Router();
 
+router.get("/transactions", controller.listTransactions);
+router.get("/bills", controller.listBills);
 router.get("/", controller.list);
 router.post("/", validate(createMovement), controller.create);
 router.put("/:id", validate(updateMovement), controller.update);
