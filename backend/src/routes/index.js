@@ -1,5 +1,6 @@
 const { Router } = require("express");
 
+const appRoutes = require("../modules/app/app.routes");
 const accountsRoutes = require("../modules/accounts/accounts.routes");
 const cardsRoutes = require("../modules/cards/cards.routes");
 const dashboardRoutes = require("../modules/dashboard/dashboard.routes");
@@ -13,6 +14,7 @@ const usersRoutes = require("../modules/users/users.routes");
 
 const router = Router();
 
+router.use("/app", appRoutes);
 router.use("/accounts", accountsRoutes);
 router.use("/cards", cardsRoutes);
 router.use("/dashboard", dashboardRoutes);
