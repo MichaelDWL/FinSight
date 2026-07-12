@@ -11,6 +11,8 @@ const env = {
   dbPoolMax: Number(process.env.DB_POOL_MAX) || 10,
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
+  redisUrl: process.env.REDIS_URL || null,
+  redisEnabled: Boolean(process.env.REDIS_URL),
 };
 
 module.exports = env;
