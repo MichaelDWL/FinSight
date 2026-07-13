@@ -20,7 +20,7 @@ export function renderCashflowDashboard(data, { period = "30d" } = {}) {
         </div>
       </div>
 
-      ${renderDashboardNav("dashboard/fluxo-caixa")}
+      ${renderDashboardNav("dashboards/fluxo-caixa")}
       ${renderPeriodFilter(period)}
 
       <section class="home-section">

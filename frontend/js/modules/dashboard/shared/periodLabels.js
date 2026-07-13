@@ -11,8 +11,13 @@ export function periodLabel(period) {
 }
 
 export function normalizeDashboardRoute(route) {
-  if (!route || route === "dashboard" || route === "dashboard/geral") {
-    return "dashboard/geral";
+  if (!route || route === "dashboards" || route === "dashboards/geral") {
+    return "dashboards/geral";
   }
+
+  if (route.startsWith("dashboard/")) {
+    return route.replace("dashboard/", "dashboards/");
+  }
+
   return route;
 }

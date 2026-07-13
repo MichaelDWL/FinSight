@@ -47,7 +47,7 @@ export function renderGeneralDashboard(data, { firstName = "Usuário", period = 
         </div>
       </div>
 
-      ${renderDashboardNav("dashboard/geral")}
+      ${renderDashboardNav("dashboards/geral")}
       ${renderPeriodFilter(period)}
 
       <section class="home-section">

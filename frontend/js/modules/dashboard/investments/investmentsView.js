@@ -40,7 +40,7 @@ export function renderInvestmentsDashboard(data, { period = "30d" } = {}) {
         </div>
       </div>
 
-      ${renderDashboardNav("dashboard/investimentos")}
+      ${renderDashboardNav("dashboards/investimentos")}
       ${renderPeriodFilter(period)}
 
       <section class="home-section">

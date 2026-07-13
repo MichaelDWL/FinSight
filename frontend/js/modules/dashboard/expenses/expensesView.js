@@ -30,7 +30,7 @@ export function renderExpensesDashboard(data, { period = "30d" } = {}) {
         </div>
       </div>
 
-      ${renderDashboardNav("dashboard/gastos")}
+      ${renderDashboardNav("dashboards/gastos")}
       ${renderPeriodFilter(period)}
 
       <section class="home-section">

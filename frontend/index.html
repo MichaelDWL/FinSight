@@ -50,6 +50,19 @@
 
       <ul class="nav-list">
         <li class="nav-item nav-active"><a href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li class="nav-item nav-group" data-nav-group="dashboards">
+          <button class="nav-group-toggle" type="button" data-action="toggle-dashboards-menu" aria-expanded="false" aria-controls="dashboardsSubmenu">
+            <span><i class="fa-solid fa-chart-pie"></i> Dashboards</span>
+            <i class="fa-solid fa-chevron-down nav-group-chevron"></i>
+          </button>
+          <ul class="nav-submenu" id="dashboardsSubmenu">
+            <li><a href="#dashboards/geral" data-route="dashboards/geral">Geral</a></li>
+            <li><a href="#dashboards/gastos" data-route="dashboards/gastos">Gastos</a></li>
+            <li><a href="#dashboards/fluxo-caixa" data-route="dashboards/fluxo-caixa">Fluxo de Caixa</a></li>
+            <li><a href="#dashboards/cartoes" data-route="dashboards/cartoes">Cartões</a></li>
+            <li><a href="#dashboards/investimentos" data-route="dashboards/investimentos">Investimentos</a></li>
+          </ul>
+        </li>
         <li class="nav-item"><a href="#transacoes" data-route="transacoes"><i class="fa-solid fa-arrow-right-arrow-left"></i> Transações</a></li>
         <li class="nav-item nav-group" data-nav-group="investments">
           <button class="nav-group-toggle" type="button" data-action="toggle-investments-menu" aria-expanded="false" aria-controls="investmentsSubmenu">
@@ -102,7 +115,7 @@
       <i class="fa-solid fa-plus"></i>
     </span>
     <span class="fab-add-label">Nova Movimentação</span>
-  </button>
+  </button> 
 
   <div class="modal isHidden" id="movementModal" aria-hidden="true">
     <div class="card-1 new-expense-card movement-card" role="dialog" aria-modal="true" aria-labelledby="movementModalTitle">

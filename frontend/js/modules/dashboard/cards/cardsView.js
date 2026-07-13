@@ -69,7 +69,7 @@ export function renderCardsDashboard(data, { period = "30d" } = {}) {
         </div>
       </div>
 
-      ${renderDashboardNav("dashboard/cartoes")}
+      ${renderDashboardNav("dashboards/cartoes")}
       ${renderPeriodFilter(period)}
 
       <section class="home-section">

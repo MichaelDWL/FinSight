@@ -2,6 +2,7 @@ import { accountsService } from "./services/accounts.js";
 import { billsService } from "./services/bills.js";
 import { cardsService } from "./services/cards.js";
 import { bootstrapService } from "./services/bootstrap.js";
+import { dashboardService } from "./services/dashboard.js";
 import { investmentsService } from "./services/investments.js";
 import { usersService } from "./services/users.js";
 import { transactionsService } from "./services/transactions.js";
@@ -31,6 +32,7 @@ import {
   renderInvestmentsDashboard,
 } from "./modules/dashboard/investments/investmentsView.js";
 import { normalizeDashboardRoute } from "./modules/dashboard/shared/periodLabels.js";
+import { renderHomeDashboard } from "./modules/home/homeView.js";
 import { createMovementModal } from "./ui/movementModal.js";
 import { confirmDialog } from "./ui/confirmModal.js";
 import {
@@ -93,10 +95,11 @@ const toIsoDate = (date) => {
 
 let bootstrapReady = false;
 let loadedRouteKey = null;
+let dashboardData = null;
 let currentInvoices = [];
 let analyticsDashboardData = null;
 let currentDashboardPeriod = "30d";
-let currentAnalyticsRoute = "dashboard/geral";
+let currentAnalyticsRoute = "dashboards/geral";
 let isLoadingAnalyticsDashboard = false;
 let transactions = [];
 let investments = [];
@@ -117,12 +120,12 @@ let selectedAccountId = null;
 let accountDetailData = null;
 
 const routeTitles = {
-  dashboard: "Dashboard Geral",
-  "dashboard/geral": "Dashboard Geral",
-  "dashboard/gastos": "Dashboard de Gastos",
-  "dashboard/fluxo-caixa": "Fluxo de Caixa",
-  "dashboard/cartoes": "Dashboard de Cartões",
-  "dashboard/investimentos": "Dashboard de Investimentos",
+  dashboard: "Home",
+  "dashboards/geral": "Dashboard Geral",
+  "dashboards/gastos": "Dashboard de Gastos",
+  "dashboards/fluxo-caixa": "Fluxo de Caixa",
+  "dashboards/cartoes": "Dashboard de Cartões",
+  "dashboards/investimentos": "Dashboard de Investimentos",
   transacoes: "Transações",
   patrimonio: "Patrimônio",
   "investimento-novo": "Adicionar investimento",
@@ -344,7 +347,26 @@ function applyBootstrapData(data = {}) {
   creditCards = data.cards || [];
 }
 
+function applyDashboardData(data = {}) {
+  dashboardData = data;
+  transactions = (data.transactions || data.latestTransactions || []).map(
+    normalizeTransaction,
+  );
+  investments = (data.investments || []).map(normalizeInvestment);
+  accounts = (data.accounts || []).map((account) => ({
+    ...account,
+    icon: resolveIcon(account.icon, "fa-building-columns"),
+  }));
+  creditCards = data.cards || [];
+  bills = (data.bills || data.pendingBills || []).map(normalizeBill);
+  goals = (data.goals || []).map(normalizeGoal);
+}
+
 const ROUTE_DATA_LOADERS = {
+  dashboard: async () => {
+    const data = await dashboardService.getDashboard();
+    applyDashboardData(data);
+  },
   transacoes: async () => {
     transactions = (await transactionsService.list()).map(normalizeTransaction);
   },
@@ -424,40 +446,40 @@ function updateUserHeader() {
 }
 
 const ANALYTICS_DASHBOARD_ROUTES = new Set([
-  "dashboard",
-  "dashboard/geral",
-  "dashboard/gastos",
-  "dashboard/fluxo-caixa",
-  "dashboard/cartoes",
-  "dashboard/investimentos",
+  "dashboards",
+  "dashboards/geral",
+  "dashboards/gastos",
+  "dashboards/fluxo-caixa",
+  "dashboards/cartoes",
+  "dashboards/investimentos",
 ]);
 
 const DASHBOARD_RENDERERS = {
-  "dashboard/geral": {
+  "dashboards/geral": {
     render: renderGeneralDashboard,
     mount: mountGeneralDashboardCharts,
     load: (period) => analyticsService.getGeneral({ period }),
     getProps: () => ({ firstName: getUserFirstName() }),
   },
-  "dashboard/gastos": {
+  "dashboards/gastos": {
     render: renderExpensesDashboard,
     mount: mountExpensesDashboardCharts,
     load: (period) => analyticsService.getExpenses({ period }),
     getProps: () => ({}),
   },
-  "dashboard/fluxo-caixa": {
+  "dashboards/fluxo-caixa": {
     render: renderCashflowDashboard,
     mount: mountCashflowDashboardCharts,
     load: (period) => analyticsService.getCashflow({ period }),
     getProps: () => ({}),
   },
-  "dashboard/cartoes": {
+  "dashboards/cartoes": {
     render: renderCardsDashboard,
     mount: mountCardsDashboardCharts,
     load: (period) => analyticsService.getCards({ period }),
     getProps: () => ({}),
   },
-  "dashboard/investimentos": {
+  "dashboards/investimentos": {
     render: renderInvestmentsDashboard,
     mount: mountInvestmentsDashboardCharts,
     load: (period) => analyticsService.getInvestments({ period }),
@@ -559,16 +581,17 @@ async function reloadDashboardWithPeriod(period) {
 }
 
 async function loadGeneralDashboard(period = currentDashboardPeriod) {
-  return loadAnalyticsDashboard("dashboard/geral", period);
+  return loadAnalyticsDashboard("dashboards/geral", period);
 }
 
 async function renderDashboardPage() {
-  return renderAnalyticsDashboardPage("dashboard/geral");
+  return renderAnalyticsDashboardPage("dashboards/geral");
 }
 
 async function reloadAndRender() {
   bootstrapReady = false;
   loadedRouteKey = null;
+  dashboardData = null;
   analyticsDashboardData = null;
   await renderRoute();
 }
@@ -920,6 +943,31 @@ function setAccountsMenuExpanded(expanded) {
 function toggleAccountsMenu() {
   const group = document.querySelector("[data-nav-group='accounts']");
   setAccountsMenuExpanded(!group?.classList.contains("nav-group-open"));
+}
+
+function setDashboardsMenuExpanded(expanded) {
+  const group = document.querySelector("[data-nav-group='dashboards']");
+  const toggle = group?.querySelector("[data-action='toggle-dashboards-menu']");
+  if (!group || !toggle) return;
+
+  group.classList.toggle("nav-group-open", expanded);
+  toggle.setAttribute("aria-expanded", String(expanded));
+}
+
+function toggleDashboardsMenu() {
+  const group = document.querySelector("[data-nav-group='dashboards']");
+  setDashboardsMenuExpanded(!group?.classList.contains("nav-group-open"));
+}
+
+function setDashboardSubroute(activeRoute) {
+  document
+    .querySelectorAll("[data-nav-group='dashboards'] .nav-submenu [data-route]")
+    .forEach((item) => {
+      item.classList.toggle(
+        "nav-subitem-active",
+        item.dataset.route === activeRoute,
+      );
+    });
 }
 
 function setInvestmentSubroute(activeRoute) {
@@ -1325,10 +1373,14 @@ async function addAccountFromForm() {
 }
 
 function getRoute() {
-  const route = window.location.hash.replace("#", "") || "dashboard/geral";
+  const route = window.location.hash.replace("#", "") || "dashboard";
+
+  if (route.startsWith("dashboard/")) {
+    return route.replace("dashboard/", "dashboards/");
+  }
+
   if (routeTitles[route]) return route;
-  if (route === "dashboard") return "dashboard/geral";
-  return "dashboard/geral";
+  return "dashboard";
 }
 
 function setActiveRoute(route) {
@@ -1345,7 +1397,7 @@ function setActiveRoute(route) {
   )
     ? "patrimonio"
     : isAnalyticsDashboardRoute(route)
-      ? "dashboard"
+      ? "dashboards"
       : accountRoutes.includes(route)
         ? "contas-resumo"
         : route;
@@ -1384,7 +1436,27 @@ function setActiveRoute(route) {
         : route;
   setAccountSubroute(accountSubroute);
 
-  pageTitle.textContent = routeTitles[route] || routeTitles[normalizeDashboardRoute(route)];
+  const dashboardRoutes = [
+    "dashboards",
+    "dashboards/geral",
+    "dashboards/gastos",
+    "dashboards/fluxo-caixa",
+    "dashboards/cartoes",
+    "dashboards/investimentos",
+  ];
+  const isDashboardRoute = dashboardRoutes.includes(route);
+  document
+    .querySelector("[data-nav-group='dashboards']")
+    ?.classList.toggle("nav-active", isDashboardRoute);
+  if (isDashboardRoute && !document.body.classList.contains("sidebar-closed")) {
+    setDashboardsMenuExpanded(true);
+  }
+  setDashboardSubroute(normalizeDashboardRoute(route));
+
+  pageTitle.textContent =
+    routeTitles[route] ||
+    routeTitles[normalizeDashboardRoute(route)] ||
+    "Home";
   quickAction.querySelector(".fab-add-label").textContent = "Nova Movimentação";
 }
 
@@ -1543,6 +1615,17 @@ function investmentCard(investment, compact = false) {
       }
     </article>
   `;
+}
+
+function dashboardView() {
+  return renderHomeDashboard({
+    dashboardData,
+    transactions,
+    investments,
+    creditCards,
+    goals,
+    firstName: getUserFirstName(),
+  });
 }
 
 function transactionsView() {
@@ -2686,6 +2769,7 @@ async function renderRoute() {
   }
 
   const views = {
+    dashboard: dashboardView,
     transacoes: transactionsView,
     patrimonio: wealthView,
     "investimento-detalhe": investmentDetailView,
@@ -2874,6 +2958,11 @@ document.addEventListener("click", async (event) => {
 
   if (action === "toggle-accounts-menu") {
     toggleAccountsMenu();
+    return;
+  }
+
+  if (action === "toggle-dashboards-menu") {
+    toggleDashboardsMenu();
     return;
   }
 

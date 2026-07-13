@@ -1,42 +1,42 @@
 export const DASHBOARD_NAV = [
   {
-    id: "dashboard/geral",
+    id: "dashboards/geral",
     label: "Geral",
     icon: "fa-chart-pie",
-    href: "#dashboard/geral",
+    href: "#dashboards/geral",
     available: true,
   },
   {
-    id: "dashboard/gastos",
+    id: "dashboards/gastos",
     label: "Gastos",
     icon: "fa-cart-shopping",
-    href: "#dashboard/gastos",
+    href: "#dashboards/gastos",
     available: true,
   },
   {
-    id: "dashboard/fluxo-caixa",
+    id: "dashboards/fluxo-caixa",
     label: "Fluxo de Caixa",
     icon: "fa-water",
-    href: "#dashboard/fluxo-caixa",
+    href: "#dashboards/fluxo-caixa",
     available: true,
   },
   {
-    id: "dashboard/cartoes",
+    id: "dashboards/cartoes",
     label: "Cartões",
     icon: "fa-credit-card",
-    href: "#dashboard/cartoes",
+    href: "#dashboards/cartoes",
     available: true,
   },
   {
-    id: "dashboard/investimentos",
+    id: "dashboards/investimentos",
     label: "Investimentos",
     icon: "fa-chart-line",
-    href: "#dashboard/investimentos",
+    href: "#dashboards/investimentos",
     available: true,
   },
 ];
 
-export function renderDashboardNav(activeRoute = "dashboard/geral") {
+export function renderDashboardNav(activeRoute = "dashboards/geral") {
   return `
     <nav class="dashboard-nav" aria-label="Dashboards">
       ${DASHBOARD_NAV.map((item) => {
