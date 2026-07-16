@@ -21,7 +21,9 @@
   font-size: 0.86rem;
   font-weight: 600;
   text-decoration: none;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .dashboard-nav-link:hover {
@@ -128,7 +130,10 @@
   padding: 0.55rem 1rem;
   border-radius: 999px;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .dashboard-period-btn:hover {
@@ -195,7 +200,29 @@
 
 .health-score-card {
   display: grid;
-  gap: var(--gap-md);
+  gap: var(--gap-lg);
+  overflow: hidden;
+  position: relative;
+}
+
+.health-score-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--brand-accent);
+}
+
+.health-score-card.health-score-tone--positive::before {
+  background: linear-gradient(90deg, var(--income), #34d399);
+}
+
+.health-score-card.health-score-tone--warning::before {
+  background: linear-gradient(90deg, var(--warning), #fbbf24);
+}
+
+.health-score-card.health-score-tone--neutral::before {
+  background: linear-gradient(90deg, var(--brand-accent), #60a5fa);
 }
 
 .health-score-head {
@@ -205,110 +232,237 @@
   gap: var(--gap-md);
 }
 
-.health-score-head h2 {
-  margin: 0;
-  font-family: Outfit, sans-serif;
-  font-size: 1.2rem;
+.health-score-head-copy {
+  display: grid;
+  gap: 0.25rem;
 }
 
-.health-score-badge {
+.health-score-eyebrow {
   display: inline-flex;
   align-items: center;
-  padding: 0.35rem 0.75rem;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.28rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.82rem;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+  font-size: 0.74rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-.health-score-positive {
+.health-score-card.health-score-tone--positive .health-score-eyebrow {
   color: var(--income);
   background: var(--income-soft);
 }
 
-.health-score-warning {
+.health-score-card.health-score-tone--warning .health-score-eyebrow {
   color: var(--warning);
   background: var(--warning-soft);
 }
 
-.health-score-neutral {
-  color: var(--brand-accent);
-  background: var(--brand-accent-soft);
+.health-score-head h2 {
+  margin: 0;
+  font-family: Outfit, sans-serif;
+  font-size: 1.35rem;
+  color: var(--brand-900);
 }
 
 .health-score-body {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: var(--gap-lg);
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  gap: var(--gap-xl);
+  align-items: stretch;
+}
+
+.health-score-aside {
+  display: flex;
   align-items: center;
+  justify-content: center;
+  padding: 1.25rem 1rem;
+  border: 1px solid rgba(13, 110, 253, 0.08);
+  border-radius: var(--border-radius-xl);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.95), rgba(238, 246, 255, 0.82)),
+    var(--surface-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.health-score-card.health-score-tone--positive .health-score-aside {
+  border-color: rgba(20, 184, 166, 0.14);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.96), rgba(236, 253, 245, 0.82)),
+    var(--surface-soft);
+}
+
+.health-score-card.health-score-tone--warning .health-score-aside {
+  border-color: rgba(245, 184, 46, 0.18);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.96), rgba(255, 251, 235, 0.88)),
+    var(--surface-soft);
 }
 
 .health-score-ring {
   position: relative;
-  width: 160px;
-  height: 160px;
-  margin: 0 auto;
+  width: 168px;
+  height: 168px;
 }
 
 .health-score-ring svg {
   width: 100%;
   height: 100%;
   transform: rotate(-90deg);
+  filter: drop-shadow(0 8px 18px rgba(13, 110, 253, 0.08));
 }
 
 .health-score-track {
   fill: none;
-  stroke: var(--pw2);
-  stroke-width: 10;
+  stroke: rgba(13, 110, 253, 0.08);
+  stroke-width: 9;
 }
 
 .health-score-progress {
   fill: none;
   stroke: var(--brand-accent);
-  stroke-width: 10;
+  stroke-width: 9;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.6s ease;
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.health-score-ring.health-score-positive .health-score-progress {
+.health-score-card.health-score-tone--positive .health-score-progress {
   stroke: var(--income);
 }
 
-.health-score-ring.health-score-warning .health-score-progress {
+.health-score-card.health-score-tone--warning .health-score-progress {
   stroke: var(--warning);
 }
 
-.health-score-value {
+.health-score-center {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+.health-score-value {
   font-family: Outfit, sans-serif;
-  font-size: 2rem;
+  font-size: 2.45rem;
   font-weight: 700;
-  color: var(--pw8);
+  line-height: 1;
+  color: var(--brand-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.health-score-scale {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--pw6);
+}
+
+.health-score-status {
+  margin-top: 0.35rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+.health-score-card.health-score-tone--positive .health-score-status {
+  color: var(--income);
+  background: var(--income-soft);
+}
+
+.health-score-card.health-score-tone--warning .health-score-status {
+  color: var(--warning);
+  background: var(--warning-soft);
 }
 
 .health-score-factors {
   display: grid;
   gap: 0.85rem;
+  align-content: center;
+}
+
+.health-score-factor {
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(13, 110, 253, 0.07);
+  border-radius: var(--border-radius-lg);
+  background: rgba(255, 255, 255, 0.72);
 }
 
 .health-score-factor-head {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 0.75rem;
-  font-size: 0.86rem;
+  margin-bottom: 0.55rem;
+}
+
+.health-score-factor-label {
+  font-size: 0.88rem;
+  font-weight: 600;
   color: var(--pw8);
 }
 
-.health-score-factor-head strong {
-  color: var(--brand-accent);
+.health-score-factor-score {
+  font-family: Outfit, sans-serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--brand-900);
   font-variant-numeric: tabular-nums;
 }
 
+.health-score-factor-score span {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--pw6);
+}
+
 .health-score-bar {
-  margin: 0.35rem 0;
-  height: 6px;
+  position: relative;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--pw2);
+  overflow: hidden;
+}
+
+.health-score-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--brand-accent);
+  transition: width 0.6s ease;
+}
+
+.health-score-bar-fill.is-good {
+  background: linear-gradient(90deg, var(--income), #2dd4bf);
+}
+
+.health-score-bar-fill.is-medium {
+  background: linear-gradient(90deg, var(--warning), #fcd34d);
+}
+
+.health-score-bar-fill.is-low {
+  background: linear-gradient(90deg, var(--expense), #fb7185);
+}
+
+.health-score-factor-detail {
+  margin: 0.45rem 0 0;
+  font-size: 0.8rem;
+  color: var(--pw6);
+  line-height: 1.45;
+}
+
+.health-score-empty {
+  padding: 1rem 0;
 }
 
 @media (max-width: 1080px) {
@@ -319,6 +473,12 @@
 
   .health-score-body {
     grid-template-columns: 1fr;
+  }
+
+  .health-score-aside {
+    max-width: 280px;
+    margin: 0 auto;
+    width: 100%;
   }
 }
 

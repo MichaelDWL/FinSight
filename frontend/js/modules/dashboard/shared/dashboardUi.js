@@ -18,64 +18,90 @@ function resolveFaIcon(rawIcon, fallback = "fa-wallet") {
 }
 
 function toneClass(tone) {
-  if (tone === "positive") return "health-score-positive";
-  if (tone === "warning") return "health-score-warning";
-  return "health-score-neutral";
+  if (tone === "positive") return "health-score-tone--positive";
+  if (tone === "warning") return "health-score-tone--warning";
+  return "health-score-tone--neutral";
+}
+
+function healthStatusLabel(value, tone) {
+  if (tone === "positive" || value >= 75) return "Situação saudável";
+  if (value >= 50) return "Em equilíbrio";
+  if (value >= 30) return "Precisa atenção";
+  return "Situação crítica";
+}
+
+function factorBarClass(score, weight) {
+  const ratio = weight > 0 ? score / weight : 0;
+  if (ratio >= 0.7) return "is-good";
+  if (ratio >= 0.4) return "is-medium";
+  return "is-low";
 }
 
 export function renderHealthScore(healthScore = {}) {
   const value = Number(healthScore.value) || 0;
   const tone = healthScore.tone || "neutral";
   const factors = healthScore.factors || [];
-  const circumference = 2 * Math.PI * 54;
+  const circumference = 2 * Math.PI * 46;
   const offset = circumference - (value / 100) * circumference;
+  const statusLabel = healthStatusLabel(value, tone);
 
   return `
-    <section class="premium-card health-score-card">
+    <section class="premium-card health-score-card ${toneClass(tone)}">
       <div class="health-score-head">
-        <div>
+        <div class="health-score-head-copy">
+          <span class="health-score-eyebrow"><i class="fa-solid fa-heart-pulse"></i> Indicador financeiro</span>
           <h2>Saúde financeira</h2>
-          <p class="item-meta">Indicador consolidado de 0 a 100</p>
+          <p class="item-meta">Score consolidado com base em ${factors.length || 5} fatores do período</p>
         </div>
-        <span class="health-score-badge ${toneClass(tone)}">${value}/100</span>
       </div>
+
       <div class="health-score-body">
-        <div class="health-score-ring ${toneClass(tone)}" aria-hidden="true">
-          <svg viewBox="0 0 120 120" role="img" aria-label="Saúde financeira ${value} de 100">
-            <circle class="health-score-track" cx="60" cy="60" r="54"></circle>
-            <circle
-              class="health-score-progress"
-              cx="60"
-              cy="60"
-              r="54"
-              style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};"
-            ></circle>
-          </svg>
-          <strong class="health-score-value">${value}</strong>
-        </div>
+        <aside class="health-score-aside">
+          <div class="health-score-ring" aria-hidden="true">
+            <svg viewBox="0 0 120 120" role="img" aria-label="Saúde financeira ${value} de 100">
+              <circle class="health-score-track" cx="60" cy="60" r="46"></circle>
+              <circle
+                class="health-score-progress"
+                cx="60"
+                cy="60"
+                r="46"
+                style="stroke-dasharray: ${circumference}; stroke-dashoffset: ${offset};"
+              ></circle>
+            </svg>
+            <div class="health-score-center">
+              <strong class="health-score-value">${value}</strong>
+              <span class="health-score-scale">de 100</span>
+              <span class="health-score-status">${statusLabel}</span>
+            </div>
+          </div>
+        </aside>
+
         <div class="health-score-factors">
           ${
             factors.length
               ? factors
-                  .map(
-                    (factor) => `
-                <div class="health-score-factor">
+                  .map((factor) => {
+                    const percent = Math.min(
+                      (factor.score / factor.weight) * 100,
+                      100,
+                    );
+                    const barClass = factorBarClass(factor.score, factor.weight);
+
+                    return `
+                <article class="health-score-factor">
                   <div class="health-score-factor-head">
-                    <span>${factor.label}</span>
-                    <strong>${Math.round(factor.score)}/${factor.weight}</strong>
+                    <span class="health-score-factor-label">${factor.label}</span>
+                    <strong class="health-score-factor-score">${Math.round(factor.score)}<span>/${factor.weight}</span></strong>
                   </div>
-                  <div class="progress-bar health-score-bar">
-                    <div
-                      class="progress"
-                      style="--progress-width: ${Math.min((factor.score / factor.weight) * 100, 100)}%"
-                    ></div>
+                  <div class="health-score-bar" aria-hidden="true">
+                    <span class="health-score-bar-fill ${barClass}" style="width: ${percent}%"></span>
                   </div>
-                  <small class="item-meta">${factor.detail}</small>
-                </div>
-              `,
-                  )
+                  <p class="health-score-factor-detail">${factor.detail}</p>
+                </article>
+              `;
+                  })
                   .join("")
-              : `<p class="item-meta">Sem dados suficientes para calcular os fatores.</p>`
+              : `<p class="item-meta health-score-empty">Sem dados suficientes para calcular os fatores.</p>`
           }
         </div>
       </div>
