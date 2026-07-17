@@ -17,13 +17,33 @@ const poolMax = isServerless
   ? Math.min(env.dbPoolMax, env.dbPoolMaxServerless || 2)
   : env.dbPoolMax;
 
+function buildSslConfig() {
+  if (!env.databaseSsl) return false;
+
+  // Emergencia apenas — MITM possivel. Nunca em producao rotineira.
+  if (env.databaseSslInsecure) {
+    if (env.isProduction) {
+      console.warn(
+        "[database] DATABASE_SSL_INSECURE=true em producao — risco MITM. Remova assim que possivel."
+      );
+    }
+    return { rejectUnauthorized: false };
+  }
+
+  const ssl = { rejectUnauthorized: true };
+  if (env.databaseSslCa) {
+    ssl.ca = env.databaseSslCa.replace(/\\n/g, "\n");
+  }
+  return ssl;
+}
+
 const pool = new Pool({
   connectionString: env.databaseUrl,
   max: poolMax,
   idleTimeoutMillis: isServerless ? 5_000 : 30_000,
   connectionTimeoutMillis: 10_000,
   allowExitOnIdle: isServerless,
-  ssl: env.databaseSsl ? { rejectUnauthorized: false } : false,
+  ssl: buildSslConfig(),
 });
 
 pool.on("error", (error) => {

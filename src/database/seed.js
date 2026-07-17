@@ -4,7 +4,16 @@ const { hashPassword } = require("../utils/crypto");
 const { ROLES, ACCOUNT_STATUS } = require("../modules/auth/constants");
 const logger = require("../utils/logger");
 
+/**
+ * Seed de administrador — apenas desenvolvimento ou bootstrap explicito.
+ * Em producao exige ALLOW_ADMIN_SEED=true (nunca automatico).
+ */
 async function seedAdminUser() {
+  if (env.isProduction && process.env.ALLOW_ADMIN_SEED !== "true") {
+    logger.info("Seed admin bloqueado em producao (ALLOW_ADMIN_SEED!=true).");
+    return;
+  }
+
   if (!env.adminSeedEmail || !env.adminSeedPassword) {
     logger.warn(
       "Seed admin ignorado: defina ADMIN_SEED_EMAIL e ADMIN_SEED_PASSWORD no .env"

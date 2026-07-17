@@ -115,7 +115,46 @@ async function migrateTransacoesToMovimentacoes() {
   `);
 }
 
-async function runMigrations() {
+async function ensureSchemaMigrationsTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      id VARCHAR(120) PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `);
+}
+
+async function isMigrationApplied(id) {
+  const { rows } = await pool.query(
+    `SELECT 1 FROM schema_migrations WHERE id = $1 LIMIT 1`,
+    [id]
+  );
+  return rows.length > 0;
+}
+
+async function markMigrationApplied(id) {
+  await pool.query(
+    `INSERT INTO schema_migrations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING`,
+    [id]
+  );
+}
+
+/**
+ * Executa migration nomeada uma unica vez (controle em schema_migrations).
+ * Funcoes internas continuam idempotentes (IF NOT EXISTS) para bancos legados.
+ */
+async function runNamedMigration(id, fn) {
+  if (await isMigrationApplied(id)) {
+    logger.info("Migration ja aplicada", { id });
+    return;
+  }
+  const started = Date.now();
+  await fn();
+  await markMigrationApplied(id);
+  logger.info("Migration aplicada", { id, durationMs: Date.now() - started });
+}
+
+async function migrateCardsAndAccountsColumns() {
   await pool.query(`
     ALTER TABLE cartoes
       ADD COLUMN IF NOT EXISTS cor VARCHAR(7) DEFAULT '#0d6efd',
@@ -156,18 +195,154 @@ async function runMigrations() {
       END IF;
     END $$;
   `);
+}
 
-  await migrateTransacoesToMovimentacoes();
-  await migrateAnalyticsViews();
-  await migrateInvestmentAnalytics();
-  await migrateMarketData();
-  await migrateMarketProviders();
-  await migratePersonalization();
-  await migratePerformanceIndexes();
-  await migrateAuthAndAdmin(pool);
-  await seedAdminUser();
+/**
+ * @param {{ runSeed?: boolean }} [options]
+ * runSeed: so cria admin se ALLOW_ADMIN_SEED=true (CLI) ou runtime long + env.
+ * Nunca seed automatico em NODE_ENV=production sem flag explicita.
+ */
+async function runMigrations(options = {}) {
+  const env = require("../config/env");
+  const runSeed =
+    options.runSeed === true ||
+    (options.runSeed !== false &&
+      process.env.ALLOW_ADMIN_SEED === "true" &&
+      !env.isProduction);
+
+  await ensureSchemaMigrationsTable();
+
+  await runNamedMigration("001_cards_accounts_columns", migrateCardsAndAccountsColumns);
+  await runNamedMigration("002_transacoes_to_movimentacoes", migrateTransacoesToMovimentacoes);
+  await runNamedMigration("003_analytics_views", migrateAnalyticsViews);
+  await runNamedMigration("004_investment_analytics", migrateInvestmentAnalytics);
+  await runNamedMigration("005_market_data", migrateMarketData);
+  await runNamedMigration("006_market_providers", migrateMarketProviders);
+  await runNamedMigration("007_personalization", migratePersonalization);
+  await runNamedMigration("008_performance_indexes", migratePerformanceIndexes);
+  await runNamedMigration("009_auth_and_admin", () => migrateAuthAndAdmin(pool));
+
+  // Production hardening migrations (Part 2+) — always registered here
+  await runNamedMigration("010_production_hardening", migrateProductionHardening);
+
+  if (runSeed) {
+    await seedAdminUser();
+  } else if (env.isProduction) {
+    logger.info("Seed admin ignorado em producao (defina ALLOW_ADMIN_SEED=true apenas se necessario).");
+  }
 
   logger.info("Migrations aplicadas com sucesso.");
+}
+
+/**
+ * Soft-delete columns, financial audit, idempotency, LGPD consent, MFA stub.
+ * Safe if some columns already exist.
+ */
+async function migrateProductionHardening() {
+  await pool.query(`
+    ALTER TABLE usuarios
+      ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS anonimizado_em TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT false,
+      ADD COLUMN IF NOT EXISTS mfa_secret_encrypted TEXT;
+
+    ALTER TABLE contas
+      ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS versao INTEGER NOT NULL DEFAULT 1;
+
+    ALTER TABLE cartoes
+      ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+
+    ALTER TABLE movimentacoes
+      ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ,
+      ADD COLUMN IF NOT EXISTS versao INTEGER NOT NULL DEFAULT 1;
+
+    ALTER TABLE investimentos
+      ADD COLUMN IF NOT EXISTS excluido_em TIMESTAMPTZ;
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS logs_auditoria_financeira (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+      entidade_tipo VARCHAR(40) NOT NULL,
+      entidade_id UUID,
+      operacao VARCHAR(40) NOT NULL,
+      valores_anteriores JSONB,
+      valores_novos JSONB,
+      origem VARCHAR(40) NOT NULL DEFAULT 'api',
+      ip INET,
+      user_agent TEXT,
+      criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT chk_audit_fin_operacao CHECK (
+        operacao IN ('create', 'update', 'delete', 'pay', 'transfer', 'revert')
+      )
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_fin_usuario_criado
+      ON logs_auditoria_financeira (usuario_id, criado_em DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_audit_fin_entidade
+      ON logs_auditoria_financeira (entidade_tipo, entidade_id, criado_em DESC);
+
+    CREATE OR REPLACE FUNCTION prevent_audit_fin_mutation()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      RAISE EXCEPTION 'logs_auditoria_financeira e imutavel';
+    END;
+    $$ LANGUAGE plpgsql;
+
+    DROP TRIGGER IF EXISTS trg_audit_fin_no_update ON logs_auditoria_financeira;
+    CREATE TRIGGER trg_audit_fin_no_update
+      BEFORE UPDATE OR DELETE ON logs_auditoria_financeira
+      FOR EACH ROW EXECUTE FUNCTION prevent_audit_fin_mutation();
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS idempotency_keys (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      chave VARCHAR(128) NOT NULL,
+      metodo VARCHAR(10) NOT NULL,
+      path VARCHAR(255) NOT NULL,
+      status_code SMALLINT,
+      response_body JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      CONSTRAINT uq_idempotency_user_key UNIQUE (usuario_id, chave)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_idempotency_expires
+      ON idempotency_keys (expires_at);
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS consentimentos_lgpd (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      tipo VARCHAR(40) NOT NULL,
+      aceito BOOLEAN NOT NULL DEFAULT true,
+      versao_politica VARCHAR(20) NOT NULL DEFAULT '1.0',
+      ip INET,
+      user_agent TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT chk_consentimento_tipo CHECK (
+        tipo IN ('privacy_policy', 'terms', 'marketing', 'analytics')
+      )
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_consentimentos_usuario
+      ON consentimentos_lgpd (usuario_id, tipo, created_at DESC);
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_contas_usuario_ativas
+      ON contas (usuario_id) WHERE excluido_em IS NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_movimentacoes_usuario_ativas_data
+      ON movimentacoes (usuario_id, data_transacao DESC)
+      WHERE excluido_em IS NULL;
+  `);
 }
 
 async function migrateMarketData() {
