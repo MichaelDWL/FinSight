@@ -844,3 +844,80 @@ SELECT
     END AS rentabilidade_percentual
 FROM investimentos
 WHERE usuario_id = :usuario_id;
+
+-- ------------------------------------------------------------
+-- 9. Autenticacao, sessoes e auditoria
+-- ------------------------------------------------------------
+
+CREATE TYPE papel_usuario_enum AS ENUM (
+    'USER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT', 'MODERATOR'
+);
+
+-- Extensoes em usuarios (via migration): papel, email_verificado_at,
+-- tentativas_login_falhas, bloqueado_ate, suspenso_em, suspenso_motivo, excluido_em
+-- status de conta: 'ativa' | 'inativa' | 'suspensa'
+
+CREATE TABLE sessoes_usuario (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    refresh_token_hash VARCHAR(64) NOT NULL UNIQUE,
+    token_family UUID NOT NULL DEFAULT gen_random_uuid(),
+    device VARCHAR(120),
+    browser VARCHAR(120),
+    sistema_operacional VARCHAR(120),
+    user_agent VARCHAR(512),
+    ip INET,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_activity TIMESTAMPTZ NOT NULL DEFAULT now(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    status VARCHAR(20) NOT NULL DEFAULT 'ativa'
+);
+
+CREATE TABLE tokens_refresh (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sessao_id UUID NOT NULL REFERENCES sessoes_usuario(id) ON DELETE CASCADE,
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    token_family UUID NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    replaced_by UUID REFERENCES tokens_refresh(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE tokens_redefinicao_senha (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    ip INET,
+    user_agent VARCHAR(512)
+);
+
+CREATE TABLE tokens_verificacao_email (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE logs_auditoria (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    ator_id UUID REFERENCES usuarios(id) ON DELETE SET NULL,
+    acao VARCHAR(80) NOT NULL,
+    resultado VARCHAR(40) NOT NULL DEFAULT 'sucesso',
+    ip INET,
+    device VARCHAR(120),
+    browser VARCHAR(120),
+    sistema_operacional VARCHAR(120),
+    user_agent VARCHAR(512),
+    metadados JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

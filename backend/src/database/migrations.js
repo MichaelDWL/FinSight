@@ -1,5 +1,7 @@
 const pool = require("./pool");
 const logger = require("../utils/logger");
+const { migrateAuthAndAdmin } = require("./migrations/auth.migration");
+const { seedAdminUser } = require("./seed");
 
 // Refatoracao do modulo financeiro: unifica despesas e contas na tabela
 // movimentacoes e adiciona o suporte a origem e recorrencias.
@@ -161,6 +163,8 @@ async function runMigrations() {
   await migrateMarketData();
   await migrateMarketProviders();
   await migratePersonalization();
+  await migrateAuthAndAdmin(pool);
+  await seedAdminUser();
 
   logger.info("Migrations aplicadas com sucesso.");
 }
