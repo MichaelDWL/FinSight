@@ -1,5 +1,7 @@
 # Checklist de producao — FinSight MVP
 
+Manual completo de implantacao: [deploy-manual.md](./deploy-manual.md)
+
 ## Pre-deploy
 
 - [ ] Postgres gerenciado (Neon/Supabase) com `docs/database/schema.sql` aplicado
