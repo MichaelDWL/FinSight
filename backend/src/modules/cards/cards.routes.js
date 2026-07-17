@@ -6,7 +6,7 @@ const { createCard, idParam, updateCard } = require("./cards.validator");
 
 const router = Router();
 
-router.get("/", controller.list);
+// GET /api/cards → BFF (modules/bff)
 router.get("/:id", validate(idParam), controller.detail);
 router.post("/", validate(createCard), controller.create);
 router.put("/:id", validate(updateCard), controller.update);

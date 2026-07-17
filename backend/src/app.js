@@ -25,6 +25,16 @@ app.get("/", (_req, res) => {
       api: "/api",
       auth: "/api/auth",
       admin: "/api/admin",
+      bff: {
+        home: "/api/home",
+        dashboard: "/api/dashboard",
+        investments: "/api/investments",
+        accounts: "/api/accounts",
+        cards: "/api/cards",
+        transactions: "/api/transactions",
+        reports: "/api/reports",
+        insights: "/api/insights",
+      },
     },
   });
 });

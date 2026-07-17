@@ -2,13 +2,14 @@ const app = require("./app");
 const env = require("./config/env");
 const { runMigrations } = require("./database/migrations");
 const { initCache } = require("./modules/analytics/analytics.cache");
+const CacheService = require("./modules/bff/cache/cache.service");
 const { startMarketScheduler } = require("./modules/market-data/market.scheduler");
 require("./modules/personalization");
 const logger = require("./utils/logger");
 
 async function startServer() {
   await runMigrations();
-  await initCache();
+  await Promise.all([initCache(), CacheService.init()]);
   startMarketScheduler();
 
   const server = app.listen(env.port, () => {

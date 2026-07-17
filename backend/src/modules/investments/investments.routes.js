@@ -11,7 +11,7 @@ const {
 
 const router = Router();
 
-router.get("/", controller.list);
+// GET /api/investments → BFF (modules/bff)
 router.get("/detailed", controller.listDetailed);
 router.get("/portfolio/summary", controller.portfolio);
 router.post("/simulate", validate(projectInvestment), controller.simulate);
