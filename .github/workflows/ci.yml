@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: finsight
+          POSTGRES_USER: finsight
+          POSTGRES_PASSWORD: finsight_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finsight -d finsight"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://finsight:finsight_ci@localhost:5432/finsight
+      DATABASE_SSL: "false"
+      JWT_ACCESS_SECRET: ci-access-secret-min-32-chars-xxxxxxxx
+      JWT_REFRESH_SECRET: ci-refresh-secret-min-32-chars-xxxxxxx
+      CRON_SECRET: ci-cron-secret-min16
+      REQUIRE_EMAIL_VERIFIED: "false"
+      ALLOW_ADMIN_SEED: "true"
+      ADMIN_SEED_EMAIL: admin@finsight.ci
+      ADMIN_SEED_PASSWORD: CiAdminPass1!
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Install Postgres client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Apply schema
+        run: psql "$DATABASE_URL" -f docs/database/schema.sql
+
+      - name: Migrate
+        run: npm run migrate
+
+      - name: Unit + smoke tests
+        run: npm test
