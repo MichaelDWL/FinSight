@@ -13,6 +13,8 @@ const env = {
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
   redisUrl: process.env.REDIS_URL || null,
   redisEnabled: Boolean(process.env.REDIS_URL),
+  marketSchedulerEnabled: process.env.MARKET_SCHEDULER_ENABLED !== "false",
+  brapiToken: process.env.BRAPI_TOKEN || null,
 };
 
 module.exports = env;
