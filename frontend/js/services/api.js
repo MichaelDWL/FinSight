@@ -1,4 +1,8 @@
-const API_BASE_URL = window.FINSIGHT_API_URL || "http://localhost:3045/api";
+const API_BASE_URL =
+  window.FINSIGHT_API_URL ||
+  (typeof location !== "undefined" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1"
+    ? `${location.origin}/api`
+    : "http://localhost:3045/api");
 
 const AUTH_NO_REFRESH = new Set([
   "/auth/login",
