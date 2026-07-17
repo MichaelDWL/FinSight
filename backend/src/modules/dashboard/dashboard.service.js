@@ -5,6 +5,7 @@ const investmentsService = require("../investments/investments.service");
 const movementsService = require("../movements/movements.service");
 const recurrenceService = require("../../services/recurrenceService");
 const repository = require("./dashboard.repository");
+const personalizationEngine = require("../personalization/engine/PersonalizationEngine");
 
 function round2(value) {
   return Math.round(Number(value) * 100) / 100;
@@ -369,6 +370,7 @@ async function getDashboard(userId) {
     bills,
     investments,
     goals,
+    personalization,
   ] = await Promise.all([
     repository.getFinancialSummary(userId),
     repository.getPreviousMonthSummary(userId),
@@ -382,11 +384,26 @@ async function getDashboard(userId) {
     movementsService.listBills(userId),
     investmentsService.list(userId),
     goalsService.list(userId),
+    personalizationEngine.rebuildContext(userId).catch(() => null),
   ]);
 
   const monthlyBalance = summary.income - summary.expenses;
   const pendingBills = bills.filter((bill) => bill.status !== "paid");
   const wealthBreakdown = buildWealthBreakdown(accounts, summary.investmentsTotal, cards);
+
+  const baseInsights = buildInsights({
+    summary,
+    previousMonth,
+    monthlyFlow,
+    categoryComparison,
+    pendingBills,
+    cards,
+    wealthBreakdown,
+  });
+
+  const insights = personalization?.insights?.length
+    ? [...personalization.insights, ...baseInsights].slice(0, 8)
+    : baseInsights;
 
   return {
     ...summary,
@@ -410,15 +427,13 @@ async function getDashboard(userId) {
     transactions,
     investments,
     goals,
-    insights: buildInsights({
-      summary,
-      previousMonth,
-      monthlyFlow,
-      categoryComparison,
-      pendingBills,
-      cards,
-      wealthBreakdown,
-    }),
+    insights,
+    personalization,
+    alerts: personalization?.alerts || [],
+    recommendations: personalization?.recommendations || [],
+    budgets: personalization?.budgets || [],
+    progress: personalization?.progress || [],
+    healthScore: personalization?.health || null,
   };
 }
 

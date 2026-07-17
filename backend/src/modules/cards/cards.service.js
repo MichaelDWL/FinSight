@@ -1,9 +1,11 @@
 const AppError = require("../../utils/AppError");
 const { invalidateUserAnalytics } = require("../analytics/analytics.invalidation");
+const { notifyMutation, EVENTS } = require("../personalization");
 const repository = require("./cards.repository");
 
-function bustAnalyticsCache(userId) {
+function bustCaches(userId) {
   invalidateUserAnalytics(userId).catch(() => undefined);
+  notifyMutation(userId, EVENTS.CACHE_BUST).catch(() => undefined);
 }
 
 async function list(userId) {
@@ -18,21 +20,21 @@ async function detail(userId, id) {
 
 async function create(userId, payload) {
   const result = await repository.create(userId, payload);
-  bustAnalyticsCache(userId);
+  bustCaches(userId);
   return result;
 }
 
 async function update(userId, id, payload) {
   const updated = await repository.update(userId, id, payload);
   if (!updated) throw new AppError("Cartao nao encontrado.", 404);
-  bustAnalyticsCache(userId);
+  bustCaches(userId);
   return updated;
 }
 
 async function remove(userId, id) {
   const removed = await repository.remove(userId, id);
   if (!removed) throw new AppError("Cartao nao encontrado.", 404);
-  bustAnalyticsCache(userId);
+  bustCaches(userId);
   return { id };
 }
 
