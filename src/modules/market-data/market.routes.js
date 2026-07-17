@@ -2,6 +2,7 @@ const { Router } = require("express");
 
 const controller = require("./market.controller");
 const validate = require("../../middlewares/validate");
+const { marketLimiter } = require("../../middlewares/rateLimiters");
 const {
   assetCodeParam,
   historyQuery,
@@ -11,6 +12,8 @@ const {
 } = require("./market.validator");
 
 const router = Router();
+
+router.use(marketLimiter);
 
 router.get("/overview", controller.overview);
 router.get("/rates", controller.rates);

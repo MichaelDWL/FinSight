@@ -2,24 +2,33 @@ const { Router } = require("express");
 const controller = require("./bff.controller");
 const validate = require("../../middlewares/validate");
 const { idParam } = require("../accounts/accounts.validator");
+const {
+  bffLimiter,
+  dashboardLimiter,
+  investmentsLimiter,
+  accountsLimiter,
+  cardsLimiter,
+  reportsLimiter,
+} = require("../../middlewares/rateLimiters");
 
 /**
  * Rotas BFF — uma chamada HTTP por tela.
- * GET listagens de dominio que conflitam sao removidas dos routers CRUD.
+ * Rate limits por grupo (config/rateLimit.config.js).
  */
 const router = Router();
 
-router.get("/home", controller.home);
-router.get("/dashboard", controller.dashboard);
-router.get("/investments", controller.investments);
-router.get("/accounts", controller.accounts);
-router.get("/cards", controller.cards);
-router.get("/transactions", controller.transactions);
-router.get("/reports", controller.reports);
-router.get("/insights", controller.insights);
+router.use(bffLimiter);
 
-// Detalhes agregados (shell + entidade) — paths distintos dos CRUD /:id
-router.get("/account-detail/:id", validate(idParam), controller.accountDetail);
-router.get("/card-detail/:id", validate(idParam), controller.cardDetail);
+router.get("/home", dashboardLimiter, controller.home);
+router.get("/dashboard", dashboardLimiter, controller.dashboard);
+router.get("/investments", investmentsLimiter, controller.investments);
+router.get("/accounts", accountsLimiter, controller.accounts);
+router.get("/cards", cardsLimiter, controller.cards);
+router.get("/transactions", controller.transactions);
+router.get("/reports", reportsLimiter, controller.reports);
+router.get("/insights", dashboardLimiter, controller.insights);
+
+router.get("/account-detail/:id", accountsLimiter, validate(idParam), controller.accountDetail);
+router.get("/card-detail/:id", cardsLimiter, validate(idParam), controller.cardDetail);
 
 module.exports = router;
