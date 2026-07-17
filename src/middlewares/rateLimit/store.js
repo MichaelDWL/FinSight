@@ -1,12 +1,11 @@
 /**
  * Store adaptativo para express-rate-limit.
- * Memoria (L1) por padrao; promove para Redis quando disponivel.
- * Compativel com single-instance, Docker multi-replica e Serverless.
+ * Memoria (L1) por padrao; promove para Redis compartilhado quando disponivel.
  */
-
 const { MemoryStore } = require("express-rate-limit");
 const env = require("../../config/env");
 const logger = require("../../utils/logger");
+const sharedRedis = require("../../platform/redis");
 
 const bridges = new Map();
 
@@ -80,7 +79,6 @@ class AdaptiveRateLimitStore {
   }
 }
 
-let redisClient = null;
 let redisReady = false;
 let promotePromise = null;
 
@@ -94,23 +92,19 @@ async function promoteAllToRedis() {
 
   promotePromise = (async () => {
     try {
-      const { createClient } = require("redis");
-      redisClient = createClient({ url: env.redisUrl });
-      redisClient.on("error", (error) => {
-        logger.warn("RateLimit Redis erro", { error: error.message });
-        redisReady = false;
-      });
-      await redisClient.connect();
+      const client = await sharedRedis.connect();
+      if (!client) {
+        return { mode: "memory" };
+      }
       redisReady = true;
 
       await Promise.all(
-        [...bridges.values()].map((bridge) => bridge.attachRedis(redisClient))
+        [...bridges.values()].map((bridge) => bridge.attachRedis(client))
       );
 
-      logger.info("RateLimit Redis pronto.");
+      logger.info("RateLimit Redis compartilhado pronto.");
       return { mode: "redis" };
     } catch (error) {
-      redisClient = null;
       redisReady = false;
       logger.warn("RateLimit fallback memoria", { error: error.message });
       return { mode: "memory", error: error.message };

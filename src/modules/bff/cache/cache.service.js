@@ -1,5 +1,6 @@
 const env = require("../../../config/env");
 const logger = require("../../../utils/logger");
+const sharedRedis = require("../../../platform/redis");
 const { BFF_CACHE_PREFIX } = require("../bff.constants");
 
 /**
@@ -9,8 +10,6 @@ const { BFF_CACHE_PREFIX } = require("../bff.constants");
  */
 const memoryStore = new Map();
 
-let redisClient = null;
-let redisReady = false;
 let cacheMode = "memory";
 let initialized = false;
 
@@ -20,6 +19,14 @@ function buildKey(endpoint, userId, variant = "default") {
 
 function isExpired(entry) {
   return !entry || Date.now() > entry.expiresAt;
+}
+
+function redisClient() {
+  return sharedRedis.getClient();
+}
+
+function redisReady() {
+  return sharedRedis.isReady();
 }
 
 async function init() {
@@ -32,25 +39,13 @@ async function init() {
     return getStatus();
   }
 
-  try {
-    const { createClient } = require("redis");
-    redisClient = createClient({ url: env.redisUrl });
-
-    redisClient.on("error", (error) => {
-      logger.warn("BFF Redis indisponivel, fallback memoria.", { error: error.message });
-      redisReady = false;
-      cacheMode = "memory";
-    });
-
-    await redisClient.connect();
-    redisReady = true;
+  const client = await sharedRedis.connect();
+  if (client) {
     cacheMode = "redis";
-    logger.info("BFF CacheService conectado ao Redis.");
-  } catch (error) {
-    redisClient = null;
-    redisReady = false;
+    logger.info("BFF CacheService usando Redis compartilhado.");
+  } else {
     cacheMode = "memory";
-    logger.warn("BFF falha Redis, usando memoria.", { error: error.message });
+    logger.warn("BFF falha Redis, usando memoria.");
   }
 
   return getStatus();
@@ -88,9 +83,10 @@ async function memoryInvalidatePrefix(prefix) {
 }
 
 async function redisGet(key) {
-  if (!redisReady || !redisClient) return null;
+  const client = redisClient();
+  if (!redisReady() || !client) return null;
   try {
-    const raw = await redisClient.get(key);
+    const raw = await client.get(key);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (error) {
@@ -100,39 +96,42 @@ async function redisGet(key) {
 }
 
 async function redisSet(key, value, ttlSeconds) {
-  if (!redisReady || !redisClient) return;
+  const client = redisClient();
+  if (!redisReady() || !client) return;
   try {
-    await redisClient.set(key, JSON.stringify(value), { EX: ttlSeconds });
+    await client.set(key, JSON.stringify(value), { EX: ttlSeconds });
   } catch (error) {
     logger.warn("BFF cache Redis set falhou.", { error: error.message, key });
   }
 }
 
 async function redisDel(key) {
-  if (!redisReady || !redisClient) return;
+  const client = redisClient();
+  if (!redisReady() || !client) return;
   try {
-    await redisClient.del(key);
+    await client.del(key);
   } catch (error) {
     logger.warn("BFF cache Redis del falhou.", { error: error.message, key });
   }
 }
 
 async function redisInvalidatePrefix(prefix) {
-  if (!redisReady || !redisClient) return 0;
+  const client = redisClient();
+  if (!redisReady() || !client) return 0;
 
   let removed = 0;
   let cursor = "0";
 
   try {
     do {
-      const result = await redisClient.scan(cursor, {
+      const result = await client.scan(cursor, {
         MATCH: `${prefix}*`,
         COUNT: 100,
       });
       cursor = result.cursor;
       const keys = result.keys || [];
       if (keys.length) {
-        await redisClient.del(keys);
+        await client.del(keys);
         removed += keys.length;
       }
     } while (cursor !== "0");
@@ -166,7 +165,6 @@ async function del(key) {
 async function invalidateUser(userId) {
   if (!userId) return 0;
   const prefix = `${BFF_CACHE_PREFIX}:`;
-  // Invalida todas as chaves bff:*:userId:*
   const userToken = `:${userId}:`;
   let removed = 0;
 
@@ -177,18 +175,19 @@ async function invalidateUser(userId) {
     }
   }
 
-  if (redisReady && redisClient) {
+  const client = redisClient();
+  if (redisReady() && client) {
     let cursor = "0";
     try {
       do {
-        const result = await redisClient.scan(cursor, {
+        const result = await client.scan(cursor, {
           MATCH: `${BFF_CACHE_PREFIX}:*`,
           COUNT: 100,
         });
         cursor = result.cursor;
         const keys = (result.keys || []).filter((key) => key.includes(userToken));
         if (keys.length) {
-          await redisClient.del(keys);
+          await client.del(keys);
           removed += keys.length;
         }
       } while (cursor !== "0");
@@ -217,7 +216,7 @@ async function wrap(key, ttlSeconds, factory) {
 function getStatus() {
   return {
     mode: cacheMode,
-    redisConnected: redisReady,
+    redisConnected: redisReady(),
     memoryEntries: memoryStore.size,
     initialized,
   };

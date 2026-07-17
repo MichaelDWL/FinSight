@@ -1,11 +1,10 @@
 const env = require("../../config/env");
 const logger = require("../../utils/logger");
+const sharedRedis = require("../../platform/redis");
 
 const DASHBOARDS = ["general", "expenses", "cashflow", "cards", "investments"];
 const memoryStore = new Map();
 
-let redisClient = null;
-let redisReady = false;
 let cacheMode = "memory";
 
 function buildCacheKey(userId, dashboard, period) {
@@ -21,6 +20,14 @@ function isExpired(entry) {
   return !entry || Date.now() > entry.expiresAt;
 }
 
+function redisClient() {
+  return sharedRedis.getClient();
+}
+
+function redisReady() {
+  return sharedRedis.isReady();
+}
+
 async function initCache() {
   if (!env.redisUrl) {
     cacheMode = "memory";
@@ -28,25 +35,13 @@ async function initCache() {
     return;
   }
 
-  try {
-    const { createClient } = require("redis");
-    redisClient = createClient({ url: env.redisUrl });
-
-    redisClient.on("error", (error) => {
-      logger.warn("Redis indisponivel, usando cache em memoria.", { error: error.message });
-      redisReady = false;
-      cacheMode = "memory";
-    });
-
-    await redisClient.connect();
-    redisReady = true;
+  const client = await sharedRedis.connect();
+  if (client) {
     cacheMode = "redis";
-    logger.info("Analytics cache conectado ao Redis.");
-  } catch (error) {
-    redisClient = null;
-    redisReady = false;
+    logger.info("Analytics cache usando Redis compartilhado.");
+  } else {
     cacheMode = "memory";
-    logger.warn("Falha ao conectar Redis, usando cache em memoria.", { error: error.message });
+    logger.warn("Falha ao conectar Redis, usando cache em memoria.");
   }
 }
 
@@ -81,10 +76,11 @@ async function memoryInvalidateUser(userId) {
 }
 
 async function redisGet(key) {
-  if (!redisReady || !redisClient) return null;
+  const client = redisClient();
+  if (!redisReady() || !client) return null;
 
   try {
-    const raw = await redisClient.get(key);
+    const raw = await client.get(key);
     if (!raw) return null;
     return JSON.parse(raw);
   } catch (error) {
@@ -94,17 +90,19 @@ async function redisGet(key) {
 }
 
 async function redisSet(key, value, ttlSeconds) {
-  if (!redisReady || !redisClient) return;
+  const client = redisClient();
+  if (!redisReady() || !client) return;
 
   try {
-    await redisClient.set(key, JSON.stringify(value), { EX: ttlSeconds });
+    await client.set(key, JSON.stringify(value), { EX: ttlSeconds });
   } catch (error) {
     logger.warn("Falha ao gravar cache Redis.", { error: error.message, key });
   }
 }
 
 async function redisInvalidateUser(userId) {
-  if (!redisReady || !redisClient) return 0;
+  const client = redisClient();
+  if (!redisReady() || !client) return 0;
 
   const prefix = buildUserPrefix(userId);
   let removed = 0;
@@ -112,7 +110,7 @@ async function redisInvalidateUser(userId) {
 
   try {
     do {
-      const result = await redisClient.scan(cursor, {
+      const result = await client.scan(cursor, {
         MATCH: `${prefix}*`,
         COUNT: 100,
       });
@@ -121,7 +119,7 @@ async function redisInvalidateUser(userId) {
       const keys = result.keys || [];
 
       if (keys.length) {
-        await redisClient.del(keys);
+        await client.del(keys);
         removed += keys.length;
       }
     } while (cursor !== "0");
@@ -159,7 +157,7 @@ const cacheAdapter = {
   getStatus() {
     return {
       mode: cacheMode,
-      redisConnected: redisReady,
+      redisConnected: redisReady(),
       memoryEntries: memoryStore.size,
       dashboards: DASHBOARDS,
     };
