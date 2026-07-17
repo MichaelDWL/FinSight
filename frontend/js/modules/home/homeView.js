@@ -266,6 +266,104 @@ function getNearestGoals(goals, limit = 3) {
     .slice(0, limit);
 }
 
+function budgetProgressCard(item) {
+  const tone =
+    item.status === "exceeded"
+      ? "expense"
+      : item.status === "warning"
+        ? "warning"
+        : "brand";
+  return `
+    <article class="goal-card home-budget-card">
+      <div class="goal-head">
+        <div>
+          <h3 class="item-title">${item.label}</h3>
+          <p class="item-meta">${formatCurrency(item.used)} de ${formatCurrency(item.limit)}</p>
+        </div>
+        <span class="pill">${item.usagePercent || 0}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress progress-${tone}" style="--progress-width: ${Math.min(item.usagePercent || 0, 100)}%"></div>
+      </div>
+      <p class="item-meta">Ainda pode usar ${formatCurrency(item.remaining || 0)}</p>
+    </article>
+  `;
+}
+
+function spotlightCard(item) {
+  if (!item) return "";
+  const message = item.message || item.title || "";
+  const href = item.route || "#dashboards/geral";
+  return `
+    <section class="home-section">
+      <a class="premium-card home-spotlight" href="${href}">
+        <div class="home-spotlight-copy">
+          <span class="page-eyebrow">Prioridade agora</span>
+          <strong class="item-title">${message}</strong>
+          <p class="item-meta">${item.action || "Toque para ver detalhes"}</p>
+        </div>
+        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+      </a>
+    </section>
+  `;
+}
+
+function orderedMetricCards({ balance, income, expenses, netWorth, trends, kpiOrder, investmentsTotal }) {
+  const catalog = {
+    balance: () =>
+      metricCard(
+        "Saldo disponível",
+        formatCurrency(balance),
+        "fa-wallet",
+        "Disponível nas suas contas",
+        "brand",
+        trends.balance,
+      ),
+    income: () =>
+      metricCard(
+        "Receitas do mês",
+        formatCurrency(income),
+        "fa-arrow-trend-up",
+        "Entradas recebidas neste mês",
+        "income",
+        trends.income,
+      ),
+    expenses: () =>
+      metricCard(
+        "Despesas do mês",
+        formatCurrency(expenses),
+        "fa-arrow-trend-down",
+        "Total gasto neste mês",
+        "expense",
+        trends.expenses,
+      ),
+    netWorth: () =>
+      metricCard(
+        "Patrimônio",
+        formatCurrency(netWorth),
+        "fa-gem",
+        "Contas + investimentos",
+        "brand",
+        trends.netWorth,
+      ),
+    investments: () =>
+      metricCard(
+        "Investimentos",
+        formatCurrency(investmentsTotal),
+        "fa-chart-line",
+        "Valor atual da carteira",
+        "income",
+        null,
+      ),
+  };
+
+  const order = (kpiOrder || ["balance", "income", "expenses", "netWorth"]).filter(
+    (key) => catalog[key],
+  );
+  const unique = [...new Set(order.length ? order : ["balance", "income", "expenses", "netWorth"])];
+  return unique.slice(0, 4).map((key) => catalog[key]()).join("");
+}
+
 export function renderHomeDashboard({
   dashboardData = {},
   transactions = [],
@@ -284,7 +382,23 @@ export function renderHomeDashboard({
   const financialHealth = dashboardData.financialHealth || [];
   const wealthBreakdown = dashboardData.wealthBreakdown || {};
   const insights = dashboardData.insights || [];
+  const personalization = dashboardData.personalization || null;
+  const progress = dashboardData.progress || personalization?.progress || [];
+  const healthScore = dashboardData.healthScore || personalization?.health || null;
+  const spotlight =
+    personalization?.home?.spotlight ||
+    dashboardData.alerts?.[0] ||
+    dashboardData.recommendations?.[0] ||
+    null;
+  const profileTitle = personalization?.profile?.title || null;
+  const kpiOrder =
+    personalization?.dashboards?.general?.kpiOrder ||
+    personalization?.home?.priority ||
+    [];
   const nearestGoals = getNearestGoals(goals, 3);
+  const investmentsTotal =
+    wealthBreakdown.investments ??
+    investments.reduce((sum, item) => sum + Number(item.current || 0), 0);
 
   const topExpense = flowSummary.topExpenseCategory;
   const growingCategory = flowSummary.fastestGrowingCategory;
@@ -295,7 +409,13 @@ export function renderHomeDashboard({
       <div class="page-hero home-hero">
         <div>
           <h1 class="page-title home-greeting">Olá, ${firstName} 👋</h1>
-          <p class="page-subtitle home-subtitle">Veja rapidamente como está sua vida financeira hoje.</p>
+          <p class="page-subtitle home-subtitle">
+            ${
+              profileTitle
+                ? `Seu FinSight está no modo <strong>${profileTitle}</strong> — priorizamos o que importa para você.`
+                : "Veja rapidamente como está sua vida financeira hoje."
+            }
+          </p>
         </div>
         <div class="hero-actions">
           <button class="btn-primary" type="button" data-action="add-transaction"><i class="fa-solid fa-plus"></i> Nova Movimentação</button>
@@ -303,23 +423,68 @@ export function renderHomeDashboard({
         </div>
       </div>
 
+      ${spotlightCard(spotlight)}
+
       <section class="home-section">
         <div class="metrics-grid home-metrics">
-          ${metricCard("Saldo disponível", formatCurrency(balance), "fa-wallet", "Disponível nas suas contas", "brand", trends.balance)}
-          ${metricCard("Receitas do mês", formatCurrency(income), "fa-arrow-trend-up", "Entradas recebidas neste mês", "income", trends.income)}
-          ${metricCard("Despesas do mês", formatCurrency(expenses), "fa-arrow-trend-down", "Total gasto neste mês", "expense", trends.expenses)}
-          ${metricCard("Patrimônio", formatCurrency(netWorth), "fa-gem", "Contas + investimentos", "brand", trends.netWorth)}
+          ${orderedMetricCards({
+            balance,
+            income,
+            expenses,
+            netWorth,
+            trends,
+            kpiOrder,
+            investmentsTotal,
+          })}
         </div>
       </section>
 
       ${
-        financialHealth.length
+        healthScore
           ? `
+        <section class="home-section">
+          <div class="home-section-head">
+            <h2>Saúde financeira</h2>
+            <span class="pill">${Math.round(healthScore.score)} · ${healthScore.label || ""}</span>
+          </div>
+          <div class="health-strip">
+            ${(healthScore.factors || [])
+              .slice(0, 4)
+              .map(
+                (factor) => `
+              <button class="health-chip" type="button">
+                <strong>${factor.label}</strong>
+                <span>${Math.round(factor.score)}/${factor.weight}</span>
+              </button>
+            `,
+              )
+              .join("")}
+          </div>
+        </section>
+      `
+          : financialHealth.length
+            ? `
         <section class="home-section">
           <div class="home-section-head">
             <h2>Saúde financeira</h2>
           </div>
           <div class="health-strip">${financialHealth.map(healthChip).join("")}</div>
+        </section>
+      `
+            : ""
+      }
+
+      ${
+        progress.length
+          ? `
+        <section class="home-section">
+          <div class="home-section-head">
+            <h2>Progresso do mês</h2>
+            <span class="home-section-meta">Limites personalizados</span>
+          </div>
+          <div class="home-budget-grid">
+            ${progress.map(budgetProgressCard).join("")}
+          </div>
         </section>
       `
           : ""
@@ -381,7 +546,7 @@ export function renderHomeDashboard({
         </div>
         <div class="wealth-mini-grid">
           ${wealthMiniCard("Contas", wealthBreakdown.accounts ?? balance, "fa-building-columns", "#contas-bancos")}
-          ${wealthMiniCard("Investimentos", wealthBreakdown.investments ?? investments.reduce((sum, item) => sum + item.current, 0), "fa-chart-line", "#patrimonio")}
+          ${wealthMiniCard("Investimentos", investmentsTotal, "fa-chart-line", "#patrimonio")}
           ${wealthMiniCard("Dinheiro", wealthBreakdown.cash ?? 0, "fa-money-bill-wave", "#contas-bancos")}
           ${wealthMiniCard("Cartões", wealthBreakdown.cardsAvailable ?? creditCards.reduce((sum, card) => sum + (card.totalLimit - card.usedLimit), 0), "fa-credit-card", "#contas-cartoes")}
         </div>
@@ -405,7 +570,7 @@ export function renderHomeDashboard({
         <section class="premium-card">
           <div class="card-title-row">
             <h2>Insights inteligentes</h2>
-            <span class="pill">Personalizado</span>
+            <span class="pill">${profileTitle ? profileTitle : "Personalizado"}</span>
           </div>
           <div class="mini-list">
             ${

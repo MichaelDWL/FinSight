@@ -3,12 +3,78 @@ import { mountChart } from "../../../charts/ChartWrapper.js";
 import { renderPeriodFilter } from "../shared/PeriodFilter.js";
 import { renderDashboardNav } from "../shared/DashboardNav.js";
 import { periodLabel } from "../shared/periodLabels.js";
-import { renderMetricCard } from "../shared/dashboardUi.js";
+import { renderOrderedMetrics, profileBadge } from "../shared/dashboardUi.js";
 
 export function renderCashflowDashboard(data, { period = "30d" } = {}) {
   const kpis = data?.kpis || {};
   const projection = data?.projection || {};
   const label = periodLabel(period);
+  const kpiOrder = data?.kpiOrder || [];
+  const personalization = data?.personalization || null;
+
+  const primaryCatalog = {
+    income: {
+      label: "Entradas",
+      value: chartService.formatBRL(kpis.income),
+      icon: "fa-arrow-trend-up",
+      caption: `Receitas no ${label}`,
+      tone: "income",
+    },
+    expenses: {
+      label: "Saídas",
+      value: chartService.formatBRL(kpis.expenses),
+      icon: "fa-arrow-trend-down",
+      caption: `Despesas no ${label}`,
+      tone: "expense",
+    },
+    net: {
+      label: "Saldo do período",
+      value: chartService.formatBRL(kpis.net),
+      icon: "fa-scale-balanced",
+      caption: "Entradas menos saídas",
+      tone: kpis.net >= 0 ? "income" : "expense",
+    },
+    currentBalance: {
+      label: "Saldo disponível",
+      value: chartService.formatBRL(kpis.currentBalance),
+      icon: "fa-wallet",
+      caption: "Nas contas ativas",
+      tone: "brand",
+    },
+    projectedBalance: {
+      label: "Projeção fim do mês",
+      value: chartService.formatBRL(kpis.projectedBalance),
+      icon: "fa-chart-line",
+      caption: `${projection.daysRemaining || 0} dias restantes`,
+      tone: "brand",
+    },
+    accumulatedBalance: {
+      label: "Saldo acumulado",
+      value: chartService.formatBRL(kpis.accumulatedBalance),
+      icon: "fa-layer-group",
+      caption: "Fluxo líquido acumulado",
+      tone: "brand",
+    },
+    avgDailyIncome: {
+      label: "Média diária de receitas",
+      value: chartService.formatBRL(kpis.avgDailyIncome),
+      icon: "fa-coins",
+      caption: "Baseado no período",
+      tone: "income",
+    },
+    avgDailyExpense: {
+      label: "Média diária de gastos",
+      value: chartService.formatBRL(kpis.avgDailyExpense),
+      icon: "fa-money-bill-wave",
+      caption: "Baseado no período",
+      tone: "expense",
+    },
+  };
+
+  const primaryOrder = (kpiOrder.length
+    ? kpiOrder
+    : ["income", "expenses", "net", "currentBalance"]
+  ).slice(0, 4);
 
   return `
     <section class="app-page dashboard-page">
@@ -16,7 +82,7 @@ export function renderCashflowDashboard(data, { period = "30d" } = {}) {
         <div>
           <span class="page-eyebrow">Dashboard de Fluxo de Caixa</span>
           <h1 class="page-title">Entradas, saídas e projeções</h1>
-          <p class="page-subtitle">Acompanhe a liquidez do seu dinheiro · ${label}</p>
+          <p class="page-subtitle">Acompanhe a liquidez do seu dinheiro · ${label} ${profileBadge(personalization)}</p>
         </div>
       </div>
 
@@ -25,66 +91,16 @@ export function renderCashflowDashboard(data, { period = "30d" } = {}) {
 
       <section class="home-section">
         <div class="metrics-grid dashboard-metrics">
-          ${renderMetricCard(
-            "Entradas",
-            chartService.formatBRL(kpis.income),
-            "fa-arrow-trend-up",
-            `Receitas no ${label}`,
-            "income",
-          )}
-          ${renderMetricCard(
-            "Saídas",
-            chartService.formatBRL(kpis.expenses),
-            "fa-arrow-trend-down",
-            `Despesas no ${label}`,
-            "expense",
-          )}
-          ${renderMetricCard(
-            "Saldo do período",
-            chartService.formatBRL(kpis.net),
-            "fa-scale-balanced",
-            "Entradas menos saídas",
-            kpis.net >= 0 ? "income" : "expense",
-          )}
-          ${renderMetricCard(
-            "Saldo disponível",
-            chartService.formatBRL(kpis.currentBalance),
-            "fa-wallet",
-            "Nas contas ativas",
-            "brand",
-          )}
+          ${renderOrderedMetrics(primaryCatalog, primaryOrder, kpis)}
         </div>
       </section>
 
       <section class="home-section">
         <div class="metrics-grid dashboard-metrics dashboard-metrics-secondary">
-          ${renderMetricCard(
-            "Média diária de receitas",
-            chartService.formatBRL(kpis.avgDailyIncome),
-            "fa-coins",
-            "Baseado no período",
-            "income",
-          )}
-          ${renderMetricCard(
-            "Média diária de gastos",
-            chartService.formatBRL(kpis.avgDailyExpense),
-            "fa-money-bill-wave",
-            "Baseado no período",
-            "expense",
-          )}
-          ${renderMetricCard(
-            "Saldo acumulado",
-            chartService.formatBRL(kpis.accumulatedBalance),
-            "fa-layer-group",
-            "Fluxo líquido acumulado",
-            "brand",
-          )}
-          ${renderMetricCard(
-            "Projeção fim do mês",
-            chartService.formatBRL(kpis.projectedBalance),
-            "fa-chart-line",
-            `${projection.daysRemaining || 0} dias restantes`,
-            "brand",
+          ${renderOrderedMetrics(
+            primaryCatalog,
+            Object.keys(primaryCatalog).filter((key) => !primaryOrder.includes(key)),
+            kpis,
           )}
         </div>
       </section>

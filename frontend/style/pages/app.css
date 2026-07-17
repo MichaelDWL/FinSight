@@ -73,6 +73,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-top: 20px;
 }
 
 .btn-primary {
@@ -642,6 +643,104 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--gap-md);
+}
+
+.investment-projection-panel {
+  margin-top: var(--gap-md);
+  padding: var(--pad-md);
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-blue));
+}
+
+.investment-projection-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  margin-bottom: 0.75rem;
+}
+
+.projection-horizons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.projection-horizon {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.projection-horizon strong {
+  font-size: 0.95rem;
+}
+
+.investment-projection-disclaimer,
+.investment-projection-empty .font-small {
+  margin: 0.75rem 0 0;
+  color: var(--pw6);
+  line-height: 1.45;
+}
+
+.investment-detail-list {
+  display: grid;
+  gap: var(--gap-md);
+}
+
+.investment-detail-card .investment-projection-panel,
+.investment-detail-card .variable-market-block {
+  margin-top: var(--gap-md);
+}
+
+.market-history-chart {
+  min-height: 240px;
+  margin-top: 0.75rem;
+}
+
+.rates-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.rate-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--surface-blue));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.rate-chip strong {
+  font-size: 1rem;
+}
+
+.modal .investment-modal-card {
+  max-height: min(92vh, 900px);
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .rates-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .projection-horizons {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rates-strip {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .investment-card,
@@ -1257,6 +1356,51 @@
   gap: var(--gap-lg);
 }
 
+.home-spotlight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-spotlight:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--bx-shadow-card-elevated);
+}
+
+.home-spotlight-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.home-budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gap-md);
+}
+
+.profile-notifications {
+  margin-top: 0.85rem;
+}
+
+.profile-notification-check {
+  min-height: 2.6rem;
+}
+
+#allocationSumHint {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.home-budget-card .progress-warning {
+  background: linear-gradient(90deg, var(--warning), #fbbf24);
+}
+
 .home-insight-item .item-title {
   line-height: 1.45;
 }
@@ -1373,10 +1517,226 @@
     align-items: flex-start;
     text-align: left;
   }
+}
 
-  .toast {
-    right: 1rem;
-    bottom: 9.5rem;
+.tx-card-list {
+  display: none;
+}
+
+/* —— Mobile Home density + lists (≤767) —— */
+@media (max-width: 767px) {
+  .home-page {
+    gap: 0.85rem;
+  }
+
+  .home-hero {
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: var(--pad-md);
+  }
+
+  .home-greeting {
+    font-size: 1.35rem;
+  }
+
+  .home-subtitle {
+    margin-top: 0.2rem;
+    font-size: 0.86rem;
+  }
+
+  .home-hero .hero-actions .btn-primary,
+  .mobile-hide-fab-duplicate {
+    display: none;
+  }
+
+  .home-hero .hero-actions {
+    width: 100%;
+  }
+
+  .home-hero .hero-actions > * {
+    flex: 1 1 auto;
+    min-height: var(--touch-min, 48px);
+  }
+
+  .home-section {
+    gap: 0.65rem;
+  }
+
+  .home-section-head h2 {
+    font-size: 1rem;
+  }
+
+  .home-metrics.metrics-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .metric-card {
+    width: 100%;
+    padding: 0.85rem;
+    gap: 0.35rem;
+  }
+
+  .metric-value {
+    font-size: 1.15rem;
+  }
+
+  .metric-caption {
+    font-size: 0.72rem;
+  }
+
+  .health-strip {
+    gap: 0.65rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .health-chip {
+    min-width: 11.5rem;
+    flex: 0 0 72%;
+    padding: 0.85rem;
+    scroll-snap-align: start;
+  }
+
+  .home-flow-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .home-flow-card {
+    min-height: 220px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .home-flow-chart,
+  .chart-card,
+  .premium-card {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .wealth-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .wealth-mini-card {
+    min-height: var(--touch-min, 48px);
+    padding: 0.85rem;
+  }
+
+  .page-hero {
+    gap: 0.75rem;
+    padding: var(--pad-md);
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.86rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .icon-button {
+    min-height: var(--touch-min, 48px);
+    min-width: var(--touch-min, 48px);
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+
+  .filters-grid .field:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .table-wrap .data-table {
+    display: none;
+  }
+
+  .tx-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+  }
+
+  .tx-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: var(--border-card);
+    border-radius: var(--border-radius-lg);
+    background: var(--surface-card);
+    box-shadow: var(--bx-shadow-item);
+  }
+
+  .tx-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .tx-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.65rem;
+    color: var(--pw6);
+    font-size: 0.8rem;
+  }
+
+  .tx-card-actions .btn-secondary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-greeting {
+    font-size: 1.25rem;
+  }
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-grid .field:last-child {
+    grid-column: auto;
+  }
+
+  .metric-card {
+    padding: 0.75rem;
+  }
+
+  .health-chip {
+    flex-basis: 78%;
+  }
+}
+
+@media (max-width: 360px) {
+  .home-metrics.metrics-grid,
+  .metrics-grid {
+    gap: 0.5rem;
+  }
+
+  .metric-value {
+    font-size: 1.05rem;
+  }
+
+  .wealth-mini-grid {
+    gap: 0.5rem;
   }
 }
 

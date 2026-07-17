@@ -3,7 +3,7 @@ import { mountChart } from "../../../charts/ChartWrapper.js";
 import { renderPeriodFilter } from "../shared/PeriodFilter.js";
 import { renderDashboardNav } from "../shared/DashboardNav.js";
 import { periodLabel } from "../shared/periodLabels.js";
-import { renderMetricCard } from "../shared/dashboardUi.js";
+import { renderOrderedMetrics, profileBadge } from "../shared/dashboardUi.js";
 
 function formatDate(isoDate) {
   if (!isoDate) return "—";
@@ -53,6 +53,53 @@ export function renderCardsDashboard(data, { period = "30d" } = {}) {
   const nextDueDates = data?.lists?.nextDueDates || [];
   const cardComparison = data?.charts?.cardComparison || [];
   const label = periodLabel(period);
+  const kpiOrder = data?.kpiOrder || [];
+  const personalization = data?.personalization || null;
+
+  const metricCatalog = {
+    availableLimit: {
+      label: "Limite disponível",
+      value: chartService.formatBRL(kpis.availableLimit),
+      icon: "fa-wallet",
+      caption: `De ${chartService.formatBRL(kpis.totalLimit)} total`,
+      tone: "brand",
+    },
+    usagePercent: {
+      label: "Limite utilizado",
+      value: `${kpis.usagePercent || 0}%`,
+      icon: "fa-chart-pie",
+      caption: chartService.formatBRL(kpis.usedLimit),
+      tone: kpis.usagePercent >= 70 ? "expense" : "brand",
+    },
+    usedLimit: {
+      label: "Valor utilizado",
+      value: chartService.formatBRL(kpis.usedLimit),
+      icon: "fa-credit-card",
+      caption: `${kpis.usagePercent || 0}% do limite`,
+      tone: "expense",
+    },
+    totalLimit: {
+      label: "Limite total",
+      value: chartService.formatBRL(kpis.totalLimit),
+      icon: "fa-layer-group",
+      caption: `${kpis.cardsCount || 0} cartão(ões)`,
+      tone: "brand",
+    },
+    periodSpending: {
+      label: "Gastos no cartão",
+      value: chartService.formatBRL(kpis.periodSpending),
+      icon: "fa-bag-shopping",
+      caption: `Compras no ${label}`,
+      tone: "expense",
+    },
+    pendingInstallments: {
+      label: "Parcelas futuras",
+      value: chartService.formatBRL(kpis.pendingInstallments),
+      icon: "fa-clock",
+      caption: `${kpis.pendingInstallmentsCount || 0} parcela(s) pendente(s)`,
+      tone: "brand",
+    },
+  };
 
   return `
     <section class="app-page dashboard-page">
@@ -60,7 +107,7 @@ export function renderCardsDashboard(data, { period = "30d" } = {}) {
         <div>
           <span class="page-eyebrow">Dashboard de Cartões</span>
           <h1 class="page-title">Crédito sob controle</h1>
-          <p class="page-subtitle">Limites, faturas e parcelas em um só lugar · ${label}</p>
+          <p class="page-subtitle">Limites, faturas e parcelas em um só lugar · ${label} ${profileBadge(personalization)}</p>
         </div>
         <div class="hero-actions">
           <a class="btn-secondary" href="#contas-cartoes">
@@ -74,34 +121,7 @@ export function renderCardsDashboard(data, { period = "30d" } = {}) {
 
       <section class="home-section">
         <div class="metrics-grid dashboard-metrics">
-          ${renderMetricCard(
-            "Limite disponível",
-            chartService.formatBRL(kpis.availableLimit),
-            "fa-wallet",
-            `De ${chartService.formatBRL(kpis.totalLimit)} total`,
-            "brand",
-          )}
-          ${renderMetricCard(
-            "Limite utilizado",
-            `${kpis.usagePercent || 0}%`,
-            "fa-chart-pie",
-            chartService.formatBRL(kpis.usedLimit),
-            kpis.usagePercent >= 70 ? "expense" : "brand",
-          )}
-          ${renderMetricCard(
-            "Gastos no cartão",
-            chartService.formatBRL(kpis.periodSpending),
-            "fa-bag-shopping",
-            `Compras no ${label}`,
-            "expense",
-          )}
-          ${renderMetricCard(
-            "Parcelas futuras",
-            chartService.formatBRL(kpis.pendingInstallments),
-            "fa-clock",
-            `${kpis.pendingInstallmentsCount || 0} parcela(s) pendente(s)`,
-            "brand",
-          )}
+          ${renderOrderedMetrics(metricCatalog, kpiOrder.slice(0, 4), kpis)}
         </div>
       </section>
 

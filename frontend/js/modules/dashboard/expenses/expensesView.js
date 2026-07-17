@@ -3,7 +3,7 @@ import { mountChart } from "../../../charts/ChartWrapper.js";
 import { renderPeriodFilter } from "../shared/PeriodFilter.js";
 import { renderDashboardNav } from "../shared/DashboardNav.js";
 import { periodLabel } from "../shared/periodLabels.js";
-import { renderMetricCard } from "../shared/dashboardUi.js";
+import { renderOrderedMetrics, profileBadge } from "../shared/dashboardUi.js";
 
 function formatDate(isoDate) {
   if (!isoDate) return "";
@@ -19,6 +19,40 @@ export function renderExpensesDashboard(data, { period = "30d" } = {}) {
   const topExpenses = data?.lists?.topExpenses || [];
   const fastestGrowing = data?.lists?.fastestGrowing || [];
   const label = periodLabel(period);
+  const kpiOrder = data?.kpiOrder || [];
+  const personalization = data?.personalization || null;
+
+  const metricCatalog = {
+    total: {
+      label: "Total de gastos",
+      value: chartService.formatBRL(kpis.total),
+      icon: "fa-arrow-trend-down",
+      caption: `No ${label}`,
+      tone: "expense",
+      trend: trends.total,
+    },
+    avgDaily: {
+      label: "Média diária",
+      value: chartService.formatBRL(kpis.avgDaily),
+      icon: "fa-calendar-day",
+      caption: "Gasto médio por dia",
+      tone: "expense",
+    },
+    projectedMonthEnd: {
+      label: "Previsão fim do mês",
+      value: chartService.formatBRL(kpis.projectedMonthEnd),
+      icon: "fa-chart-line",
+      caption: `Projeção linear · ${projection.daysRemaining || 0} dias restantes`,
+      tone: "brand",
+    },
+    transactionsCount: {
+      label: "Lançamentos",
+      value: String(kpis.transactionsCount || 0),
+      icon: "fa-receipt",
+      caption: "Despesas no período",
+      tone: "brand",
+    },
+  };
 
   return `
     <section class="app-page dashboard-page">
@@ -26,7 +60,7 @@ export function renderExpensesDashboard(data, { period = "30d" } = {}) {
         <div>
           <span class="page-eyebrow">Dashboard de Gastos</span>
           <h1 class="page-title">Análise detalhada de despesas</h1>
-          <p class="page-subtitle">Entenda para onde vai seu dinheiro · ${label}</p>
+          <p class="page-subtitle">Entenda para onde vai seu dinheiro · ${label} ${profileBadge(personalization)}</p>
         </div>
       </div>
 
@@ -35,35 +69,7 @@ export function renderExpensesDashboard(data, { period = "30d" } = {}) {
 
       <section class="home-section">
         <div class="metrics-grid dashboard-metrics">
-          ${renderMetricCard(
-            "Total de gastos",
-            chartService.formatBRL(kpis.total),
-            "fa-arrow-trend-down",
-            `No ${label}`,
-            "expense",
-            trends.total,
-          )}
-          ${renderMetricCard(
-            "Média diária",
-            chartService.formatBRL(kpis.avgDaily),
-            "fa-calendar-day",
-            "Gasto médio por dia",
-            "expense",
-          )}
-          ${renderMetricCard(
-            "Previsão fim do mês",
-            chartService.formatBRL(kpis.projectedMonthEnd),
-            "fa-chart-line",
-            `Projeção linear · ${projection.daysRemaining || 0} dias restantes`,
-            "brand",
-          )}
-          ${renderMetricCard(
-            "Lançamentos",
-            String(kpis.transactionsCount || 0),
-            "fa-receipt",
-            "Despesas no período",
-            "brand",
-          )}
+          ${renderOrderedMetrics(metricCatalog, kpiOrder, kpis)}
         </div>
       </section>
 

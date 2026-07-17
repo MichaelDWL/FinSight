@@ -232,3 +232,36 @@ export function renderFlowSummaryItem(label, title, meta) {
     </div>
   `;
 }
+
+/**
+ * Renderiza métricas na ordem do Personalization Engine.
+ * catalog[key] pode ser objeto ou função (kpis) => objeto.
+ */
+export function renderOrderedMetrics(catalog, kpiOrder = [], kpis = {}) {
+  const keys = (kpiOrder?.length ? kpiOrder : Object.keys(catalog)).filter(
+    (key) => catalog[key],
+  );
+  const unique = [...new Set(keys)];
+  const order = unique.length ? unique : Object.keys(catalog);
+
+  return order
+    .map((key) => {
+      const item = typeof catalog[key] === "function" ? catalog[key](kpis) : catalog[key];
+      if (!item) return "";
+      return renderMetricCard(
+        item.label,
+        item.value,
+        item.icon,
+        item.caption,
+        item.tone || "brand",
+        item.trend || null,
+      );
+    })
+    .join("");
+}
+
+export function profileBadge(personalization) {
+  const title = personalization?.profileTitle || personalization?.profile?.title;
+  if (!title) return "";
+  return `<span class="pill">Perfil ${title}</span>`;
+}

@@ -4,12 +4,13 @@ import { renderPeriodFilter } from "../shared/PeriodFilter.js";
 import { renderDashboardNav } from "../shared/DashboardNav.js";
 import { periodLabel } from "../shared/periodLabels.js";
 import {
-  renderMetricCard,
+  renderOrderedMetrics,
   renderHealthScore,
   renderBillRow,
   renderMovementRow,
   renderInsightItem,
   renderFlowSummaryItem,
+  profileBadge,
 } from "../shared/dashboardUi.js";
 
 export function renderGeneralDashboard(data, { firstName = "Usuário", period = "30d" } = {}) {
@@ -21,11 +22,62 @@ export function renderGeneralDashboard(data, { firstName = "Usuário", period = 
   const insights = data?.insights || [];
   const healthScore = data?.healthScore || {};
   const meta = data?.meta || {};
+  const kpiOrder = data?.kpiOrder || [];
+  const personalization = data?.personalization || meta.personalization || null;
 
   const topExpense = flowSummary.topExpenseCategory;
   const growingCategory = flowSummary.fastestGrowingCategory;
 
   const label = periodLabel(period);
+
+  const metricCatalog = {
+    balance: {
+      label: "Saldo disponível",
+      value: chartService.formatBRL(kpis.balance),
+      icon: "fa-wallet",
+      caption: "Disponível nas suas contas",
+      tone: "brand",
+      trend: trends.balance,
+    },
+    income: {
+      label: "Receitas",
+      value: chartService.formatBRL(kpis.income),
+      icon: "fa-arrow-trend-up",
+      caption: `Entradas no ${label}`,
+      tone: "income",
+      trend: trends.income,
+    },
+    expenses: {
+      label: "Despesas",
+      value: chartService.formatBRL(kpis.expenses),
+      icon: "fa-arrow-trend-down",
+      caption: `Gastos no ${label}`,
+      tone: "expense",
+      trend: trends.expenses,
+    },
+    netWorth: {
+      label: "Patrimônio",
+      value: chartService.formatBRL(kpis.netWorth),
+      icon: "fa-gem",
+      caption: "Contas + investimentos",
+      tone: "brand",
+      trend: trends.netWorth,
+    },
+    investments: {
+      label: "Investimentos",
+      value: chartService.formatBRL(kpis.investments),
+      icon: "fa-chart-line",
+      caption: "Carteira atual",
+      tone: "income",
+    },
+    pendingBills: {
+      label: "Contas pendentes",
+      value: chartService.formatBRL(kpis.pendingBills),
+      icon: "fa-file-invoice-dollar",
+      caption: "A vencer",
+      tone: "warning",
+    },
+  };
 
   return `
     <section class="app-page dashboard-page home-page">
@@ -35,6 +87,7 @@ export function renderGeneralDashboard(data, { firstName = "Usuário", period = 
           <h1 class="page-title home-greeting">Olá, ${firstName} 👋</h1>
           <p class="page-subtitle home-subtitle">
             Visão executiva do seu financeiro · ${label}
+            ${profileBadge(personalization)}
           </p>
         </div>
         <div class="hero-actions">
@@ -52,43 +105,22 @@ export function renderGeneralDashboard(data, { firstName = "Usuário", period = 
 
       <section class="home-section">
         <div class="metrics-grid home-metrics dashboard-metrics">
-          ${renderMetricCard(
-            "Saldo disponível",
-            chartService.formatBRL(kpis.balance),
-            "fa-wallet",
-            "Disponível nas suas contas",
-            "brand",
-            trends.balance,
-          )}
-          ${renderMetricCard(
-            "Receitas",
-            chartService.formatBRL(kpis.income),
-            "fa-arrow-trend-up",
-            `Entradas no ${label}`,
-            "income",
-            trends.income,
-          )}
-          ${renderMetricCard(
-            "Despesas",
-            chartService.formatBRL(kpis.expenses),
-            "fa-arrow-trend-down",
-            `Gastos no ${label}`,
-            "expense",
-            trends.expenses,
-          )}
-          ${renderMetricCard(
-            "Patrimônio",
-            chartService.formatBRL(kpis.netWorth),
-            "fa-gem",
-            "Contas + investimentos",
-            "brand",
-            trends.netWorth,
-          )}
+          ${renderOrderedMetrics(metricCatalog, kpiOrder, kpis)}
         </div>
       </section>
 
       <section class="home-section">
         ${renderHealthScore(healthScore)}
+      </section>
+
+      <section class="home-section">
+        <div class="home-section-head">
+          <h2>Evolução da saúde financeira</h2>
+          <span class="home-section-meta">Histórico automático</span>
+        </div>
+        <section class="chart-card">
+          <div id="dashboard-health-history-chart" class="dashboard-chart-host" data-chart="health-history"></div>
+        </section>
       </section>
 
       <section class="home-section">
@@ -166,7 +198,7 @@ export function renderGeneralDashboard(data, { firstName = "Usuário", period = 
         <section class="premium-card">
           <div class="card-title-row">
             <h2>Insights inteligentes</h2>
-            <span class="pill">Personalizado</span>
+            ${profileBadge(personalization) || '<span class="pill">Personalizado</span>'}
           </div>
           <div class="mini-list">
             ${
@@ -190,9 +222,14 @@ export function renderGeneralDashboard(data, { firstName = "Usuário", period = 
 export function mountGeneralDashboardCharts(data) {
   const monthlyFlow = data?.charts?.monthlyFlow || [];
   const categoryDistribution = data?.charts?.categoryDistribution || [];
+  const healthHistory =
+    data?.healthHistory?.sixMonths ||
+    data?.healthHistory?.year ||
+    [];
 
   const flowEl = document.querySelector("#dashboard-flow-chart");
   const categoryEl = document.querySelector("#dashboard-category-chart");
+  const healthEl = document.querySelector("#dashboard-health-history-chart");
 
   if (flowEl && monthlyFlow.length) {
     mountChart(flowEl, chartService.mixedFlowChart(monthlyFlow));
@@ -204,5 +241,42 @@ export function mountGeneralDashboardCharts(data) {
     mountChart(categoryEl, chartService.donutChart(categoryDistribution));
   } else if (categoryEl) {
     categoryEl.innerHTML = `<div class="home-flow-empty">Sem despesas por categoria no período.</div>`;
+  }
+
+  if (healthEl) {
+    if (healthHistory.length) {
+      const categories = healthHistory.map((item) => {
+        const date = new Date(`${String(item.date).slice(0, 10)}T00:00:00`);
+        return new Intl.DateTimeFormat("pt-BR", {
+          day: "2-digit",
+          month: "short",
+        }).format(date);
+      });
+      mountChart(
+        healthEl,
+        {
+          ...chartService.areaChart({
+            categories,
+            series: [
+              {
+                name: "Saúde financeira",
+                data: healthHistory.map((item) => Number(item.score) || 0),
+              },
+            ],
+            height: 260,
+          }),
+          yaxis: {
+            min: 0,
+            max: 100,
+            labels: { formatter: (value) => `${Math.round(value)}` },
+          },
+          tooltip: {
+            y: { formatter: (value) => `${Math.round(value)} pts` },
+          },
+        },
+      );
+    } else {
+      healthEl.innerHTML = `<div class="home-flow-empty">O histórico começa após o onboarding e o uso diário do FinSight.</div>`;
+    }
   }
 }

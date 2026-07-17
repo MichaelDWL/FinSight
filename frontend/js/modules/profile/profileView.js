@@ -1,0 +1,254 @@
+import { personalizationService } from "../../services/personalization.js";
+import {
+  ALLOCATION_KEYS,
+  INCOME_SOURCES,
+  NOTIFICATION_OPTIONS,
+  PROFILES,
+} from "../onboarding/constants.js";
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export function renderProfilePage({
+  user = {},
+  personalization = null,
+} = {}) {
+  const userName = user.name || "Usuario FinSight";
+  const userEmail = user.email || "sem-email@finsight.local";
+  const initials = userName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const profile = personalization?.profile || {};
+  const allocation = profile.allocation || {
+    contas: 50,
+    investimentos: 20,
+    metas: 10,
+    lazer: 10,
+    desenvolvimento: 10,
+  };
+  const notifications = new Set(profile.notifications || []);
+  const profileType = profile.type || "equilibrado";
+
+  const profileOptions = [
+    ...PROFILES.map(
+      (item) =>
+        `<option value="${item.id}" ${profileType === item.id ? "selected" : ""}>${item.emoji} ${item.title}</option>`,
+    ),
+    `<option value="custom" ${profileType === "custom" ? "selected" : ""}>Personalizado</option>`,
+  ].join("");
+
+  const incomeOptions = INCOME_SOURCES.map(
+    (item) =>
+      `<option value="${item.id}" ${profile.incomeSource === item.id ? "selected" : ""}>${item.label}</option>`,
+  ).join("");
+
+  const allocationFields = ALLOCATION_KEYS.map(
+    (item) => `
+      <label class="expense-field">
+        <span class="font-label">${item.label} (%)</span>
+        <div class="expense-input-wrapper">
+          <i class="fa-solid fa-percent"></i>
+          <input
+            class="input-basic"
+            type="number"
+            min="0"
+            max="100"
+            step="1"
+            name="alloc_${item.key}"
+            data-alloc-key="${item.key}"
+            value="${Number(allocation[item.key]) || 0}"
+          >
+        </div>
+      </label>
+    `,
+  ).join("");
+
+  const notificationChecks = NOTIFICATION_OPTIONS.map(
+    (item) => `
+      <label class="onboarding-check profile-notification-check">
+        <input type="checkbox" name="notification" value="${item.id}" ${
+          notifications.has(item.id) ? "checked" : ""
+        }>
+        <span>${item.label}</span>
+      </label>
+    `,
+  ).join("");
+
+  return `
+    <section class="app-page">
+      <div class="page-hero">
+        <div>
+          <span class="page-eyebrow">Perfil</span>
+          <h1 class="page-title">Preferências e personalização</h1>
+          <p class="page-subtitle">Ajuste renda, perfil financeiro, orçamento e notificações. O FinSight se adapta automaticamente.</p>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+        <section class="form-card">
+          <div class="item-left">
+            <span class="profile-picture">${initials}</span>
+            <div>
+              <h2>${escapeHtml(userName)}</h2>
+              <p class="item-meta">${escapeHtml(userEmail)}</p>
+            </div>
+          </div>
+
+          <form id="profilePersonalizationForm" class="new-expense-form" novalidate>
+            <div class="form-grid">
+              <label class="expense-field">
+                <span class="font-label">Nome</span>
+                <div class="expense-input-wrapper">
+                  <i class="fa-solid fa-user"></i>
+                  <input class="input-basic" id="profileName" name="name" type="text" value="${escapeHtml(userName)}">
+                </div>
+              </label>
+              <label class="expense-field">
+                <span class="font-label">Email</span>
+                <div class="expense-input-wrapper">
+                  <i class="fa-solid fa-envelope"></i>
+                  <input class="input-basic" id="profileEmail" name="email" type="email" value="${escapeHtml(userEmail)}">
+                </div>
+              </label>
+              <label class="expense-field">
+                <span class="font-label">Perfil financeiro</span>
+                <div class="expense-input-wrapper">
+                  <i class="fa-solid fa-user-astronaut"></i>
+                  <select class="input-basic" id="profileType" name="profileType">
+                    ${profileOptions}
+                  </select>
+                </div>
+              </label>
+              <label class="expense-field">
+                <span class="font-label">Fonte de renda</span>
+                <div class="expense-input-wrapper">
+                  <i class="fa-solid fa-briefcase"></i>
+                  <select class="input-basic" id="incomeSource" name="incomeSource">
+                    <option value="">Não informado</option>
+                    ${incomeOptions}
+                  </select>
+                </div>
+              </label>
+              <label class="expense-field">
+                <span class="font-label">Renda mensal</span>
+                <div class="expense-input-wrapper expense-value-field">
+                  <i class="fa-solid fa-brazilian-real-sign"></i>
+                  <input class="input-basic" id="monthlyIncome" name="monthlyIncome" type="number" min="0" step="0.01" value="${Number(profile.monthlyIncome) || 0}">
+                </div>
+              </label>
+            </div>
+
+            <h3 class="font-title-sm" style="margin-top:1rem">Distribuição do orçamento</h3>
+            <p class="item-meta">A soma deve permanecer em 100%. Ao salvar, metas e limites são recalculados.</p>
+            <div class="form-grid" id="profileAllocationGrid">
+              ${allocationFields}
+            </div>
+            <p class="item-meta" id="allocationSumHint">Soma: 100%</p>
+
+            <div class="form-actions">
+              <button class="btn-primary" type="submit">
+                <i class="fa-solid fa-check"></i> Salvar personalização
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="premium-card">
+          <h2>Notificações inteligentes</h2>
+          <p class="item-meta">Escolha o que o FinSight deve monitorar para você.</p>
+          <div class="onboarding-check-grid profile-notifications">
+            ${notificationChecks}
+          </div>
+          <div class="settings-list" style="margin-top:1rem">
+            <button class="setting-row" type="button" data-action="change-password">
+              <div>
+                <strong class="item-title">Alterar senha</strong>
+                <p class="item-meta">Atualize sua senha de acesso.</p>
+              </div>
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <button class="setting-row" type="button" data-action="delete-account">
+              <div>
+                <strong class="item-title text-expense">Excluir conta</strong>
+                <p class="item-meta">Sempre pediremos confirmação antes.</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-expense"></i>
+            </button>
+          </div>
+        </section>
+      </div>
+    </section>
+  `;
+}
+
+export function bindProfilePage(root, { showToast, onSaved } = {}) {
+  const form = root.querySelector("#profilePersonalizationForm");
+  if (!form) return;
+
+  const sumHint = root.querySelector("#allocationSumHint");
+
+  const updateSum = () => {
+    const total = [...root.querySelectorAll("[data-alloc-key]")].reduce(
+      (sum, input) => sum + (Number(input.value) || 0),
+      0,
+    );
+    if (sumHint) {
+      sumHint.textContent = `Soma: ${total}%${total === 100 ? " ✓" : " — ajuste para 100%"}`;
+      sumHint.style.color = total === 100 ? "var(--success)" : "var(--expense)";
+    }
+  };
+
+  root.querySelectorAll("[data-alloc-key]").forEach((input) => {
+    input.addEventListener("input", updateSum);
+  });
+  updateSum();
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const allocation = {};
+    for (const item of ALLOCATION_KEYS) {
+      const input = form.querySelector(`[data-alloc-key="${item.key}"]`);
+      allocation[item.key] = Number(input?.value) || 0;
+    }
+
+    const total = Object.values(allocation).reduce((sum, value) => sum + value, 0);
+    if (total !== 100) {
+      showToast?.("A distribuição do orçamento precisa somar 100%.");
+      return;
+    }
+
+    const notifications = [...root.querySelectorAll('input[name="notification"]:checked')].map(
+      (input) => input.value,
+    );
+
+    const payload = {
+      profileType: form.profileType.value,
+      incomeSource: form.incomeSource.value || null,
+      monthlyIncome: Number(form.monthlyIncome.value) || 0,
+      allocation,
+      notifications,
+      onboardingCompleted: true,
+    };
+
+    try {
+      await personalizationService.updateProfile(payload);
+      const name = form.name?.value?.trim();
+      const email = form.email?.value?.trim();
+      showToast?.("Personalização salva. O FinSight foi atualizado.");
+      onSaved?.({ name, email, personalization: payload });
+    } catch (error) {
+      console.error(error);
+      showToast?.(error.message || "Não foi possível salvar a personalização.");
+    }
+  });
+}

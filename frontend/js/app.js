@@ -9,7 +9,8 @@ import { transactionsService } from "./services/transactions.js";
 import { goalsService } from "./services/goals.js";
 import { invoicesService } from "./services/invoices.js";
 import { analyticsService } from "./services/analyticsService.js";
-import { destroyAllCharts } from "./charts/ChartWrapper.js";
+import { destroyAllCharts, mountChart } from "./charts/ChartWrapper.js";
+import { chartService } from "./services/chartService.js";
 import { renderDashboardSkeleton } from "./modules/dashboard/shared/DashboardSkeleton.js";
 import {
   mountGeneralDashboardCharts,
@@ -31,9 +32,28 @@ import {
   mountInvestmentsDashboardCharts,
   renderInvestmentsDashboard,
 } from "./modules/dashboard/investments/investmentsView.js";
+import {
+  buildInvestmentPayload,
+  buildSimulationPayload,
+  isFixedIncomeType,
+  renderEconomicRatesStrip,
+  renderFixedSimulationBlock,
+  renderPortfolioHighlights,
+  renderPortfolioProjectionBlock,
+  renderProjectionPanel,
+  renderVariableMarketBlock,
+  syncInvestmentFormFields,
+} from "./modules/investments/investmentFormUi.js";
 import { normalizeDashboardRoute } from "./modules/dashboard/shared/periodLabels.js";
+import { initDashboardScrollHints } from "./modules/dashboard/shared/DashboardNav.js";
 import { renderHomeDashboard } from "./modules/home/homeView.js";
 import { createMovementModal } from "./ui/movementModal.js";
+import { createOnboardingWizard } from "./modules/onboarding/onboardingWizard.js";
+import {
+  renderProfilePage,
+  bindProfilePage,
+} from "./modules/profile/profileView.js";
+import { personalizationService } from "./services/personalization.js";
 import { confirmDialog } from "./ui/confirmModal.js";
 import {
   initCustomSelects,
@@ -103,11 +123,14 @@ let currentAnalyticsRoute = "dashboards/geral";
 let isLoadingAnalyticsDashboard = false;
 let transactions = [];
 let investments = [];
+let portfolioSummary = null;
+let investmentSimulationTimer = null;
 let accounts = [];
 let creditCards = [];
 let bills = [];
 let goals = [];
 let currentUser = null;
+let personalizationContext = null;
 let isLoadingData = false;
 let editingTransactionId = null;
 let editingInvestmentId = null;
@@ -308,6 +331,12 @@ function normalizeInvestment(investment) {
     ...investment,
     icon: getInvestmentIcon(category),
     category,
+    investmentType: investment.investmentType || null,
+    assetCode: investment.assetCode || null,
+    quantity: investment.quantity != null ? Number(investment.quantity) : null,
+    cdiPercent: investment.cdiPercent != null ? Number(investment.cdiPercent) : null,
+    prefixedRate: investment.prefixedRate != null ? Number(investment.prefixedRate) : null,
+    ipcaSpread: investment.ipcaSpread != null ? Number(investment.ipcaSpread) : null,
     current: Number(investment.current ?? investment.value ?? 0),
     invested: Number(investment.invested ?? 0),
     returnRate: Number(investment.returnRate ?? 0),
@@ -382,10 +411,20 @@ const ROUTE_DATA_LOADERS = {
     bills = (await billsService.list()).map(normalizeBill);
   },
   patrimonio: async () => {
-    investments = (await investmentsService.list()).map(normalizeInvestment);
+    const [list, summary] = await Promise.all([
+      investmentsService.list(),
+      investmentsService.portfolioSummary().catch(() => null),
+    ]);
+    investments = list.map(normalizeInvestment);
+    portfolioSummary = summary;
   },
   "investimento-detalhe": async () => {
-    investments = (await investmentsService.list()).map(normalizeInvestment);
+    const [list, summary] = await Promise.all([
+      investmentsService.listDetailed(),
+      investmentsService.portfolioSummary().catch(() => null),
+    ]);
+    investments = list.map(normalizeInvestment);
+    portfolioSummary = summary;
   },
   metas: async () => {
     goals = (await goalsService.list()).map(normalizeGoal);
@@ -547,6 +586,7 @@ async function renderAnalyticsDashboardPage(route = getRoute()) {
 
     app.innerHTML = renderAnalyticsDashboardView(normalizedRoute, analyticsDashboardData);
     mountAnalyticsDashboardCharts(normalizedRoute, analyticsDashboardData);
+    initDashboardScrollHints(app);
   } catch (error) {
     app.innerHTML = `
       <section class="app-page">
@@ -574,6 +614,7 @@ async function reloadDashboardWithPeriod(period) {
     await loadAnalyticsDashboard(currentAnalyticsRoute, period);
     app.innerHTML = renderAnalyticsDashboardView(currentAnalyticsRoute, analyticsDashboardData);
     mountAnalyticsDashboardCharts(currentAnalyticsRoute, analyticsDashboardData);
+    initDashboardScrollHints(app);
   } catch (error) {
     showToast(error.message || "Não foi possível atualizar o período.");
     await renderAnalyticsDashboardPage(currentAnalyticsRoute);
@@ -684,8 +725,8 @@ function openInvestmentModal(investment = null) {
     setFieldValue(investmentForm, "#investmentName", investment.name);
     setFieldValue(
       investmentForm,
-      "#investmentCategory",
-      investment.category || investment.type || "Poupança",
+      "#investmentType",
+      investment.investmentType || "outro",
     );
     setFieldValue(
       investmentForm,
@@ -698,6 +739,31 @@ function openInvestmentModal(investment = null) {
       "#investmentCurrent",
       investment.current ?? investment.value ?? investment.invested,
     );
+    setFieldValue(
+      investmentForm,
+      "#investmentCdiPercent",
+      investment.cdiPercent ?? 100,
+    );
+    setFieldValue(
+      investmentForm,
+      "#investmentPrefixedRate",
+      investment.prefixedRate ?? "",
+    );
+    setFieldValue(
+      investmentForm,
+      "#investmentIpcaSpread",
+      investment.ipcaSpread ?? "",
+    );
+    setFieldValue(
+      investmentForm,
+      "#investmentAssetCode",
+      investment.assetCode || "",
+    );
+    setFieldValue(
+      investmentForm,
+      "#investmentQuantity",
+      investment.quantity ?? "",
+    );
     setFieldValue(investmentForm, "#investmentNotes", investment.notes || "");
     setCustomCalendarValue(
       investmentForm.querySelector("#investmentDate"),
@@ -709,10 +775,12 @@ function openInvestmentModal(investment = null) {
       tag: "Novo ativo",
       title: "Adicionar Investimento",
       description:
-        "Cadastre um investimento com as informações principais da sua carteira.",
+        "Cadastre um investimento e veja a projeção automática para renda fixa.",
       buttonIcon: "fa-check",
       buttonText: "Salvar investimento",
     });
+    setFieldValue(investmentForm, "#investmentType", "tesouro_selic");
+    setFieldValue(investmentForm, "#investmentCdiPercent", 100);
     setCustomCalendarValue(
       investmentForm.querySelector("#investmentDate"),
       toIsoDate(new Date()),
@@ -722,7 +790,58 @@ function openInvestmentModal(investment = null) {
   showModal(investmentModal);
   initCustomSelects(investmentForm);
   initCustomCalendars(investmentForm);
+  syncInvestmentFormFields(investmentForm);
+  scheduleInvestmentSimulation();
+  // Garante sync apos o custom-select montar o DOM
+  requestAnimationFrame(() => syncInvestmentFormFields(investmentForm));
   investmentForm.querySelector("#investmentName")?.focus();
+}
+
+async function refreshInvestmentSimulation() {
+  const content = investmentForm?.querySelector("#investmentProjectionContent");
+  const panel = investmentForm?.querySelector("#investmentProjectionPanel");
+  if (!investmentForm || !content || !panel) return;
+
+  syncInvestmentFormFields(investmentForm);
+  const type = investmentForm.querySelector("#investmentType")?.value;
+  if (!isFixedIncomeType(type)) {
+    content.innerHTML = renderProjectionPanel({ kind: "variable_income" });
+    return;
+  }
+
+  const payload = buildSimulationPayload(investmentForm);
+  if (!payload.invested || payload.invested <= 0) {
+    content.innerHTML = `
+      <div class="investment-projection-empty">
+        <p class="font-small">Informe o valor investido para calcular a projeção.</p>
+      </div>
+    `;
+    return;
+  }
+
+  content.innerHTML = `
+    <div class="investment-projection-empty">
+      <p class="font-small">Calculando projeção...</p>
+    </div>
+  `;
+
+  try {
+    const simulation = await investmentsService.simulate(payload);
+    content.innerHTML = renderProjectionPanel(simulation);
+  } catch (_error) {
+    content.innerHTML = `
+      <div class="investment-projection-empty">
+        <p class="font-small">Não foi possível calcular a projeção agora.</p>
+      </div>
+    `;
+  }
+}
+
+function scheduleInvestmentSimulation() {
+  clearTimeout(investmentSimulationTimer);
+  investmentSimulationTimer = setTimeout(() => {
+    refreshInvestmentSimulation();
+  }, 350);
 }
 
 function closeInvestmentDialog({ reset = false } = {}) {
@@ -1086,17 +1205,7 @@ function getInvestmentIcon(category) {
 async function addInvestmentFromForm() {
   if (!investmentForm) return;
 
-  const formData = new FormData(investmentForm);
-  const invested = Number(formData.get("invested")) || 0;
-  const current = Number(formData.get("current")) || invested;
-  const payload = {
-    name: formData.get("name") || "Novo investimento",
-    institution: formData.get("institution") || "Instituição",
-    invested,
-    value: current,
-    date: formData.get("date") || toIsoDate(new Date()),
-    notes: formData.get("notes") || "Investimento cadastrado no FinSight.",
-  };
+  const payload = buildInvestmentPayload(investmentForm);
 
   if (editingInvestmentId) {
     await investmentsService.update(editingInvestmentId, payload);
@@ -1403,6 +1512,8 @@ function setActiveRoute(route) {
         : route;
 
   document.querySelectorAll("[data-route]").forEach((link) => {
+    if (link.closest(".mobile-bottom-nav")) return;
+
     const targetRoute = link.closest(".nav-submenu") ? route : activeRoute;
     const isActive = link.dataset.route === targetRoute;
     link.classList.toggle("nav-link-active", isActive);
@@ -1414,20 +1525,22 @@ function setActiveRoute(route) {
     "investimento-novo",
     "investimento-detalhe",
   ];
+  const canExpandNavGroups =
+    !document.body.classList.contains("sidebar-closed") ||
+    window.matchMedia("(max-width: 767px)").matches;
+
   const isInvestmentRoute = investmentRoutes.includes(route);
   document
     .querySelector("[data-nav-group='investments']")
     ?.classList.toggle("nav-active", isInvestmentRoute);
-  if (isInvestmentRoute && !document.body.classList.contains("sidebar-closed"))
-    setInvestmentsMenuExpanded(true);
+  if (isInvestmentRoute && canExpandNavGroups) setInvestmentsMenuExpanded(true);
   setInvestmentSubroute(route);
 
   const isAccountRoute = accountRoutes.includes(route);
   document
     .querySelector("[data-nav-group='accounts']")
     ?.classList.toggle("nav-active", isAccountRoute);
-  if (isAccountRoute && !document.body.classList.contains("sidebar-closed"))
-    setAccountsMenuExpanded(true);
+  if (isAccountRoute && canExpandNavGroups) setAccountsMenuExpanded(true);
   const accountSubroute =
     route === "cartao-detalhe"
       ? "contas-cartoes"
@@ -1448,10 +1561,24 @@ function setActiveRoute(route) {
   document
     .querySelector("[data-nav-group='dashboards']")
     ?.classList.toggle("nav-active", isDashboardRoute);
-  if (isDashboardRoute && !document.body.classList.contains("sidebar-closed")) {
+  if (isDashboardRoute && canExpandNavGroups) {
     setDashboardsMenuExpanded(true);
   }
   setDashboardSubroute(normalizeDashboardRoute(route));
+
+  document.querySelectorAll(".mobile-bottom-nav-link").forEach((link) => {
+    const key = link.dataset.mobileNav;
+    const isActive =
+      (key === "home" && route === "dashboard") ||
+      (key === "dashboard" && isDashboardRoute) ||
+      (key === "movements" && route === "transacoes") ||
+      (key === "wealth" && isInvestmentRoute) ||
+      (key === "profile" && route === "perfil");
+
+    link.classList.toggle("is-active", isActive);
+    if (isActive) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
 
   pageTitle.textContent =
     routeTitles[route] ||
@@ -1635,9 +1762,9 @@ function transactionsView() {
         <div>
           <span class="page-eyebrow">Transações</span>
           <h1 class="page-title">Movimentações fáceis de encontrar.</h1>
-          <p class="page-subtitle">Filtre por período, categoria, conta, tipo ou busque pelo nome. A tabela continua limpa mesmo com muitos lançamentos.</p>
+          <p class="page-subtitle">Filtre por período, categoria, conta, tipo ou busque pelo nome.</p>
         </div>
-        <button class="btn-primary" type="button" data-action="add-transaction"><i class="fa-solid fa-plus"></i> Nova transação</button>
+        <button class="btn-primary mobile-hide-fab-duplicate" type="button" data-action="add-transaction"><i class="fa-solid fa-plus"></i> Nova transação</button>
       </div>
 
       <section class="table-shell">
@@ -1739,6 +1866,60 @@ function renderTransactionsTable() {
     return;
   }
 
+  const tableRows = filtered
+    .map(
+      (transaction) => `
+        <tr>
+          <td>
+            <div class="item-left">
+              <span class="item-icon"><i class="fa-solid ${transaction.icon}"></i></span>
+              <strong class="item-title">${transaction.description}</strong>
+            </div>
+          </td>
+          <td><span class="pill">${transaction.category}</span></td>
+          <td>${transaction.account}</td>
+          <td><strong class="${transaction.value >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(transaction.value)}</strong></td>
+          <td>${new Date(transaction.date).toLocaleDateString("pt-BR")}</td>
+          <td>
+            <button class="btn-secondary" type="button" data-action="edit-transaction" data-transaction-id="${transaction.id}">
+              <i class="fa-solid fa-pen"></i> Editar
+            </button>
+          </td>
+        </tr>
+      `,
+    )
+    .join("");
+
+  const cardRows = filtered
+    .map(
+      (transaction) => `
+        <article class="tx-card">
+          <div class="tx-card-top">
+            <div class="item-left">
+              <span class="item-icon"><i class="fa-solid ${transaction.icon}"></i></span>
+              <div>
+                <strong class="item-title">${transaction.description}</strong>
+                <div class="tx-card-meta">
+                  <span class="pill">${transaction.category}</span>
+                  <span>${transaction.account}</span>
+                </div>
+              </div>
+            </div>
+            <strong class="${transaction.value >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(transaction.value)}</strong>
+          </div>
+          <div class="tx-card-meta">
+            <span>${new Date(transaction.date).toLocaleDateString("pt-BR")}</span>
+          </div>
+          <div class="tx-card-actions">
+            <button class="btn-secondary" type="button" data-action="edit-transaction" data-transaction-id="${transaction.id}">
+              <i class="fa-solid fa-pen"></i> Editar
+            </button>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+
   table.innerHTML = `
     <table class="data-table">
       <thead>
@@ -1752,31 +1933,12 @@ function renderTransactionsTable() {
         </tr>
       </thead>
       <tbody>
-        ${filtered
-          .map(
-            (transaction) => `
-              <tr>
-                <td>
-                  <div class="item-left">
-                    <span class="item-icon"><i class="fa-solid ${transaction.icon}"></i></span>
-                    <strong class="item-title">${transaction.description}</strong>
-                  </div>
-                </td>
-                <td><span class="pill">${transaction.category}</span></td>
-                <td>${transaction.account}</td>
-                <td><strong class="${transaction.value >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(transaction.value)}</strong></td>
-                <td>${new Date(transaction.date).toLocaleDateString("pt-BR")}</td>
-                <td>
-                  <button class="btn-secondary" type="button" data-action="edit-transaction" data-transaction-id="${transaction.id}">
-                    <i class="fa-solid fa-pen"></i> Editar
-                  </button>
-                </td>
-              </tr>
-            `,
-          )
-          .join("")}
+        ${tableRows}
       </tbody>
     </table>
+    <div class="tx-card-list" aria-label="Lista de movimentações">
+      ${cardRows}
+    </div>
   `;
 }
 
@@ -2374,6 +2536,11 @@ function wealthView() {
   const usedCredit = creditCards.reduce((sum, card) => sum + card.usedLimit, 0);
   const totalPatrimony = cashTotal + investmentsTotal;
   const purchasePower = cashTotal + availableCredit;
+  const rates = portfolioSummary?.rates || {};
+  const intelligenceBlock = renderPortfolioHighlights(portfolioSummary);
+  const projectionBlock = renderPortfolioProjectionBlock(
+    portfolioSummary?.portfolioProjection,
+  );
 
   return `
     <section class="app-page">
@@ -2392,6 +2559,8 @@ function wealthView() {
         ${metricCard("Limite disponível", formatCurrency(availableCredit), "fa-credit-card", `${formatCurrency(usedCredit)} já utilizado`)}
         ${metricCard("Investimentos", formatCurrency(investmentsTotal), "fa-chart-line", `${investments.length} ativos acompanhados`)}
       </div>
+
+      ${Object.keys(rates).length ? renderEconomicRatesStrip(rates) : ""}
 
       <div class="wealth-grid">
         <section class="premium-card">
@@ -2484,6 +2653,12 @@ function wealthView() {
           </div>
         </section>
       </div>
+
+      ${
+        intelligenceBlock || projectionBlock
+          ? `<div class="wealth-grid">${intelligenceBlock}${projectionBlock}</div>`
+          : ""
+      }
     </section>
   `;
 }
@@ -2526,10 +2701,6 @@ function investmentDetailView() {
       investment.current > highest.current ? investment : highest,
     investments[0],
   );
-  const maxInvestmentValue = Math.max(
-    ...investments.map((investment) => investment.current),
-    1,
-  );
 
   return `
     <section class="app-page">
@@ -2537,7 +2708,7 @@ function investmentDetailView() {
         <div>
           <span class="page-eyebrow">Detalhes</span>
           <h1 class="page-title">Todos os investimentos em detalhes.</h1>
-          <p class="page-subtitle">Veja cada ativo da carteira, compare valores investidos, valor atual, lucro e rentabilidade em uma visão consolidada.</p>
+          <p class="page-subtitle">Projeções de renda fixa e indicadores de mercado para renda variável, sem previsão de preço futuro.</p>
         </div>
         <div class="hero-actions">
           <button class="btn-primary" type="button" data-action="add-investment"><i class="fa-solid fa-plus"></i> Novo investimento</button>
@@ -2554,73 +2725,82 @@ function investmentDetailView() {
         <div class="detail-stat"><span>Maior posição</span><strong>${highestInvestment.name}</strong></div>
       </div>
 
-      <div class="detail-grid">
-        <section class="premium-card">
-          <div class="card-title-row">
-            <h2>Resumo por investimento</h2>
-            <span class="pill">${investments.length} ativos</span>
-          </div>
-          <div class="mini-list">
-            ${investments
-              .map((investment) => {
-                const profit = investment.current - investment.invested;
-                const returnClass =
-                  profit >= 0 ? "text-income" : "text-expense";
+      <div class="investment-detail-list">
+        ${investments
+          .map((investment) => {
+            const profit = investment.current - investment.invested;
+            const returnClass = profit >= 0 ? "text-income" : "text-expense";
+            const simulation = investment.simulation;
+            const isFixed = simulation?.kind === "fixed_income";
+            const isVariable = simulation?.kind === "variable_income";
 
-                return `
-                  <div class="history-item">
-                    <div class="item-left">
-                      <span class="investment-icon">${investment.icon}</span>
-                      <div>
-                        <strong class="item-title">${investment.name}</strong>
-                        <p class="item-meta">${investment.category} • ${investment.institution}</p>
-                      </div>
-                    </div>
-                    <div class="detail-investment-values">
-                      <strong>${formatCurrency(investment.current)}</strong>
-                      <span class="${returnClass}">${profit >= 0 ? "+" : ""}${formatCurrency(profit)} • ${investment.returnRate >= 0 ? "+" : ""}${investment.returnRate}%</span>
-                      <button class="btn-secondary" type="button" data-action="edit-investment" data-investment-id="${investment.id}">
-                        <i class="fa-solid fa-pen"></i> Editar
-                      </button>
+            return `
+              <section class="premium-card investment-detail-card">
+                <div class="card-title-row">
+                  <div class="item-left">
+                    <span class="investment-icon">${investment.icon}</span>
+                    <div>
+                      <h2 class="item-title">${investment.name}</h2>
+                      <p class="item-meta">${investment.category}${investment.assetCode ? ` · ${investment.assetCode}` : ""} · ${investment.institution}</p>
                     </div>
                   </div>
-                `;
-              })
-              .join("")}
-          </div>
-        </section>
-        <section class="chart-card">
-          <div class="card-title-row">
-            <h2>Distribuição da carteira</h2>
-            <span class="pill">${formatCurrency(totalCurrent)}</span>
-          </div>
-          <div class="bar-chart">
-            ${investments
-              .map((investment) => {
-                const height = Math.max(
-                  Math.round((investment.current / maxInvestmentValue) * 88),
-                  18,
-                );
-                return `<span style="height: ${height}%" data-label="${investment.name.slice(0, 8)}"></span>`;
-              })
-              .join("")}
-          </div>
-          <div class="mini-list">
-            ${investments
-              .map(
-                (investment) => `
-                  <div class="history-item">
-                    <span>${investment.name}</span>
-                    <strong>${Math.round((investment.current / totalCurrent) * 100)}%</strong>
+                  <div class="detail-investment-values">
+                    <strong>${formatCurrency(investment.current)}</strong>
+                    <span class="${returnClass}">${profit >= 0 ? "+" : ""}${formatCurrency(profit)} · ${investment.returnRate >= 0 ? "+" : ""}${investment.returnRate}%</span>
                   </div>
-                `,
-              )
-              .join("")}
-          </div>
-        </section>
+                </div>
+
+                <div class="detail-stat-grid">
+                  <div class="detail-stat"><span>Investido</span><strong>${formatCurrency(investment.invested)}</strong></div>
+                  <div class="detail-stat"><span>Atual</span><strong>${formatCurrency(investment.current)}</strong></div>
+                  <div class="detail-stat"><span>Tipo</span><strong>${investment.investmentType || "—"}</strong></div>
+                  <div class="detail-stat"><span>Qtd.</span><strong>${investment.quantity ?? "—"}</strong></div>
+                </div>
+
+                ${isFixed ? renderFixedSimulationBlock(simulation) : ""}
+                ${isVariable ? renderVariableMarketBlock(simulation, investment.id) : ""}
+
+                <div class="new-expense-actions" style="margin-top:1rem">
+                  <button class="expense-secondary-btn" type="button" data-action="edit-investment" data-investment-id="${investment.id}">
+                    <i class="fa-solid fa-pen"></i> Editar
+                  </button>
+                  <button class="expense-secondary-btn" type="button" data-action="delete-investment" data-investment-id="${investment.id}">
+                    <i class="fa-solid fa-trash"></i> Excluir
+                  </button>
+                </div>
+              </section>
+            `;
+          })
+          .join("")}
       </div>
     </section>
   `;
+}
+
+function mountInvestmentDetailCharts() {
+  investments.forEach((investment) => {
+    const history = investment.simulation?.market?.history || [];
+    if (!history.length) return;
+    const el = document.querySelector(`#market-chart-${investment.id}`);
+    if (!el) return;
+
+    const recent = history.slice(-90);
+    mountChart(
+      el,
+      chartService.areaChart({
+        categories: recent.map((item) =>
+          String(item.date).slice(5).replace("-", "/"),
+        ),
+        series: [
+          {
+            name: investment.assetCode || investment.name,
+            data: recent.map((item) => Number(item.price) || 0),
+          },
+        ],
+        height: 240,
+      }),
+    );
+  });
 }
 
 function goalsView() {
@@ -2641,96 +2821,10 @@ function goalsView() {
 }
 
 function profileView() {
-  const userName = currentUser?.name || "Usuario FinSight";
-  const userEmail = currentUser?.email || "sem-email@finsight.local";
-  const initials = userName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  return `
-    <section class="app-page">
-      <div class="page-hero">
-        <div>
-          <span class="page-eyebrow">Perfil</span>
-          <h1 class="page-title">Preferências simples e seguras.</h1>
-          <p class="page-subtitle">Ajuste tema, moeda, idioma e notificações sem sair da experiência do FinSight.</p>
-        </div>
-      </div>
-
-      <div class="profile-grid">
-        <section class="form-card">
-          <div class="item-left">
-            <span class="profile-picture">${initials}</span>
-            <div>
-              <h2>${userName}</h2>
-              <p class="item-meta">${userEmail}</p>
-            </div>
-          </div>
-          <div class="form-grid">
-            <div class="field">
-              <label for="theme">Tema</label>
-              <select id="theme">
-                <option>Claro</option>
-                <option>Escuro</option>
-                <option>Sistema</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="currency">Moeda</label>
-              <select id="currency">
-                <option>Real brasileiro (BRL)</option>
-                <option>Dólar americano (USD)</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="language">Idioma</label>
-              <select id="language">
-                <option>Português</option>
-                <option>English</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="email">Email</label>
-              <input id="email" type="email" value="michael@email.com">
-            </div>
-          </div>
-          <div class="form-actions">
-            <button class="btn-primary" type="button" data-action="save-profile"><i class="fa-solid fa-check"></i> Salvar alterações</button>
-          </div>
-        </section>
-
-        <section class="premium-card">
-          <h2>Segurança e notificações</h2>
-          <div class="settings-list">
-            <div class="setting-row">
-              <div>
-                <strong class="item-title">Notificações</strong>
-                <p class="item-meta">Receba lembretes úteis, sem excesso.</p>
-              </div>
-              <span class="switch" aria-hidden="true"></span>
-            </div>
-            <button class="setting-row" type="button" data-action="change-password">
-              <div>
-                <strong class="item-title">Alterar senha</strong>
-                <p class="item-meta">Atualize sua senha de acesso.</p>
-              </div>
-              <i class="fa-solid fa-chevron-right"></i>
-            </button>
-            <button class="setting-row" type="button" data-action="delete-account">
-              <div>
-                <strong class="item-title text-expense">Excluir conta</strong>
-                <p class="item-meta">Sempre pediremos confirmação antes.</p>
-              </div>
-              <i class="fa-solid fa-chevron-right text-expense"></i>
-            </button>
-          </div>
-        </section>
-      </div>
-    </section>
-  `;
+  return renderProfilePage({
+    user: currentUser,
+    personalization: personalizationContext,
+  });
 }
 
 async function renderRoute() {
@@ -2753,6 +2847,12 @@ async function renderRoute() {
 
   await loadBootstrap();
   await loadRouteData(route);
+
+  if (viewRoute === "perfil") {
+    personalizationContext = await personalizationService
+      .getContext()
+      .catch(() => null);
+  }
 
   if (viewRoute === "cartao-detalhe") {
     const cardId = selectedCardId || creditCards[0]?.id || null;
@@ -2785,6 +2885,23 @@ async function renderRoute() {
 
   app.innerHTML = views[viewRoute]();
 
+  if (viewRoute === "perfil") {
+    bindProfilePage(app, {
+      showToast,
+      onSaved: async () => {
+        personalizationContext = await personalizationService
+          .getContext()
+          .catch(() => personalizationContext);
+        bootstrapReady = false;
+        await reloadAndRender();
+      },
+    });
+  }
+
+  if (viewRoute === "investimento-detalhe") {
+    mountInvestmentDetailCharts();
+  }
+
   if (viewRoute === "transacoes") renderTransactionsTable();
   if (viewRoute === "contas-despesas") renderBillsList();
   initCustomSelects(app);
@@ -2803,6 +2920,19 @@ document.addEventListener("input", (event) => {
 document.addEventListener("change", (event) => {
   if (event.target.closest("#transactionFilters")) renderTransactionsTable();
   if (event.target.closest("#billFilters")) renderBillsList();
+  if (
+    event.target.matches("#investmentType") ||
+    event.target.closest("#investmentForm")
+  ) {
+    syncInvestmentFormFields(investmentForm);
+    scheduleInvestmentSimulation();
+  }
+});
+
+document.addEventListener("input", (event) => {
+  if (event.target.closest("#investmentForm")) {
+    scheduleInvestmentSimulation();
+  }
 });
 
 document.addEventListener("submit", async (event) => {
@@ -3204,9 +3334,6 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "save-profile") {
-    showToast(
-      "Nenhuma alteração foi salva. Edição de perfil ainda será habilitada.",
-    );
     return;
   }
 
@@ -3216,12 +3343,23 @@ document.addEventListener("click", async (event) => {
   }
 
   if (action === "delete-investment") {
+    const investmentId =
+      event.target.closest("[data-investment-id]")?.dataset.investmentId;
     const confirmed = await confirmDialog({
       title: "Excluir investimento",
-      message: "Tem certeza que deseja excluir este investimento? Essa ação não pode ser desfeita.",
+      message:
+        "Tem certeza que deseja excluir este investimento? Essa ação não pode ser desfeita.",
       confirmText: "Excluir",
     });
-    if (confirmed) showToast("Investimento excluído com segurança.");
+    if (!confirmed || !investmentId) return;
+
+    try {
+      await investmentsService.remove(investmentId);
+      showToast("Investimento excluído com sucesso.");
+      await reloadAndRender();
+    } catch (error) {
+      showToast(error?.message || "Não foi possível excluir o investimento.");
+    }
     return;
   }
 
@@ -3261,6 +3399,20 @@ const movementModal = createMovementModal({
   showToast,
 });
 
+const onboardingWizard = createOnboardingWizard({
+  getAccounts: () => accounts,
+  showToast,
+  onComplete: async () => {
+    bootstrapReady = false;
+    loadedRouteKey = null;
+    await reloadAndRender();
+  },
+  onSkip: () => {},
+});
+
+// Expõe para testes / reabertura manual: onboardingWizard.open({ force: true })
+window.onboardingWizard = onboardingWizard;
+
 quickAction.addEventListener("click", () => {
   movementModal.open();
 });
@@ -3298,4 +3450,15 @@ document.addEventListener("keydown", (event) => {
 setupCustomSelects();
 setupCustomCalendars();
 window.addEventListener("hashchange", renderRoute);
-renderRoute();
+
+async function bootApp() {
+  await renderRoute();
+  const forceOnboarding = window.location.hash === "#onboarding";
+  if (forceOnboarding) {
+    onboardingWizard.open({ force: true });
+    return;
+  }
+  onboardingWizard.maybeOpen();
+}
+
+bootApp();

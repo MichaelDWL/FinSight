@@ -3,7 +3,13 @@ import { mountChart } from "../../../charts/ChartWrapper.js";
 import { renderPeriodFilter } from "../shared/PeriodFilter.js";
 import { renderDashboardNav } from "../shared/DashboardNav.js";
 import { periodLabel } from "../shared/periodLabels.js";
-import { renderMetricCard } from "../shared/dashboardUi.js";
+import { renderOrderedMetrics, profileBadge } from "../shared/dashboardUi.js";
+import {
+  formatMoney,
+  formatPercent,
+  renderEconomicRatesStrip,
+  renderPortfolioProjectionBlock,
+} from "../../investments/investmentFormUi.js";
 
 function formatDate(isoDate) {
   if (!isoDate) return "—";
@@ -12,10 +18,38 @@ function formatDate(isoDate) {
   );
 }
 
-function formatPercent(value) {
-  const num = Number(value) || 0;
-  const sign = num > 0 ? "+" : "";
-  return `${sign}${num.toFixed(2)}%`;
+function renderIntelligenceCard(intelligence = {}) {
+  const returnByType = intelligence.returnByType || [];
+  if (!returnByType.length && !intelligence.largestPosition) return "";
+
+  const typeRows = returnByType
+    .map(
+      (item) => `
+      <div class="list-item">
+        <div class="item-left">
+          <span class="item-icon"><i class="fa-solid fa-chart-pie"></i></span>
+          <div>
+            <p class="item-title">${item.type}</p>
+            <p class="item-meta">${item.count} ativo(s)</p>
+          </div>
+        </div>
+        <div class="home-transaction-side">
+          <strong>${formatMoney(item.value)}</strong>
+          <small class="item-meta">${formatPercent(item.returnRate)}</small>
+        </div>
+      </div>
+    `,
+    )
+    .join("");
+
+  return `
+    <section class="premium-card">
+      <div class="card-title-row">
+        <h2>Rentabilidade por tipo</h2>
+      </div>
+      <div class="mini-list">${typeRows || `<div class="empty-state compact"><div><p>Sem dados por tipo.</p></div></div>`}</div>
+    </section>
+  `;
 }
 
 export function renderInvestmentsDashboard(data, { period = "30d" } = {}) {
@@ -23,7 +57,69 @@ export function renderInvestmentsDashboard(data, { period = "30d" } = {}) {
   const projection = data?.projection || {};
   const investments = data?.lists?.investments || [];
   const topPerformers = data?.lists?.topPerformers || [];
+  const rates = data?.economicRates || {};
+  const portfolioProjection = data?.portfolioProjection;
+  const intelligence = data?.portfolioIntelligence || {};
   const label = periodLabel(period);
+  const projected12 =
+    portfolioProjection?.horizons?.find((item) => item.months === 12)
+      ?.estimatedWealth ?? kpis.projectedPatrimonio;
+  const kpiOrder = data?.kpiOrder || [];
+  const personalization = data?.personalization || null;
+
+  const metricCatalog = {
+    patrimonio: {
+      label: "Patrimônio investido",
+      value: chartService.formatBRL(kpis.patrimonio),
+      icon: "fa-gem",
+      caption: `${kpis.investmentsCount || 0} ativo(s)`,
+      tone: "brand",
+    },
+    lucro: {
+      label: "Lucro / prejuízo",
+      value: chartService.formatBRL(kpis.lucro),
+      icon: "fa-sack-dollar",
+      caption: "Resultado da carteira",
+      tone: kpis.lucro >= 0 ? "income" : "expense",
+    },
+    accumulatedReturn: {
+      label: "Rentabilidade acumulada",
+      value: formatPercent(kpis.accumulatedReturn),
+      icon: "fa-chart-line",
+      caption: `Lucro ${chartService.formatBRL(kpis.lucro)}`,
+      tone: kpis.accumulatedReturn >= 0 ? "income" : "expense",
+    },
+    monthlyReturn: {
+      label: "Rentabilidade mensal",
+      value: formatPercent(kpis.monthlyReturn),
+      icon: "fa-calendar-day",
+      caption: "Último mês com snapshot",
+      tone: kpis.monthlyReturn >= 0 ? "income" : "expense",
+    },
+    projectedPatrimonio: {
+      label: "Projeção 12 meses",
+      value: chartService.formatBRL(projected12),
+      icon: "fa-rocket",
+      caption: portfolioProjection
+        ? "Motor de projeção (RF + RV atual)"
+        : `Média ${formatPercent(projection.avgMonthlyReturn)}/mês`,
+      tone: "brand",
+    },
+    totalAportado: {
+      label: "Total aportado",
+      value: chartService.formatBRL(kpis.totalAportado),
+      icon: "fa-piggy-bank",
+      caption: "Capital investido",
+      tone: "brand",
+    },
+    investmentsCount: {
+      label: "Ativos",
+      value: String(kpis.investmentsCount || 0),
+      icon: "fa-layer-group",
+      caption: "Na carteira",
+      tone: "brand",
+    },
+  };
 
   return `
     <section class="app-page dashboard-page">
@@ -31,7 +127,7 @@ export function renderInvestmentsDashboard(data, { period = "30d" } = {}) {
         <div>
           <span class="page-eyebrow">Dashboard de Investimentos</span>
           <h1 class="page-title">Patrimônio e rentabilidade</h1>
-          <p class="page-subtitle">Acompanhe a evolução da sua carteira · ${label}</p>
+          <p class="page-subtitle">Acompanhe a evolução da sua carteira · ${label} ${profileBadge(personalization)}</p>
         </div>
         <div class="hero-actions">
           <a class="btn-secondary" href="#patrimonio">
@@ -45,35 +141,12 @@ export function renderInvestmentsDashboard(data, { period = "30d" } = {}) {
 
       <section class="home-section">
         <div class="metrics-grid dashboard-metrics">
-          ${renderMetricCard(
-            "Patrimônio investido",
-            chartService.formatBRL(kpis.patrimonio),
-            "fa-gem",
-            `${kpis.investmentsCount || 0} ativo(s)`,
-            "brand",
-          )}
-          ${renderMetricCard(
-            "Rentabilidade acumulada",
-            formatPercent(kpis.accumulatedReturn),
-            "fa-chart-line",
-            `Lucro ${chartService.formatBRL(kpis.lucro)}`,
-            kpis.accumulatedReturn >= 0 ? "income" : "expense",
-          )}
-          ${renderMetricCard(
-            "Rentabilidade mensal",
-            formatPercent(kpis.monthlyReturn),
-            "fa-calendar-day",
-            "Último mês com snapshot",
-            kpis.monthlyReturn >= 0 ? "income" : "expense",
-          )}
-          ${renderMetricCard(
-            "Projeção 12 meses",
-            chartService.formatBRL(kpis.projectedPatrimonio),
-            "fa-rocket",
-            `Média ${formatPercent(projection.avgMonthlyReturn)}/mês`,
-            "brand",
-          )}
+          ${renderOrderedMetrics(metricCatalog, kpiOrder.slice(0, 4), kpis)}
         </div>
+      </section>
+
+      <section class="home-section">
+        ${renderEconomicRatesStrip(rates)}
       </section>
 
       <section class="home-section dashboard-charts-grid">
@@ -106,6 +179,11 @@ export function renderInvestmentsDashboard(data, { period = "30d" } = {}) {
           </div>
           <div id="investments-benchmark-chart" class="dashboard-chart-host" data-chart="investments-benchmark"></div>
         </section>
+      </section>
+
+      <section class="home-section home-bottom-grid">
+        ${renderPortfolioProjectionBlock(portfolioProjection)}
+        ${renderIntelligenceCard(intelligence)}
       </section>
 
       <section class="home-section home-bottom-grid">
