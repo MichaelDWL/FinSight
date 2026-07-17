@@ -7,6 +7,8 @@ import { usersService } from "./services/users.js";
 import { transactionsService } from "./services/transactions.js";
 import { invoicesService } from "./services/invoices.js";
 import { bffService } from "./services/bff.js";
+import { privacyService } from "./services/privacy.js";
+import { escapeHtml } from "./utils/dom.js";
 import { destroyAllCharts, mountChart } from "./charts/ChartWrapper.js";
 import { chartService } from "./services/chartService.js";
 import { renderDashboardSkeleton } from "./modules/dashboard/shared/DashboardSkeleton.js";
@@ -1384,9 +1386,9 @@ function billCard(bill, compact = false) {
       <div class="item-left">
         <span class="item-icon"><i class="fa-solid ${bill.icon}"></i></span>
         <div>
-          <h3 class="item-title">${bill.name}</h3>
-          <p class="item-meta">${bill.category} • vence em ${formatDateLabel(bill.dueDate)}</p>
-          ${compact ? "" : `<p class="item-meta">${bill.account} • ${bill.payment}</p>`}
+          <h3 class="item-title">${escapeHtml(bill.name)}</h3>
+          <p class="item-meta">${escapeHtml(bill.category)} • vence em ${formatDateLabel(bill.dueDate)}</p>
+          ${compact ? "" : `<p class="item-meta">${escapeHtml(bill.account)} • ${escapeHtml(bill.payment)}</p>`}
         </div>
       </div>
       <div class="bill-card-side">
@@ -1793,7 +1795,7 @@ function transactionItem(transaction) {
       <div class="item-left">
         <span class="item-icon"><i class="fa-solid ${transaction.icon}"></i></span>
         <div>
-          <p class="item-title">${transaction.description}</p>
+          <p class="item-title">${escapeHtml(transaction.description)}</p>
           <p class="item-meta">${transaction.category} • ${transaction.account}</p>
         </div>
       </div>
@@ -1983,7 +1985,7 @@ function renderTransactionsTable() {
           <td>
             <div class="item-left">
               <span class="item-icon"><i class="fa-solid ${transaction.icon}"></i></span>
-              <strong class="item-title">${transaction.description}</strong>
+              <strong class="item-title">${escapeHtml(transaction.description)}</strong>
             </div>
           </td>
           <td><span class="pill">${transaction.category}</span></td>
@@ -2008,7 +2010,7 @@ function renderTransactionsTable() {
             <div class="item-left">
               <span class="item-icon"><i class="fa-solid ${transaction.icon}"></i></span>
               <div>
-                <strong class="item-title">${transaction.description}</strong>
+                <strong class="item-title">${escapeHtml(transaction.description)}</strong>
                 <div class="tx-card-meta">
                   <span class="pill">${transaction.category}</span>
                   <span>${transaction.account}</span>
@@ -2537,7 +2539,7 @@ function accountMovementRow(movement) {
   return `
     <div class="history-item">
       <div>
-        <strong class="item-title">${movement.description}</strong>
+        <strong class="item-title">${escapeHtml(movement.description)}</strong>
         <p class="item-meta">${movement.category || movementTypeLabel(movement.type)} • ${formatDateLabel(movement.date)}</p>
       </div>
       <strong class="${amountClass}">${formatCurrency(movement.value)}</strong>
@@ -3485,13 +3487,40 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  if (action === "export-data") {
+    try {
+      const data = await privacyService.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `finsight-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast("Exportacao LGPD baixada.");
+    } catch (error) {
+      showToast(error?.message || "Nao foi possivel exportar os dados.");
+    }
+    return;
+  }
+
   if (action === "delete-account") {
     const confirmed = await confirmDialog({
       title: "Excluir conta",
-      message: "Tem certeza que deseja excluir sua conta? Essa ação é permanente e exige confirmação.",
+      message:
+        "Tem certeza que deseja excluir sua conta? Seus dados pessoais serao anonimizados (LGPD). Essa acao nao pode ser desfeita.",
       confirmText: "Excluir conta",
     });
-    if (confirmed) showToast("Solicitação de exclusão registrada.");
+    if (!confirmed) return;
+    try {
+      await privacyService.deleteAccount();
+      showToast("Conta excluida e dados anonimizados.");
+      window.dispatchEvent(new CustomEvent("finsight:session-expired"));
+    } catch (error) {
+      showToast(error?.message || "Nao foi possivel excluir a conta.");
+    }
     return;
   }
 

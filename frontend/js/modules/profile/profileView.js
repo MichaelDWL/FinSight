@@ -179,13 +179,23 @@ export function renderProfilePage({
               </div>
               <i class="fa-solid fa-chevron-right"></i>
             </button>
+            <button class="setting-row" type="button" data-action="export-data">
+              <div>
+                <strong class="item-title">Exportar meus dados</strong>
+                <p class="item-meta">Download JSON (portabilidade LGPD).</p>
+              </div>
+              <i class="fa-solid fa-download"></i>
+            </button>
             <button class="setting-row" type="button" data-action="delete-account">
               <div>
                 <strong class="item-title text-expense">Excluir conta</strong>
-                <p class="item-meta">Sempre pediremos confirmação antes.</p>
+                <p class="item-meta">Anonimiza dados pessoais (LGPD).</p>
               </div>
               <i class="fa-solid fa-chevron-right text-expense"></i>
             </button>
+            <p class="item-meta" style="margin-top:0.75rem">
+              <a href="/privacy.html" target="_blank" rel="noopener noreferrer">Politica de Privacidade</a>
+            </p>
           </div>
         </section>
       </div>

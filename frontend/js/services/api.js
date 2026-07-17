@@ -92,11 +92,38 @@ export async function tryRefreshSession() {
 
 export const api = {
   get: (path) => request(path),
-  post: (path, body) => request(path, { method: "POST", body }),
+  post: (path, body, options = {}) =>
+    request(path, {
+      method: "POST",
+      body,
+      headers: {
+        ...(options.idempotencyKey
+          ? { "Idempotency-Key": options.idempotencyKey }
+          : {}),
+        ...options.headers,
+      },
+    }),
   put: (path, body) => request(path, { method: "PUT", body }),
-  patch: (path, body) => request(path, { method: "PATCH", body }),
+  patch: (path, body, options = {}) =>
+    request(path, {
+      method: "PATCH",
+      body,
+      headers: {
+        ...(options.idempotencyKey
+          ? { "Idempotency-Key": options.idempotencyKey }
+          : {}),
+        ...options.headers,
+      },
+    }),
   delete: (path) => request(path, { method: "DELETE" }),
 };
+
+export function newIdempotencyKey() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `idem-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export const authApi = {
   login: (body) => api.post("/auth/login", body),
