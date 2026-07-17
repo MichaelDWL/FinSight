@@ -1,6 +1,7 @@
 const express = require("express");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
+const compression = require("compression");
 
 const apiRoutes = require("./routes");
 const healthRoutes = require("./routes/healthRoutes");
@@ -9,11 +10,15 @@ const { errorMiddleware, notFoundMiddleware } = require("./middlewares/errorMidd
 const securityMiddleware = require("./middlewares/securityMiddleware");
 const requestLogger = require("./middlewares/requestLogger");
 const { bootstrapMiddleware } = require("./platform/bootstrap");
+const { initSentry } = require("./observability/sentry");
 const { success } = require("./utils/apiResponse");
+
+initSentry();
 
 const app = express();
 
 securityMiddleware(app);
+app.use(compression({ threshold: 1024 }));
 app.use(morgan("combined"));
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
@@ -25,9 +30,12 @@ app.get("/", (_req, res) => {
     message: "FinSight API pronta para uso.",
     data: {
       health: "/health",
+      live: "/live",
+      ready: "/ready",
       api: "/api",
       auth: "/api/auth",
       admin: "/api/admin",
+      privacy: "/api/privacy",
       cron: {
         market: "/api/cron/market",
       },
@@ -48,6 +56,9 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/health", healthRoutes);
+// Atalhos na raiz (Vercel rewrites /live e /ready)
+app.get("/live", require("./controllers/healthController").getLive);
+app.get("/ready", require("./controllers/healthController").getReady);
 // Cron fora do authenticate/CSRF — protegido por CRON_SECRET
 app.use("/api/cron", cronRoutes);
 app.use("/api", apiRoutes);
