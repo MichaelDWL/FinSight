@@ -9,13 +9,19 @@
     "dev": "nodemon src/server.js",
     "stop": "node backend/scripts/free-port.js",
     "restart": "npm run stop && npm start",
-    "cron:market": "node -e \"process.env.RUNTIME='long'; require('./src/modules/market-data/market.sync.job').runDailySync().then(r=>{console.log(JSON.stringify(r,null,2)); process.exit(r.ok?0:1)}).catch(e=>{console.error(e); process.exit(1)})\""
+    "migrate": "node src/database/migrate-cli.js",
+    "cron:market": "node -e \"process.env.RUNTIME='long'; require('./src/modules/market-data/market.sync.job').runDailySync().then(r=>{console.log(JSON.stringify(r,null,2)); process.exit(r.ok?0:1)}).catch(e=>{console.error(e); process.exit(1)})\"",
+    "lint": "eslint \"src/**/*.js\" \"api/**/*.js\" \"tests/**/*.js\" --max-warnings 200",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:smoke": "vitest run tests/api/smoke.test.js"
   },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
     "argon2": "^0.44.0",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csrf-csrf": "^4.0.3",
@@ -34,6 +40,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "nodemon": "^3.1.9",
+    "vitest": "^4.1.10"
   }
 }
