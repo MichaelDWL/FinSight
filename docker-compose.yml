@@ -20,12 +20,14 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: Dockerfile
     container_name: finsight-backend
     ports:
       - "3045:3045"
     environment:
       NODE_ENV: development
+      RUNTIME: long
       PORT: 3045
       CORS_ORIGIN: "*"
       DATABASE_URL: postgres://finsight:finsight_dev_password@postgres:5432/finsight
@@ -33,6 +35,8 @@ services:
       DB_POOL_MAX: 10
       RATE_LIMIT_WINDOW_MS: 900000
       RATE_LIMIT_MAX: 300
+      MARKET_SCHEDULER_ENABLED: "true"
+      CRON_SECRET: dev-cron-secret-change-me
     depends_on:
       postgres:
         condition: service_healthy
