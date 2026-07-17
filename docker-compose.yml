@@ -37,9 +37,19 @@ services:
       RATE_LIMIT_MAX: 300
       MARKET_SCHEDULER_ENABLED: "true"
       CRON_SECRET: dev-cron-secret-change-me
+      REDIS_URL: redis://redis:6379
+      ALLOW_ADMIN_SEED: "true"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3045/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   redis:
