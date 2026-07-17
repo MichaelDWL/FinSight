@@ -55,15 +55,35 @@ Store adaptativo (`src/middlewares/rateLimit/store.js`):
 |-----|-----|
 | `DATABASE_URL` | Postgres (Neon/Supabase recomendado no MVP) |
 | `DATABASE_SSL=true` | quase sempre em managed Postgres |
+| `DATABASE_SSL_CA` | opcional — PEM do CA do provedor |
 | `CRON_SECRET` | protege o job; Vercel envia Bearer automaticamente |
 | `JWT_*` / `COOKIE_*` | auth |
 | `CORS_ORIGIN` | URL do frontend na Vercel |
-| `REDIS_URL` | opcional (cache L2 + rate-limit compartilhado) |
+| `REDIS_URL` | **recomendado** em producao (cache + rate-limit compartilhado; Upstash) |
 | `RUNTIME` | omitir (auto) ou `serverless` |
+| `ALLOW_ADMIN_SEED` | nunca `true` em producao rotineira |
+| `EMAIL_PROVIDER=resend` | + `RESEND_API_KEY` em producao |
+| `SENTRY_DSN` | opcional (observabilidade) |
+
+## Deploy checklist (Vercel)
+
+1. Aplicar schema inicial (`docs/database/schema.sql`) no Postgres gerenciado (uma vez).
+2. `DATABASE_URL` + secrets no painel Vercel.
+3. Rodar migrations **fora** do request: `npm run migrate` (CI ou maquina com acesso ao DB).
+4. Configurar `REDIS_URL` (Upstash) — sem Redis, cache/rate-limit ficam por instancia.
+5. Confirmar Cron `/api/cron/market` + `CRON_SECRET`.
+6. Smoke: `/live`, `/ready`, login.
 
 ## Migrar para Railway / VPS / Fly
 
 1. Subir com `RUNTIME=long` (`Dockerfile` na raiz).
 2. Apontar o frontend para a URL da API (ou reverse proxy `/api`).
 3. Trocar Vercel Cron por crontab chamando `/api/cron/market` **ou** manter `MARKET_SCHEDULER_ENABLED=true`.
-4. Nenhuma mudanca em Services/Repositories.
+4. `REDIS_URL` no Compose/servico.
+5. Nenhuma mudanca em Services/Repositories.
+
+## Ops
+
+- Backup/restore: `docs/ops/backup-restore.md`
+- Disaster recovery: `docs/ops/disaster-recovery.md`
+
