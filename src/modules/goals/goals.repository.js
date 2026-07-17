@@ -1,4 +1,6 @@
 const pool = require("../../database/pool");
+const { paginationService } = require("../../services/pagination/PaginationService");
+const paginationConfig = require("../../config/pagination.config");
 
 function mapGoal(row) {
   return {
@@ -12,18 +14,41 @@ function mapGoal(row) {
   };
 }
 
-async function findAll(userId) {
+async function findAll(userId, options = {}) {
+  const pagination =
+    options.pagination ||
+    paginationService.parseFromQuery(
+      {
+        page: options.page || 1,
+        pageSize: options.pageSize ?? paginationConfig.pageSize.max,
+        sort: options.sort,
+        order: options.order,
+      },
+      { resource: "goals", defaultSort: "deadline" }
+    );
+
+  const order = paginationService.resolveOrderBy(pagination, "prazo ASC");
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM metas WHERE usuario_id = $1`,
+    [userId]
+  );
+
   const { rows } = await pool.query(
     `
       SELECT id, nome, valor_alvo, valor_atual, percentual, prazo, status
       FROM metas
       WHERE usuario_id = $1
-      ORDER BY prazo ASC
+      ORDER BY ${order.clause}
+      LIMIT $2 OFFSET $3
     `,
-    [userId]
+    [userId, pagination.limit, pagination.offset]
   );
 
-  return rows.map(mapGoal);
+  return {
+    items: rows.map(mapGoal),
+    ...paginationService.toMeta(pagination, countResult.rows[0].total),
+  };
 }
 
 async function create(userId, payload) {
@@ -53,15 +78,26 @@ async function update(userId, id, payload) {
       WHERE usuario_id = $1 AND id = $2
       RETURNING id
     `,
-    [userId, id, payload.name, payload.target, payload.current, payload.deadline, payload.status]
+    [
+      userId,
+      id,
+      payload.name,
+      payload.target,
+      payload.current,
+      payload.deadline,
+      payload.status,
+    ]
   );
 
   return rows[0] || null;
 }
 
 async function remove(userId, id) {
-  const { rowCount } = await pool.query("DELETE FROM metas WHERE usuario_id = $1 AND id = $2", [userId, id]);
+  const { rowCount } = await pool.query(
+    "DELETE FROM metas WHERE usuario_id = $1 AND id = $2",
+    [userId, id]
+  );
   return rowCount > 0;
 }
 
-module.exports = { create, findAll, remove, update };
+module.exports = { findAll, create, update, remove };

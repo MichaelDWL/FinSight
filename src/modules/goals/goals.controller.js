@@ -4,7 +4,9 @@ const { success } = require("../../utils/apiResponse");
 const service = require("./goals.service");
 
 const list = asyncHandler(async (req, res) => {
-  const data = await service.list(getCurrentUserId(req));
+  const data = await service.list(getCurrentUserId(req), {
+    pagination: req.pagination,
+  });
   return success(res, { message: "Metas carregadas.", data });
 });
 

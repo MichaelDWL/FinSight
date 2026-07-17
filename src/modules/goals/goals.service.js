@@ -8,8 +8,11 @@ function bustCaches(userId, eventName = EVENTS.CACHE_BUST) {
   notifyMutation(userId, eventName).catch(() => undefined);
 }
 
-async function list(userId) {
-  return repository.findAll(userId);
+async function list(userId, options = {}) {
+  const result = await repository.findAll(userId, options);
+  // BFF / callers legados esperam array
+  if (!options.pagination) return result.items;
+  return result;
 }
 
 async function create(userId, payload) {

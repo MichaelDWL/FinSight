@@ -2,6 +2,8 @@ const { Router } = require("express");
 
 const controller = require("./investments.controller");
 const validate = require("../../middlewares/validate");
+const { paginate } = require("../../middlewares/paginate");
+const { investmentsLimiter } = require("../../middlewares/rateLimiters");
 const {
   createInvestment,
   idParam,
@@ -11,8 +13,14 @@ const {
 
 const router = Router();
 
+router.use(investmentsLimiter);
+
 // GET /api/investments → BFF (modules/bff)
-router.get("/detailed", controller.listDetailed);
+router.get(
+  "/detailed",
+  paginate({ resource: "investments", defaultSort: "date" }),
+  controller.listDetailed
+);
 router.get("/portfolio/summary", controller.portfolio);
 router.post("/simulate", validate(projectInvestment), controller.simulate);
 router.get("/:id", validate(idParam), controller.detail);

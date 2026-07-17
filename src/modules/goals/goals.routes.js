@@ -2,11 +2,12 @@ const { Router } = require("express");
 
 const controller = require("./goals.controller");
 const validate = require("../../middlewares/validate");
+const { paginate } = require("../../middlewares/paginate");
 const { createGoal, idParam, updateGoal } = require("./goals.validator");
 
 const router = Router();
 
-router.get("/", controller.list);
+router.get("/", paginate({ resource: "goals", defaultSort: "deadline" }), controller.list);
 router.post("/", validate(createGoal), controller.create);
 router.put("/:id", validate(updateGoal), controller.update);
 router.delete("/:id", validate(idParam), controller.remove);

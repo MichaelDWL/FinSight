@@ -9,7 +9,9 @@ const list = asyncHandler(async (req, res) => {
 });
 
 const listDetailed = asyncHandler(async (req, res) => {
-  const data = await service.listDetailed(getCurrentUserId(req));
+  const data = await service.listDetailed(getCurrentUserId(req), {
+    pagination: req.pagination,
+  });
   return success(res, { message: "Investimentos detalhados carregados.", data });
 });
 

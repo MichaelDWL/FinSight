@@ -61,15 +61,21 @@ async function attachProjection(investment) {
   };
 }
 
-async function list(userId) {
-  return repository.findAll(userId);
+async function list(userId, options = {}) {
+  const result = await repository.findAll(userId, {
+    pageSize: options.pageSize ?? 100,
+    ...options,
+  });
+  return options.pagination ? result : result.items;
 }
 
-async function listDetailed(userId) {
-  const [items, rates] = await Promise.all([
-    repository.findAll(userId),
-    rateService.getCurrentRates(),
-  ]);
+async function listDetailed(userId, options = {}) {
+  const page = await repository.findAll(userId, {
+    pagination: options.pagination,
+    pageSize: options.pageSize ?? 100,
+  });
+  const items = page.items;
+  const rates = await rateService.getCurrentRates();
 
   const marketCache = new Map();
 
@@ -83,44 +89,36 @@ async function listDetailed(userId) {
         assetCode: item.assetCode,
       });
 
-    const enriched = { ...item, investmentType };
+    let marketAsset = null;
+    if (item.assetCode) {
+      if (!marketCache.has(item.assetCode)) {
+        marketCache.set(
+          item.assetCode,
+          await marketService.getAsset(item.assetCode).catch(() => null)
+        );
+      }
+      marketAsset = marketCache.get(item.assetCode);
+    }
 
+    const withType = { ...item, investmentType };
     if (projectionService.isFixedIncome(investmentType)) {
       detailed.push({
-        ...enriched,
-        simulation: projectionService.projectFixedIncome(enriched, rates),
+        ...withType,
+        simulation: projectionService.projectFixedIncome(withType, rates),
       });
-      continue;
-    }
-
-    if (projectionService.isVariableIncome(investmentType) && item.assetCode) {
-      const code = String(item.assetCode).toUpperCase();
-      if (!marketCache.has(code)) {
-        // eslint-disable-next-line no-await-in-loop
-        marketCache.set(code, await marketService.getAsset(code));
-      }
+    } else if (projectionService.isVariableIncome(investmentType) && item.assetCode) {
       detailed.push({
-        ...enriched,
-        simulation: projectionService.buildVariableIncomeView(
-          enriched,
-          marketCache.get(code)
-        ),
+        ...withType,
+        simulation: projectionService.buildVariableIncomeView(withType, marketAsset),
       });
-      continue;
+    } else {
+      detailed.push({ ...withType, simulation: null });
     }
-
-    // RV sem asset_code: ainda monta a view sem mercado
-    if (projectionService.isVariableIncome(investmentType)) {
-      detailed.push({
-        ...enriched,
-        simulation: projectionService.buildVariableIncomeView(enriched, null),
-      });
-      continue;
-    }
-
-    detailed.push({ ...enriched, simulation: null });
   }
 
+  if (options.pagination) {
+    return { ...page, items: detailed };
+  }
   return detailed;
 }
 

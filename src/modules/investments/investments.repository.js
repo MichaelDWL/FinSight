@@ -1,4 +1,14 @@
 const pool = require("../../database/pool");
+const { paginationService } = require("../../services/pagination/PaginationService");
+const paginationConfig = require("../../config/pagination.config");
+
+const INVESTMENT_COLUMNS = `
+  i.id, i.usuario_id, i.categoria_id, i.nome, i.instituicao,
+  i.valor_inicial, i.valor_atual, i.data_investimento, i.observacao,
+  i.tipo_investimento, i.asset_code, i.quantidade,
+  i.percentual_cdi, i.taxa_prefixada, i.taxa_ipca_spread, i.moeda,
+  i.created_at, i.updated_at
+`;
 
 function mapInvestment(row) {
   const initialValue = Number(row.valor_inicial);
@@ -31,11 +41,33 @@ function mapInvestment(row) {
   };
 }
 
-async function findAll(userId) {
+async function findAll(userId, options = {}) {
+  const pagination =
+    options.pagination ||
+    paginationService.parseFromQuery(
+      {
+        page: options.page || 1,
+        pageSize: options.pageSize ?? paginationConfig.pageSize.max,
+        sort: options.sort,
+        order: options.order,
+      },
+      { resource: "investments", defaultSort: "date" }
+    );
+
+  const order = paginationService.resolveOrderBy(
+    pagination,
+    "i.data_investimento DESC, i.created_at DESC"
+  );
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM investimentos WHERE usuario_id = $1`,
+    [userId]
+  );
+
   const { rows } = await pool.query(
     `
       SELECT
-        i.*,
+        ${INVESTMENT_COLUMNS},
         ci.nome AS categoria,
         ci.icone,
         md.current_price AS market_price,
@@ -45,19 +77,23 @@ async function findAll(userId) {
       INNER JOIN categorias_investimentos ci ON ci.id = i.categoria_id
       LEFT JOIN market_data md ON md.asset_code = i.asset_code
       WHERE i.usuario_id = $1
-      ORDER BY i.data_investimento DESC, i.created_at DESC
+      ORDER BY ${order.clause}
+      LIMIT $2 OFFSET $3
     `,
-    [userId]
+    [userId, pagination.limit, pagination.offset]
   );
 
-  return rows.map(mapInvestment);
+  return {
+    items: rows.map(mapInvestment),
+    ...paginationService.toMeta(pagination, countResult.rows[0].total),
+  };
 }
 
 async function findById(userId, id) {
   const { rows } = await pool.query(
     `
       SELECT
-        i.*,
+        ${INVESTMENT_COLUMNS},
         ci.nome AS categoria,
         ci.icone,
         md.current_price AS market_price,

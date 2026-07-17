@@ -13,8 +13,7 @@ const { parallel } = require("../utils/parallel");
 async function buildInvestments(userId, query = {}) {
   const result = await parallel({
     user: () => usersService.getProfile(userId),
-    portfolio: { fn: () => investmentsService.list(userId), optional: true, fallback: [] },
-    detailed: {
+    portfolio: {
       fn: () => investmentsService.listDetailed(userId),
       optional: true,
       fallback: [],
@@ -41,7 +40,7 @@ async function buildInvestments(userId, query = {}) {
     },
   });
 
-  const portfolio = result.detailed?.length ? result.detailed : result.portfolio;
+  const portfolio = result.portfolio || [];
   const summary = result.summary || {};
   const analytics = result.analytics || {};
 
