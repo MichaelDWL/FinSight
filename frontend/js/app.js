@@ -2,13 +2,11 @@ import { accountsService } from "./services/accounts.js";
 import { billsService } from "./services/bills.js";
 import { cardsService } from "./services/cards.js";
 import { bootstrapService } from "./services/bootstrap.js";
-import { dashboardService } from "./services/dashboard.js";
 import { investmentsService } from "./services/investments.js";
 import { usersService } from "./services/users.js";
 import { transactionsService } from "./services/transactions.js";
-import { goalsService } from "./services/goals.js";
 import { invoicesService } from "./services/invoices.js";
-import { analyticsService } from "./services/analyticsService.js";
+import { bffService } from "./services/bff.js";
 import { destroyAllCharts, mountChart } from "./charts/ChartWrapper.js";
 import { chartService } from "./services/chartService.js";
 import { renderDashboardSkeleton } from "./modules/dashboard/shared/DashboardSkeleton.js";
@@ -385,56 +383,105 @@ function applyBootstrapData(data = {}) {
 
 function applyDashboardData(data = {}) {
   dashboardData = data;
-  transactions = (data.transactions || data.latestTransactions || []).map(
+  transactions = (data.transactions || data.latestTransactions || data.recentTransactions || []).map(
     normalizeTransaction,
   );
-  investments = (data.investments || []).map(normalizeInvestment);
+  investments = (data.investments || data.portfolio || []).map(normalizeInvestment);
   accounts = (data.accounts || []).map((account) => ({
     ...account,
     icon: resolveIcon(account.icon, "fa-building-columns"),
   }));
-  creditCards = data.cards || [];
-  bills = (data.bills || data.pendingBills || []).map(normalizeBill);
+  const cardsList = Array.isArray(data.cards) ? data.cards : data.cards?.list;
+  if (cardsList) creditCards = cardsList;
+  bills = (data.bills || data.pendingBills || data.nextBills || []).map(normalizeBill);
   goals = (data.goals || []).map(normalizeGoal);
 }
 
+/** Aplica user/contas/cartoes vindos de qualquer endpoint BFF (1 call por tela). */
+function applyBffShell(data = {}) {
+  if (data.user) {
+    currentUser = data.user;
+    updateUserHeader();
+  }
+
+  if (Array.isArray(data.accounts)) {
+    accounts = data.accounts.map((account) => ({
+      ...account,
+      icon: resolveIcon(account.icon, "fa-building-columns"),
+    }));
+  }
+
+  const cardsList = Array.isArray(data.cards) ? data.cards : data.cards?.list;
+  if (cardsList) creditCards = cardsList;
+
+  bootstrapReady = true;
+}
+
+const BFF_ROUTE_LOADERS = new Set([
+  "dashboard",
+  "transacoes",
+  "contas-resumo",
+  "contas-despesas",
+  "contas-bancos",
+  "contas-cartoes",
+  "patrimonio",
+  "investimento-detalhe",
+  "metas",
+  "perfil",
+]);
+
 const ROUTE_DATA_LOADERS = {
   dashboard: async () => {
-    const data = await dashboardService.getDashboard();
+    const data = await bffService.getHome();
+    applyBffShell(data);
     applyDashboardData(data);
   },
   transacoes: async () => {
-    transactions = (await transactionsService.list()).map(normalizeTransaction);
+    const data = await bffService.getTransactions();
+    applyBffShell(data);
+    transactions = (data.list || []).map(normalizeTransaction);
   },
   "contas-resumo": async () => {
-    const [billsData, invoices] = await Promise.all([
-      billsService.list(),
-      invoicesService.listCurrent(),
-    ]);
-    bills = billsData.map(normalizeBill);
-    currentInvoices = invoices;
+    const data = await bffService.getAccounts();
+    applyBffShell(data);
+    bills = (data.bills || []).map(normalizeBill);
+    currentInvoices = data.invoices || [];
   },
   "contas-despesas": async () => {
-    bills = (await billsService.list()).map(normalizeBill);
+    const data = await bffService.getAccounts();
+    applyBffShell(data);
+    bills = (data.bills || []).map(normalizeBill);
+  },
+  "contas-bancos": async () => {
+    const data = await bffService.getAccounts();
+    applyBffShell(data);
+  },
+  "contas-cartoes": async () => {
+    const data = await bffService.getCards();
+    applyBffShell(data);
   },
   patrimonio: async () => {
-    const [list, summary] = await Promise.all([
-      investmentsService.list(),
-      investmentsService.portfolioSummary().catch(() => null),
-    ]);
-    investments = list.map(normalizeInvestment);
-    portfolioSummary = summary;
+    const data = await bffService.getInvestments();
+    applyBffShell(data);
+    investments = (data.portfolio || []).map(normalizeInvestment);
+    portfolioSummary = data.summary || null;
   },
   "investimento-detalhe": async () => {
-    const [list, summary] = await Promise.all([
-      investmentsService.listDetailed(),
-      investmentsService.portfolioSummary().catch(() => null),
-    ]);
-    investments = list.map(normalizeInvestment);
-    portfolioSummary = summary;
+    const data = await bffService.getInvestments();
+    applyBffShell(data);
+    investments = (data.portfolio || []).map(normalizeInvestment);
+    portfolioSummary = data.summary || null;
   },
   metas: async () => {
-    goals = (await goalsService.list()).map(normalizeGoal);
+    const data = await bffService.getInsights();
+    applyBffShell(data);
+    goals = (data.goals || []).map(normalizeGoal);
+  },
+  perfil: async () => {
+    const data = await bffService.getInsights();
+    applyBffShell(data);
+    personalizationContext = data.personalization || null;
+    goals = (data.goals || []).map(normalizeGoal);
   },
 };
 
@@ -461,12 +508,19 @@ async function loadBootstrap({ force = false } = {}) {
 }
 
 async function loadRouteData(route, { force = false } = {}) {
-  await loadBootstrap({ force });
-
   const viewRoute = route === "investimento-novo" ? "patrimonio" : route;
   const loader = ROUTE_DATA_LOADERS[viewRoute];
-  if (!loader) return;
 
+  // Telas BFF: uma unica chamada HTTP (sem bootstrap separado)
+  if (loader && BFF_ROUTE_LOADERS.has(viewRoute)) {
+    if (loadedRouteKey === viewRoute && !force && bootstrapReady) return;
+    await loader();
+    loadedRouteKey = viewRoute;
+    return;
+  }
+
+  await loadBootstrap({ force });
+  if (!loader) return;
   if (loadedRouteKey === viewRoute && !force) return;
   await loader();
   loadedRouteKey = viewRoute;
@@ -500,41 +554,48 @@ const ANALYTICS_DASHBOARD_ROUTES = new Set([
   "dashboards/investimentos",
 ]);
 
+let analyticsDashboardPayload = null;
+
 const DASHBOARD_RENDERERS = {
   "dashboards/geral": {
     render: renderGeneralDashboard,
     mount: mountGeneralDashboardCharts,
-    load: (period) => analyticsService.getGeneral({ period }),
+    section: "general",
     getProps: () => ({ firstName: getUserFirstName() }),
   },
   "dashboards/gastos": {
     render: renderExpensesDashboard,
     mount: mountExpensesDashboardCharts,
-    load: (period) => analyticsService.getExpenses({ period }),
+    section: "expenses",
     getProps: () => ({}),
   },
   "dashboards/fluxo-caixa": {
     render: renderCashflowDashboard,
     mount: mountCashflowDashboardCharts,
-    load: (period) => analyticsService.getCashflow({ period }),
+    section: "cashflow",
     getProps: () => ({}),
   },
   "dashboards/cartoes": {
     render: renderCardsDashboard,
     mount: mountCardsDashboardCharts,
-    load: (period) => analyticsService.getCards({ period }),
+    section: "cards",
     getProps: () => ({}),
   },
   "dashboards/investimentos": {
     render: renderInvestmentsDashboard,
     mount: mountInvestmentsDashboardCharts,
-    load: (period) => analyticsService.getInvestments({ period }),
+    section: "investments",
     getProps: () => ({}),
   },
 };
 
 function isAnalyticsDashboardRoute(route) {
   return ANALYTICS_DASHBOARD_ROUTES.has(route);
+}
+
+function pickAnalyticsSection(payload, section) {
+  if (!payload) return null;
+  return payload.sections?.[section] || null;
 }
 
 async function loadAnalyticsDashboard(route = currentAnalyticsRoute, period = currentDashboardPeriod) {
@@ -546,7 +607,19 @@ async function loadAnalyticsDashboard(route = currentAnalyticsRoute, period = cu
 
   isLoadingAnalyticsDashboard = true;
   try {
-    analyticsDashboardData = await renderer.load(period);
+    // Uma unica chamada BFF para todos os paineis do dashboard
+    if (
+      !analyticsDashboardPayload ||
+      currentDashboardPeriod !== period
+    ) {
+      analyticsDashboardPayload = await bffService.getDashboard({ period });
+      applyBffShell(analyticsDashboardPayload);
+    }
+
+    analyticsDashboardData = pickAnalyticsSection(
+      analyticsDashboardPayload,
+      renderer.section,
+    );
     currentDashboardPeriod = period;
     currentAnalyticsRoute = normalizedRoute;
     return analyticsDashboardData;
@@ -581,15 +654,7 @@ async function renderAnalyticsDashboardPage(route = getRoute()) {
   app.innerHTML = renderDashboardSkeleton();
 
   try {
-    await Promise.all([
-      loadBootstrap(),
-      loadAnalyticsDashboard(normalizedRoute, currentDashboardPeriod),
-    ]);
-
-    if (!currentUser) {
-      currentUser = await usersService.profile();
-      updateUserHeader();
-    }
+    await loadAnalyticsDashboard(normalizedRoute, currentDashboardPeriod);
 
     app.innerHTML = renderAnalyticsDashboardView(normalizedRoute, analyticsDashboardData);
     mountAnalyticsDashboardCharts(normalizedRoute, analyticsDashboardData);
@@ -614,6 +679,7 @@ async function reloadDashboardWithPeriod(period) {
 
   currentDashboardPeriod = period;
   analyticsDashboardData = null;
+  analyticsDashboardPayload = null;
   destroyAllCharts();
   app.innerHTML = renderDashboardSkeleton();
 
@@ -641,6 +707,7 @@ async function reloadAndRender() {
   loadedRouteKey = null;
   dashboardData = null;
   analyticsDashboardData = null;
+  analyticsDashboardPayload = null;
   await renderRoute();
 }
 
@@ -2866,16 +2933,16 @@ async function renderRoute() {
     </section>
   `;
 
-  await loadBootstrap();
   await loadRouteData(route);
 
-  if (viewRoute === "perfil") {
+  if (viewRoute === "perfil" && !personalizationContext) {
     personalizationContext = await personalizationService
       .getContext()
       .catch(() => null);
   }
 
   if (viewRoute === "cartao-detalhe") {
+    if (!bootstrapReady) await loadBootstrap();
     const cardId = selectedCardId || creditCards[0]?.id || null;
     cardDetailData = cardId
       ? await cardsService.detail(cardId).catch(() => null)
@@ -2883,6 +2950,7 @@ async function renderRoute() {
   }
 
   if (viewRoute === "conta-detalhe") {
+    if (!bootstrapReady) await loadBootstrap();
     const accountId = selectedAccountId || accounts[0]?.id || null;
     accountDetailData = accountId
       ? await accountsService.detail(accountId).catch(() => null)

@@ -1,5 +1,6 @@
-import { api } from "./api.js";
+import { bffService } from "./bff.js";
 
+/** @deprecated Prefira bffService.getReports() */
 export const reportsService = {
-  list: () => api.get("/reports"),
+  list: (params = {}) => bffService.getReports(params),
 };
