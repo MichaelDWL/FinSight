@@ -20,6 +20,8 @@ export const bffService = {
   getInvestments: (params = {}) => api.get(`/investments${buildQuery(params)}`),
   getAccounts: () => api.get("/accounts"),
   getCards: (params = {}) => api.get(`/cards${buildQuery(params)}`),
+  getAccountDetail: (id) => api.get(`/account-detail/${id}`),
+  getCardDetail: (id) => api.get(`/card-detail/${id}`),
   getTransactions: () => api.get("/transactions"),
   getReports: (params = {}) => api.get(`/reports${buildQuery(params)}`),
   getInsights: () => api.get("/insights"),

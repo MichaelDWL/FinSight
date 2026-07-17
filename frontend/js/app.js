@@ -424,6 +424,8 @@ const BFF_ROUTE_LOADERS = new Set([
   "contas-despesas",
   "contas-bancos",
   "contas-cartoes",
+  "cartao-detalhe",
+  "conta-detalhe",
   "patrimonio",
   "investimento-detalhe",
   "metas",
@@ -459,6 +461,33 @@ const ROUTE_DATA_LOADERS = {
   "contas-cartoes": async () => {
     const data = await bffService.getCards();
     applyBffShell(data);
+  },
+  "cartao-detalhe": async () => {
+    const id = selectedCardId || creditCards[0]?.id;
+    if (!id) {
+      cardDetailData = null;
+      return;
+    }
+    const data = await bffService.getCardDetail(id);
+    applyBffShell(data);
+    cardDetailData = data.card || null;
+    if (cardDetailData?.id) selectedCardId = cardDetailData.id;
+  },
+  "conta-detalhe": async () => {
+    const id = selectedAccountId || accounts[0]?.id;
+    if (!id) {
+      accountDetailData = null;
+      return;
+    }
+    const data = await bffService.getAccountDetail(id);
+    applyBffShell(data);
+    accountDetailData = data.account
+      ? {
+          ...data.account,
+          icon: resolveIcon(data.account.icon, "fa-building-columns"),
+        }
+      : null;
+    if (accountDetailData?.id) selectedAccountId = accountDetailData.id;
   },
   patrimonio: async () => {
     const data = await bffService.getInvestments();
@@ -511,19 +540,26 @@ async function loadRouteData(route, { force = false } = {}) {
   const viewRoute = route === "investimento-novo" ? "patrimonio" : route;
   const loader = ROUTE_DATA_LOADERS[viewRoute];
 
+  const routeCacheKey =
+    viewRoute === "cartao-detalhe"
+      ? `cartao-detalhe:${selectedCardId || ""}`
+      : viewRoute === "conta-detalhe"
+        ? `conta-detalhe:${selectedAccountId || ""}`
+        : viewRoute;
+
   // Telas BFF: uma unica chamada HTTP (sem bootstrap separado)
   if (loader && BFF_ROUTE_LOADERS.has(viewRoute)) {
-    if (loadedRouteKey === viewRoute && !force && bootstrapReady) return;
+    if (loadedRouteKey === routeCacheKey && !force && bootstrapReady) return;
     await loader();
-    loadedRouteKey = viewRoute;
+    loadedRouteKey = routeCacheKey;
     return;
   }
 
   await loadBootstrap({ force });
   if (!loader) return;
-  if (loadedRouteKey === viewRoute && !force) return;
+  if (loadedRouteKey === routeCacheKey && !force) return;
   await loader();
-  loadedRouteKey = viewRoute;
+  loadedRouteKey = routeCacheKey;
 }
 
 function updateUserHeader() {
@@ -2939,22 +2975,6 @@ async function renderRoute() {
     personalizationContext = await personalizationService
       .getContext()
       .catch(() => null);
-  }
-
-  if (viewRoute === "cartao-detalhe") {
-    if (!bootstrapReady) await loadBootstrap();
-    const cardId = selectedCardId || creditCards[0]?.id || null;
-    cardDetailData = cardId
-      ? await cardsService.detail(cardId).catch(() => null)
-      : null;
-  }
-
-  if (viewRoute === "conta-detalhe") {
-    if (!bootstrapReady) await loadBootstrap();
-    const accountId = selectedAccountId || accounts[0]?.id || null;
-    accountDetailData = accountId
-      ? await accountsService.detail(accountId).catch(() => null)
-      : null;
   }
 
   const views = {
