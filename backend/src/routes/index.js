@@ -7,10 +7,12 @@ const dashboardRoutes = require("../modules/dashboard/dashboard.routes");
 const goalsRoutes = require("../modules/goals/goals.routes");
 const invoicesRoutes = require("../modules/invoices/invoices.routes");
 const investmentsRoutes = require("../modules/investments/investments.routes");
+const marketRoutes = require("../modules/market-data/market.routes");
 const movementsRoutes = require("../modules/movements/movements.routes");
 const recurrencesRoutes = require("../modules/recurrences/recurrences.routes");
 const reportsRoutes = require("../modules/reports/reports.routes");
 const usersRoutes = require("../modules/users/users.routes");
+const personalizationRoutes = require("../modules/personalization/personalization.routes");
 
 const router = Router();
 
@@ -21,7 +23,9 @@ router.use("/dashboard", dashboardRoutes);
 router.use("/goals", goalsRoutes);
 router.use("/invoices", invoicesRoutes);
 router.use("/investments", investmentsRoutes);
+router.use("/market", marketRoutes);
 router.use("/movements", movementsRoutes);
+router.use("/personalization", personalizationRoutes);
 router.use("/recurrences", recurrencesRoutes);
 router.use("/reports", reportsRoutes);
 router.use("/users", usersRoutes);
