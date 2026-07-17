@@ -1,7 +1,14 @@
-const DEMO_USER_ID = "00000000-0000-0000-0000-000000000001";
+const AppError = require("./AppError");
 
-function getCurrentUserId(_req) {
-  return DEMO_USER_ID;
+/**
+ * Resolve o usuario autenticado a partir de req.user
+ * (preenchido pelo middleware authenticate).
+ */
+function getCurrentUserId(req) {
+  if (!req?.user?.id) {
+    throw new AppError("Autenticacao necessaria.", 401);
+  }
+  return req.user.id;
 }
 
-module.exports = { DEMO_USER_ID, getCurrentUserId };
+module.exports = { getCurrentUserId };

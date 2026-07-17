@@ -13,8 +13,19 @@ const recurrencesRoutes = require("../modules/recurrences/recurrences.routes");
 const reportsRoutes = require("../modules/reports/reports.routes");
 const usersRoutes = require("../modules/users/users.routes");
 const personalizationRoutes = require("../modules/personalization/personalization.routes");
+const authRoutes = require("../modules/auth/auth.routes");
+const adminRoutes = require("../modules/admin/admin.routes");
+const { authenticate } = require("../middlewares/authenticate");
+const { csrfProtection } = require("../middlewares/csrf");
 
 const router = Router();
+
+router.use("/auth", authRoutes);
+router.use("/admin", adminRoutes);
+
+// Demais rotas da API exigem autenticacao + CSRF em mutacoes
+router.use(authenticate);
+router.use(csrfProtection);
 
 router.use("/app", appRoutes);
 router.use("/accounts", accountsRoutes);

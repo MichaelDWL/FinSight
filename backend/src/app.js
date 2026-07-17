@@ -1,17 +1,21 @@
 const express = require("express");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
 const apiRoutes = require("./routes");
 const healthRoutes = require("./routes/healthRoutes");
 const { errorMiddleware, notFoundMiddleware } = require("./middlewares/errorMiddleware");
 const securityMiddleware = require("./middlewares/securityMiddleware");
+const requestLogger = require("./middlewares/requestLogger");
 const { success } = require("./utils/apiResponse");
 
 const app = express();
 
 securityMiddleware(app);
 app.use(morgan("combined"));
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+app.use(cookieParser());
+app.use(requestLogger);
 
 app.get("/", (_req, res) => {
   return success(res, {
@@ -19,6 +23,8 @@ app.get("/", (_req, res) => {
     data: {
       health: "/health",
       api: "/api",
+      auth: "/api/auth",
+      admin: "/api/admin",
     },
   });
 });
