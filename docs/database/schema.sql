@@ -628,6 +628,23 @@ CREATE INDEX idx_movimentacao_tags_tag ON movimentacao_tags (tag_id);
 CREATE INDEX idx_anexos_movimentacao ON anexos (movimentacao_id);
 CREATE INDEX idx_notificacoes_usuario_lida ON notificacoes (usuario_id, lida, created_at DESC);
 
+-- BFF / dashboard agregados
+CREATE INDEX idx_movimentacoes_usuario_tipo_status_data
+  ON movimentacoes (usuario_id, tipo, status, data_transacao DESC);
+CREATE INDEX idx_movimentacoes_usuario_conta_data
+  ON movimentacoes (usuario_id, conta_id, data_transacao DESC)
+  WHERE conta_id IS NOT NULL;
+CREATE INDEX idx_movimentacoes_usuario_conta_destino
+  ON movimentacoes (usuario_id, conta_destino_id)
+  WHERE conta_destino_id IS NOT NULL;
+CREATE INDEX idx_movimentacoes_usuario_cartao_data
+  ON movimentacoes (usuario_id, cartao_id, data_transacao DESC)
+  WHERE cartao_id IS NOT NULL;
+CREATE INDEX idx_faturas_usuario_mes ON faturas (usuario_id, mes_referencia);
+CREATE INDEX idx_parcelas_usuario_status_vencimento
+  ON parcelas (usuario_id, status, data_vencimento)
+  WHERE status IS DISTINCT FROM 'paga';
+
 -- ------------------------------------------------------------
 -- 7. Carga inicial de exemplo
 -- ------------------------------------------------------------
