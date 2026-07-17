@@ -47,14 +47,8 @@ main {
   padding: var(--pad-lg);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 991px) {
   main {
     padding: var(--pad-md);
-  }
-}
-
-@media (max-width: 560px) {
-  main {
-    padding: var(--pad-sm);
   }
 }

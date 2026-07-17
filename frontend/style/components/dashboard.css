@@ -482,18 +482,105 @@
   }
 }
 
-@media (max-width: 640px) {
-  .dashboard-period-filter {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    scrollbar-width: none;
+@media (max-width: 767px) {
+  /* White rail + edge fade/chevron = scroll affordance */
+  .dashboard-scroll-rail {
+    position: relative;
   }
 
+  .dashboard-scroll-rail::after {
+    content: "";
+    position: absolute;
+    top: 0.2rem;
+    right: 0.15rem;
+    bottom: 0.2rem;
+    z-index: 1;
+    width: 2.5rem;
+    pointer-events: none;
+    border-radius: 0 var(--border-radius-xl) var(--border-radius-xl) 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0),
+      rgba(255, 255, 255, 0.88) 45%,
+      var(--surface) 100%
+    );
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .dashboard-scroll-rail.is-scrollable:not(.is-at-end)::after {
+    opacity: 1;
+  }
+
+  .dashboard-scroll-rail::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 0.7rem;
+    z-index: 2;
+    width: 0.42rem;
+    height: 0.42rem;
+    border-right: 2px solid var(--brand-accent);
+    border-bottom: 2px solid var(--brand-accent);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-50%) rotate(-45deg);
+    transition: opacity 0.2s ease;
+  }
+
+  .dashboard-scroll-rail.is-scrollable:not(.is-at-end)::before {
+    opacity: 1;
+  }
+
+  .dashboard-nav,
+  .dashboard-period-filter {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    gap: 0.45rem;
+    margin: 0;
+    padding: 0.35rem 0.4rem;
+    padding-right: 2.5rem;
+    border: 1px solid var(--border-card);
+    border-radius: var(--border-radius-xl);
+    background: var(--surface);
+    box-shadow: var(--bx-shadow-card);
+  }
+
+  .dashboard-nav::-webkit-scrollbar,
   .dashboard-period-filter::-webkit-scrollbar {
     display: none;
   }
 
+  .dashboard-nav-link,
+  .dashboard-nav-link.is-disabled,
   .dashboard-period-btn {
+    flex: 0 0 auto;
+    min-height: var(--touch-min, 48px);
+    padding: 0.65rem 0.95rem;
+    scroll-snap-align: start;
     white-space: nowrap;
+  }
+
+  .dashboard-nav-link.is-active {
+    transform: translateY(-1px);
+  }
+
+  .dashboard-chart-card,
+  .chart-card,
+  .apexcharts-canvas {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-nav-link,
+  .dashboard-period-btn,
+  .dashboard-scroll-rail::before,
+  .dashboard-scroll-rail::after {
+    transition: none;
   }
 }
