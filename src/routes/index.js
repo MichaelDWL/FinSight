@@ -12,6 +12,7 @@ const movementsRoutes = require("../modules/movements/movements.routes");
 const recurrencesRoutes = require("../modules/recurrences/recurrences.routes");
 const usersRoutes = require("../modules/users/users.routes");
 const personalizationRoutes = require("../modules/personalization/personalization.routes");
+const privacyRoutes = require("../modules/privacy/privacy.routes");
 const authRoutes = require("../modules/auth/auth.routes");
 const adminRoutes = require("../modules/admin/admin.routes");
 const bffRoutes = require("../modules/bff/bff.routes");
@@ -40,6 +41,7 @@ router.use("/investments", investmentsRoutes);
 router.use("/market", marketRoutes);
 router.use("/movements", movementsRoutes);
 router.use("/personalization", personalizationRoutes);
+router.use("/privacy", privacyRoutes);
 router.use("/recurrences", recurrencesRoutes);
 router.use("/users", usersRoutes);
 
