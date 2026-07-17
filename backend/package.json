@@ -1,36 +1,14 @@
 {
   "name": "finsight-backend",
   "version": "1.0.0",
-  "description": "Backend API for FinSight.",
-  "main": "src/server.js",
+  "private": true,
+  "description": "Compat: scripts locais apontam para src/ na raiz do monorepo.",
+  "main": "../src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "stop": "node scripts/free-port.js",
-    "restart": "npm run stop && npm start",
-    "dev": "nodemon src/server.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "argon2": "^0.44.0",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "csrf-csrf": "^4.0.3",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "express-rate-limit": "^8.5.2",
-    "express-slow-down": "^3.1.0",
-    "helmet": "^8.2.0",
-    "jsonwebtoken": "^9.0.3",
-    "morgan": "^1.11.0",
-    "node-cron": "^3.0.3",
-    "pg": "^8.22.0",
-    "redis": "^4.7.1",
-    "ua-parser-js": "^2.0.10",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.9"
+    "start": "npm start --prefix ..",
+    "stop": "npm run stop --prefix ..",
+    "restart": "npm run restart --prefix ..",
+    "dev": "npm run dev --prefix ..",
+    "cron:market": "npm run cron:market --prefix .."
   }
 }
