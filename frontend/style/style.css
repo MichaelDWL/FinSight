@@ -20,6 +20,8 @@
 @import "./components/modal/movement.css";
 @import "./components/modal/confirm.css";
 @import "./components/onboarding.css";
+@import "./components/auth.css";
+@import "./components/admin.css";
 @import "./components/fab.css";
 @import "./components/dashboard.css";
 @import "./pages/app.css";

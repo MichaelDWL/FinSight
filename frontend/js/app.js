@@ -53,8 +53,14 @@ import {
   renderProfilePage,
   bindProfilePage,
 } from "./modules/profile/profileView.js";
+import {
+  renderAdminPage,
+  bindAdminPage,
+} from "./modules/admin/adminView.js";
 import { personalizationService } from "./services/personalization.js";
 import { confirmDialog } from "./ui/confirmModal.js";
+import { ensureAuthenticated } from "./modules/auth/authGate.js";
+import { authApi } from "./services/api.js";
 import {
   initCustomSelects,
   refreshCustomSelectValue,
@@ -161,6 +167,7 @@ const routeTitles = {
   "conta-detalhe": "Detalhes da conta",
   metas: "Metas financeiras",
   perfil: "Perfil",
+  admin: "Administracao",
 };
 
 const ACCOUNT_TYPE_LABELS = {
@@ -2827,10 +2834,24 @@ function profileView() {
   });
 }
 
+function adminView() {
+  return renderAdminPage();
+}
+
+function isAdminUser(user = currentUser) {
+  return user?.role === "ADMIN" || user?.role === "SUPER_ADMIN";
+}
+
 async function renderRoute() {
   const route = getRoute();
   const viewRoute = route === "investimento-novo" ? "patrimonio" : route;
   setActiveRoute(viewRoute);
+
+  if (viewRoute === "admin" && !isAdminUser()) {
+    window.location.hash = "#dashboard";
+    showToast("Acesso restrito a administradores.");
+    return;
+  }
 
   if (isAnalyticsDashboardRoute(viewRoute)) {
     await renderAnalyticsDashboardPage(route);
@@ -2881,6 +2902,7 @@ async function renderRoute() {
     "conta-detalhe": accountDetailView,
     metas: goalsView,
     perfil: profileView,
+    admin: adminView,
   };
 
   app.innerHTML = views[viewRoute]();
@@ -2895,6 +2917,13 @@ async function renderRoute() {
         bootstrapReady = false;
         await reloadAndRender();
       },
+    });
+  }
+
+  if (viewRoute === "admin") {
+    bindAdminPage(app, {
+      showToast,
+      currentUser,
     });
   }
 
@@ -3093,6 +3122,11 @@ document.addEventListener("click", async (event) => {
 
   if (action === "toggle-dashboards-menu") {
     toggleDashboardsMenu();
+    return;
+  }
+
+  if (action === "logout") {
+    await window.finsightLogout?.();
     return;
   }
 
@@ -3452,13 +3486,51 @@ setupCustomCalendars();
 window.addEventListener("hashchange", renderRoute);
 
 async function bootApp() {
-  await renderRoute();
-  const forceOnboarding = window.location.hash === "#onboarding";
-  if (forceOnboarding) {
-    onboardingWizard.open({ force: true });
-    return;
+  const user = await ensureAuthenticated(async (authenticatedUser) => {
+    applyAuthenticatedUser(authenticatedUser);
+    document.body.classList.remove("is-auth-screen");
+    await renderRoute();
+    const forceOnboarding = window.location.hash === "#onboarding";
+    if (forceOnboarding) {
+      onboardingWizard.open({ force: true });
+      return;
+    }
+    onboardingWizard.maybeOpen();
+  });
+
+  if (!user) {
+    document.body.classList.add("is-auth-screen");
   }
-  onboardingWizard.maybeOpen();
+}
+
+function applyAuthenticatedUser(user) {
+  if (!user) return;
+  currentUser = user;
+  const profileLabel = document.querySelector(".profile span:first-child");
+  const profilePicture = document.querySelector(".profile-picture");
+  const firstName = String(user.name || "").split(" ")[0] || "Usuario";
+  if (profileLabel) profileLabel.textContent = `Ola, ${firstName}!`;
+  if (profilePicture) {
+    profilePicture.textContent = firstName.slice(0, 2).toUpperCase();
+  }
+  document.querySelectorAll(".admin-only-nav").forEach((el) => {
+    el.classList.toggle("is-hidden", !isAdminUser(user));
+  });
+  window.__finsightUser = user;
 }
 
 bootApp();
+
+window.addEventListener("finsight:session-expired", () => {
+  if (document.body.classList.contains("is-auth-screen")) return;
+  window.finsightLogout?.();
+});
+
+window.finsightLogout = async () => {
+  try {
+    await authApi.logout();
+  } catch {
+    /* ignore */
+  }
+  window.location.reload();
+};
