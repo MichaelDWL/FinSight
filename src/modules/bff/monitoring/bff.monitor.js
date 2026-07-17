@@ -52,7 +52,13 @@ function createBffMonitor(endpoint, { userId, cacheHit = false } = {}) {
         statusCode: res?.statusCode || 200,
       };
 
-      logger.info("BFF request metrics", metrics);
+      logger.performance("BFF request metrics", {
+        durationMs: metrics.totalMs,
+        sqlCount: metrics.sqlQueryCount,
+        rowCount: metrics.sqlRowCount,
+        cacheHit: metrics.cacheHit,
+        ...metrics,
+      });
 
       if (res && !res.headersSent) {
         res.setHeader("X-BFF-Endpoint", endpoint);

@@ -12,6 +12,8 @@ const cardsBffService = require("./services/cards.bff.service");
 const transactionsBffService = require("./services/transactions.bff.service");
 const reportsBffService = require("./services/reports.bff.service");
 const insightsBffService = require("./services/insights.bff.service");
+const accountDetailBffService = require("./services/account-detail.bff.service");
+const cardDetailBffService = require("./services/card-detail.bff.service");
 
 function createHandler(endpoint, serviceFn, message) {
   return asyncHandler(async (req, res) => {
@@ -20,6 +22,29 @@ function createHandler(endpoint, serviceFn, message) {
 
     const { data, cacheHit } = await runWithSqlTracking(() =>
       serviceFn(userId, req.query || {}),
+    );
+
+    monitor.setCacheHit(cacheHit);
+    monitor.setRecordCount(countRecords(data));
+
+    const payload = monitor.measureSerialize(() => data);
+    monitor.finish(res, payload);
+
+    return success(res, {
+      message,
+      data: payload,
+    });
+  });
+}
+
+function createDetailHandler(endpoint, serviceFn, message) {
+  return asyncHandler(async (req, res) => {
+    const userId = getCurrentUserId(req);
+    const id = req.params.id;
+    const monitor = createBffMonitor(endpoint, { userId });
+
+    const { data, cacheHit } = await runWithSqlTracking(() =>
+      serviceFn(userId, id),
     );
 
     monitor.setCacheHit(cacheHit);
@@ -67,6 +92,16 @@ const insights = createHandler(
   insightsBffService.getInsights,
   "Insights carregados.",
 );
+const accountDetail = createDetailHandler(
+  "account-detail",
+  accountDetailBffService.getAccountDetail,
+  "Detalhe da conta carregado.",
+);
+const cardDetail = createDetailHandler(
+  "card-detail",
+  cardDetailBffService.getCardDetail,
+  "Detalhe do cartao carregado.",
+);
 
 module.exports = {
   home,
@@ -77,4 +112,6 @@ module.exports = {
   transactions,
   reports,
   insights,
+  accountDetail,
+  cardDetail,
 };

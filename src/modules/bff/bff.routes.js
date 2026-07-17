@@ -1,5 +1,7 @@
 const { Router } = require("express");
 const controller = require("./bff.controller");
+const validate = require("../../middlewares/validate");
+const { idParam } = require("../accounts/accounts.validator");
 
 /**
  * Rotas BFF — uma chamada HTTP por tela.
@@ -15,5 +17,9 @@ router.get("/cards", controller.cards);
 router.get("/transactions", controller.transactions);
 router.get("/reports", controller.reports);
 router.get("/insights", controller.insights);
+
+// Detalhes agregados (shell + entidade) — paths distintos dos CRUD /:id
+router.get("/account-detail/:id", validate(idParam), controller.accountDetail);
+router.get("/card-detail/:id", validate(idParam), controller.cardDetail);
 
 module.exports = router;

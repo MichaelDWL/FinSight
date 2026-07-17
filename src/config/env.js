@@ -1,5 +1,9 @@
+const path = require("path");
 const dotenv = require("dotenv");
 
+// Ordem: backend/.env (dev legado) → raiz/.env → cwd
+dotenv.config({ path: path.join(__dirname, "../../backend/.env") });
+dotenv.config({ path: path.join(__dirname, "../../.env") });
 dotenv.config();
 
 function requiredInProduction(name, value) {
@@ -88,12 +92,31 @@ const env = {
   databaseUrl: process.env.DATABASE_URL,
   databaseSsl: process.env.DATABASE_SSL === "true",
   dbPoolMax: Number(process.env.DB_POOL_MAX) || 10,
+  /** Limite por instancia em serverless (Neon/Supabase free). */
+  dbPoolMaxServerless: Number(process.env.DB_POOL_MAX_SERVERLESS) || 2,
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
   redisUrl: process.env.REDIS_URL || null,
   redisEnabled: Boolean(process.env.REDIS_URL),
+  /**
+   * Em long-running: node-cron in-process.
+   * Em serverless: desligado; use CRON_SECRET + /api/cron/market (Vercel Cron / crontab).
+   */
   marketSchedulerEnabled: process.env.MARKET_SCHEDULER_ENABLED !== "false",
+  cronSecret: assertStrongSecret(
+    "CRON_SECRET",
+    requiredInProduction(
+      "CRON_SECRET",
+      process.env.CRON_SECRET || (!isProduction ? "dev-cron-secret-change-me" : null)
+    ),
+    { minLength: 16 }
+  ),
   brapiToken: process.env.BRAPI_TOKEN || null,
+
+  uploadProvider: process.env.UPLOAD_PROVIDER || "stub",
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || null,
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || null,
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || null,
 
   jwtAccessSecret,
   jwtRefreshSecret,

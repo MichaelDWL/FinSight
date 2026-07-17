@@ -163,6 +163,7 @@ async function runMigrations() {
   await migrateMarketData();
   await migrateMarketProviders();
   await migratePersonalization();
+  await migratePerformanceIndexes();
   await migrateAuthAndAdmin(pool);
   await seedAdminUser();
 
@@ -670,6 +671,38 @@ async function migratePersonalization() {
       BEFORE UPDATE ON regras_orcamento
       FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   `);
+}
+
+/**
+ * Indices compostos para BFF/dashboard (consultas agregadas por usuario).
+ * Idempotente — seguro em serverless/CI e bancos ja populados.
+ */
+async function migratePerformanceIndexes() {
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_movimentacoes_usuario_tipo_status_data
+      ON movimentacoes (usuario_id, tipo, status, data_transacao DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_movimentacoes_usuario_conta_data
+      ON movimentacoes (usuario_id, conta_id, data_transacao DESC)
+      WHERE conta_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_movimentacoes_usuario_conta_destino
+      ON movimentacoes (usuario_id, conta_destino_id)
+      WHERE conta_destino_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_movimentacoes_usuario_cartao_data
+      ON movimentacoes (usuario_id, cartao_id, data_transacao DESC)
+      WHERE cartao_id IS NOT NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_faturas_usuario_mes
+      ON faturas (usuario_id, mes_referencia);
+
+    CREATE INDEX IF NOT EXISTS idx_parcelas_usuario_status_vencimento
+      ON parcelas (usuario_id, status, data_vencimento)
+      WHERE status IS DISTINCT FROM 'paga';
+  `);
+
+  logger.info("Indices de performance verificados/aplicados.");
 }
 
 module.exports = { runMigrations };

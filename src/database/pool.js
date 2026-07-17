@@ -1,15 +1,28 @@
 const { Pool } = require("pg");
 
 const env = require("../config/env");
+const { isServerless } = require("../platform/runtime");
 const { recordQuery } = require("../modules/bff/monitoring/sql.tracker");
 
 if (!env.databaseUrl) {
   throw new Error("DATABASE_URL nao configurada.");
 }
 
+/**
+ * Pool reutilizavel entre warm invocations.
+ * Em serverless: poucas conexoes por instancia (evita esgotar o Postgres).
+ * Em long-running: DB_POOL_MAX (default 10).
+ */
+const poolMax = isServerless
+  ? Math.min(env.dbPoolMax, env.dbPoolMaxServerless || 2)
+  : env.dbPoolMax;
+
 const pool = new Pool({
   connectionString: env.databaseUrl,
-  max: env.dbPoolMax,
+  max: poolMax,
+  idleTimeoutMillis: isServerless ? 5_000 : 30_000,
+  connectionTimeoutMillis: 10_000,
+  allowExitOnIdle: isServerless,
   ssl: env.databaseSsl ? { rejectUnauthorized: false } : false,
 });
 

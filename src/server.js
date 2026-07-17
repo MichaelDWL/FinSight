@@ -1,19 +1,32 @@
-const app = require("./app");
 const env = require("./config/env");
 const { runMigrations } = require("./database/migrations");
-const { initCache } = require("./modules/analytics/analytics.cache");
-const CacheService = require("./modules/bff/cache/cache.service");
+const { ensureReady } = require("./platform/bootstrap");
+const { isLongRunning, isServerless, runtime } = require("./platform/runtime");
 const { startMarketScheduler } = require("./modules/market-data/market.scheduler");
-require("./modules/personalization");
 const logger = require("./utils/logger");
 
 async function startServer() {
-  await runMigrations();
-  await Promise.all([initCache(), CacheService.init()]);
-  startMarketScheduler();
+  if (isServerless) {
+    logger.warn("server.js nao deve ser usado em runtime serverless", { runtime });
+    return;
+  }
 
+  await runMigrations();
+  await ensureReady();
+
+  // node-cron apenas em processo longo; em serverless use /api/cron/market
+  if (isLongRunning && env.marketSchedulerEnabled) {
+    startMarketScheduler();
+  } else {
+    logger.info("MarketScheduler in-process desabilitado", {
+      runtime,
+      marketSchedulerEnabled: env.marketSchedulerEnabled,
+    });
+  }
+
+  const app = require("./app");
   const server = app.listen(env.port, () => {
-    console.log(`FinSight API rodando na porta ${env.port}`);
+    console.log(`FinSight API rodando na porta ${env.port} [${runtime}]`);
   });
 
   server.on("error", (error) => {

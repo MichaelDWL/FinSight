@@ -11,6 +11,8 @@ const BFF_CACHE_TTL = {
   transactions: 30,
   reports: 300, // 5 min
   insights: 60,
+  "account-detail": 45,
+  "card-detail": 45,
 };
 
 const BFF_ENDPOINTS = Object.keys(BFF_CACHE_TTL);

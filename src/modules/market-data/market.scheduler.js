@@ -1,6 +1,8 @@
 const cron = require("node-cron");
 const logger = require("../../utils/logger");
 const env = require("../../config/env");
+const { isServerless } = require("../../platform/runtime");
+const { runDailySync } = require("./market.sync.job");
 const rateService = require("./rate.service");
 const marketService = require("./market.service");
 const { syncMarkedPositions } = require("../investments/markToMarket.service");
@@ -67,6 +69,10 @@ async function bootstrapRefresh() {
 
 function startMarketScheduler() {
   if (started) return;
+  if (isServerless) {
+    logger.info("MarketScheduler ignorado em serverless — use /api/cron/market");
+    return;
+  }
   if (!env.marketSchedulerEnabled) {
     logger.info("MarketScheduler desabilitado via configuracao");
     return;
@@ -74,12 +80,12 @@ function startMarketScheduler() {
 
   started = true;
 
-  schedule("0 8 * * *", "daily-rates", () => rateService.refreshDailyIndicators({ force: true }));
-  schedule("0 9 * * *", "daily-ipca-check", () => rateService.refreshIpca({ force: false }));
-  // TTL de ativos = 24h; job horario respeita cache e so chama APIs quando necessario
+  // MVP: um job diario alinhado ao fluxo BCB → BRAPI → Postgres
+  schedule("0 3 * * *", "daily-market-sync", () => runDailySync({ forceRates: true }));
+  // Compat: refresh horario de ativos (respeita TTL/cache dos providers)
   schedule("0 * * * *", "assets-and-mtm-hourly", () => refreshAssetsAndMark());
 
-  logger.info("MarketScheduler iniciado");
+  logger.info("MarketScheduler iniciado (long-running)");
 
   setImmediate(() => {
     bootstrapRefresh().catch((error) => {
@@ -94,4 +100,9 @@ function stopMarketScheduler() {
   started = false;
 }
 
-module.exports = { bootstrapRefresh, startMarketScheduler, stopMarketScheduler };
+module.exports = {
+  bootstrapRefresh,
+  startMarketScheduler,
+  stopMarketScheduler,
+  runDailySync: require("./market.sync.job").runDailySync,
+};
