@@ -68,7 +68,7 @@ function buildFlowSummary(categoryComparison) {
   };
 }
 
-function buildGeneralDashboard(raw, period) {
+function buildGeneralDashboard(raw, period, options = {}) {
   const patrimonio = raw.patrimonio || {};
   const periodSummary = raw.periodSummary || {};
   const previousSummary = raw.previousSummary || {};
@@ -167,6 +167,38 @@ function buildGeneralDashboard(raw, period) {
     percent: totalCategoryValue > 0 ? round2((item.value / totalCategoryValue) * 100) : 0,
   }));
 
+  const personalization = options.personalization || null;
+  const personalizedInsights = personalization?.insights?.length
+    ? [...personalization.insights, ...insights].slice(0, 8)
+    : insights;
+
+  const kpiOrder = personalization?.dashboards?.general?.kpiOrder || [
+    "balance",
+    "netWorth",
+    "income",
+    "expenses",
+    "investments",
+    "pendingBills",
+  ];
+
+  const kpisRaw = {
+    balance: round2(balance),
+    netWorth,
+    income: round2(income),
+    expenses: round2(expenses),
+    monthlyBalance,
+    investments: round2(investments),
+    pendingBills: round2(pendingBillsTotal),
+  };
+
+  const orderedKpis = {};
+  for (const key of kpiOrder) {
+    if (kpisRaw[key] !== undefined) orderedKpis[key] = kpisRaw[key];
+  }
+  for (const [key, value] of Object.entries(kpisRaw)) {
+    if (orderedKpis[key] === undefined) orderedKpis[key] = value;
+  }
+
   return {
     meta: {
       period: period.period,
@@ -176,16 +208,16 @@ function buildGeneralDashboard(raw, period) {
       compareEndDate: period.compareEndDate,
       granularity: period.granularity,
       generatedAt: new Date().toISOString(),
+      personalization: personalization
+        ? {
+            profileType: personalization.profile?.type,
+            profileTitle: personalization.profile?.title,
+            homePriority: personalization.home?.priority || [],
+          }
+        : null,
     },
-    kpis: {
-      balance: round2(balance),
-      netWorth,
-      income: round2(income),
-      expenses: round2(expenses),
-      monthlyBalance,
-      investments: round2(investments),
-      pendingBills: round2(pendingBillsTotal),
-    },
+    kpis: orderedKpis,
+    kpiOrder,
     trends: {
       income: calcTrend(income, previousIncome),
       expenses: calcTrend(expenses, previousExpenses),
@@ -202,8 +234,26 @@ function buildGeneralDashboard(raw, period) {
     },
     flowSummary: buildFlowSummary(categoryComparison),
     cards,
-    healthScore,
-    insights,
+    healthScore: personalization?.health
+      ? {
+          value: Math.round(Number(personalization.health.score) || 0),
+          tone:
+            personalization.health.score >= 75
+              ? "positive"
+              : personalization.health.score < 50
+                ? "warning"
+                : "neutral",
+          label: personalization.health.label,
+          factors: personalization.health.factors,
+        }
+      : healthScore,
+    budgets: personalization?.budgets || [],
+    progress: personalization?.progress || [],
+    recommendations: personalization?.recommendations || [],
+    alerts: personalization?.alerts || [],
+    healthHistory: personalization?.health?.history || null,
+    insights: personalizedInsights,
+    personalization,
   };
 }
 
