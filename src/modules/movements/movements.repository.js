@@ -4,6 +4,10 @@ const { withTransaction } = require("../../database/transaction");
 const { applyMovement, revertMovement } = require("../../services/balanceService");
 const invoiceService = require("../../services/invoiceService");
 const recurrenceService = require("../../services/recurrenceService");
+const financialAudit = require("../audit/financialAudit.service");
+const { paginationService } = require("../../services/pagination/PaginationService");
+const { SafeQueryBuilder } = require("../../services/query/SafeQueryBuilder");
+const paginationConfig = require("../../config/pagination.config");
 
 function round2(value) {
   return Math.round(Number(value) * 100) / 100;
@@ -86,35 +90,101 @@ const BASE_SELECT = `
   LEFT JOIN categorias c ON c.id = m.categoria_id
   LEFT JOIN contas co ON co.id = m.conta_id
   WHERE m.usuario_id = $1
+    AND m.excluido_em IS NULL
 `;
 
-async function listAll(userId) {
+async function listAll(userId, options = {}) {
+  const pagination =
+    options.pagination ||
+    paginationService.parseFromQuery(
+      {
+        page: options.page,
+        pageSize: options.pageSize ?? paginationConfig.pageSize.default,
+        sort: options.sort,
+        order: options.order,
+      },
+      { resource: "movements", defaultSort: "date" }
+    );
+
+  const filters = SafeQueryBuilder.for("movements").buildFromQuery(options.filters || {}, 2);
+  const whereExtra = filters.sql ? ` AND ${filters.sql}` : "";
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM movimentacoes m
+      WHERE m.usuario_id = $1 AND m.excluido_em IS NULL${whereExtra}`,
+    [userId, ...filters.params]
+  );
+
+  const order = paginationService.resolveOrderBy(
+    pagination,
+    "m.data_transacao DESC, m.created_at DESC"
+  );
+  const limitIdx = 2 + filters.params.length;
+  const offsetIdx = limitIdx + 1;
+
   const { rows } = await pool.query(
-    `${BASE_SELECT} ORDER BY m.data_transacao DESC, m.created_at DESC`,
+    `${BASE_SELECT}${whereExtra}
+     ORDER BY ${order.clause}
+     LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    [userId, ...filters.params, pagination.limit, pagination.offset]
+  );
+
+  return {
+    items: rows.map(mapTransactionView),
+    ...paginationService.toMeta(pagination, countResult.rows[0].total),
+  };
+}
+
+async function listTransactionsView(userId, options) {
+  return listAll(userId, options);
+}
+
+async function listBillsView(userId, options = {}) {
+  const pagination =
+    options.pagination ||
+    paginationService.parseFromQuery(
+      {
+        page: options.page,
+        pageSize: options.pageSize ?? paginationConfig.pageSize.default,
+        sort: options.sort,
+        order: options.order || "asc",
+      },
+      { resource: "movements", defaultSort: "date" }
+    );
+
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM movimentacoes
+      WHERE usuario_id = $1 AND excluido_em IS NULL
+        AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')`,
     [userId]
   );
-  return rows.map(mapTransactionView);
-}
 
-async function listTransactionsView(userId) {
-  return listAll(userId);
-}
+  const order = paginationService.resolveOrderBy(
+    { ...pagination, resource: "movements" },
+    "m.data_transacao ASC, m.created_at DESC"
+  );
 
-async function listBillsView(userId) {
   const { rows } = await pool.query(
     `${BASE_SELECT}
        AND m.tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')
-     ORDER BY m.data_transacao ASC, m.created_at DESC`,
-    [userId]
+     ORDER BY ${order.clause}
+     LIMIT $2 OFFSET $3`,
+    [userId, pagination.limit, pagination.offset]
   );
-  return rows.map(mapBillView);
+
+  return {
+    items: rows.map(mapBillView),
+    ...paginationService.toMeta(pagination, countResult.rows[0].total),
+  };
 }
 
 async function findRawById(client, userId, id) {
   const { rows } = await client.query(
-    `SELECT id, tipo, status, valor, conta_id, conta_destino_id, cartao_id, fatura_id
+    `SELECT id, tipo, status, valor, conta_id, conta_destino_id, cartao_id, fatura_id,
+            descricao, forma_pagamento, data_transacao, versao
        FROM movimentacoes
-      WHERE usuario_id = $1 AND id = $2`,
+      WHERE usuario_id = $1 AND id = $2 AND excluido_em IS NULL
+      FOR UPDATE`,
     [userId, id]
   );
   return rows[0] || null;
@@ -269,9 +339,23 @@ function isCreditCardExpense(payload) {
   );
 }
 
-async function create(userId, payload) {
+async function create(userId, payload, auditMeta = {}) {
   if (payload.tipo === "cartao" || isCreditCardExpense(payload)) {
-    return withTransaction((client) => createCardPurchase(client, userId, payload));
+    return withTransaction(async (client) => {
+      const result = await createCardPurchase(client, userId, payload);
+      await financialAudit.record({
+        userId,
+        entityType: "movimentacao",
+        entityId: result.id,
+        operation: "create",
+        newValues: { tipo: payload.tipo, valor: payload.value },
+        origin: auditMeta.origin || "api",
+        ip: auditMeta.ip,
+        userAgent: auditMeta.userAgent,
+        client,
+      });
+      return result;
+    });
   }
 
   return withTransaction(async (client) => {
@@ -288,7 +372,7 @@ async function create(userId, payload) {
          $7, $8, $9, $10, $11, $12,
          $13, date_trunc('month', $13::date)::date, $14, $15, $16
        )
-       RETURNING id, tipo, status, valor, conta_id, conta_destino_id`,
+       RETURNING id, tipo, status, valor, conta_id, conta_destino_id, descricao`,
       [
         userId,
         data.conta_id,
@@ -311,8 +395,6 @@ async function create(userId, payload) {
 
     await applyMovement(client, rows[0], 1);
 
-    // Conta mensal recorrente: cria o modelo de recorrencia e vincula a
-    // primeira ocorrencia. As proximas serao geradas automaticamente.
     if (payload.tipo === "conta" && payload.recurring) {
       const dueDateIso = String(data.data_transacao).slice(0, 10);
       const dueDay = Number(dueDateIso.split("-")[2]);
@@ -337,16 +419,27 @@ async function create(userId, payload) {
       );
     }
 
+    await financialAudit.record({
+      userId,
+      entityType: "movimentacao",
+      entityId: rows[0].id,
+      operation: data.tipo === "transferencia" ? "transfer" : "create",
+      newValues: rows[0],
+      origin: auditMeta.origin || "api",
+      ip: auditMeta.ip,
+      userAgent: auditMeta.userAgent,
+      client,
+    });
+
     return { id: rows[0].id };
   });
 }
 
-async function update(userId, id, payload) {
+async function update(userId, id, payload, auditMeta = {}) {
   return withTransaction(async (client) => {
     const current = await findRawById(client, userId, id);
     if (!current) return null;
 
-    // Reverte o efeito antigo antes de recalcular.
     await revertMovement(client, current);
 
     let categoriaId = payload.categoryId ?? null;
@@ -366,9 +459,10 @@ async function update(userId, id, payload) {
               observacao = COALESCE($8, observacao),
               categoria_id = COALESCE($9, categoria_id),
               conta_id = COALESCE($10, conta_id),
+              versao = versao + 1,
               updated_at = now()
-        WHERE usuario_id = $1 AND id = $2
-        RETURNING id, tipo, status, valor, conta_id, conta_destino_id`,
+        WHERE usuario_id = $1 AND id = $2 AND excluido_em IS NULL
+        RETURNING id, tipo, status, valor, conta_id, conta_destino_id, descricao`,
       [
         userId,
         id,
@@ -383,13 +477,26 @@ async function update(userId, id, payload) {
       ]
     );
 
-    // Aplica o efeito novo.
     await applyMovement(client, rows[0], 1);
+
+    await financialAudit.record({
+      userId,
+      entityType: "movimentacao",
+      entityId: id,
+      operation: "update",
+      previousValues: current,
+      newValues: rows[0],
+      origin: auditMeta.origin || "api",
+      ip: auditMeta.ip,
+      userAgent: auditMeta.userAgent,
+      client,
+    });
+
     return { id: rows[0].id };
   });
 }
 
-async function markPaid(userId, id, paid) {
+async function markPaid(userId, id, paid, auditMeta = {}) {
   return withTransaction(async (client) => {
     const current = await findRawById(client, userId, id);
     if (!current) return null;
@@ -398,13 +505,27 @@ async function markPaid(userId, id, paid) {
 
     const { rows } = await client.query(
       `UPDATE movimentacoes
-          SET status = $3, updated_at = now()
-        WHERE usuario_id = $1 AND id = $2
-        RETURNING id, tipo, status, valor, conta_id, conta_destino_id`,
+          SET status = $3, versao = versao + 1, updated_at = now()
+        WHERE usuario_id = $1 AND id = $2 AND excluido_em IS NULL
+        RETURNING id, tipo, status, valor, conta_id, conta_destino_id, descricao`,
       [userId, id, paid ? "paga" : "pendente"]
     );
 
     await applyMovement(client, rows[0], 1);
+
+    await financialAudit.record({
+      userId,
+      entityType: "movimentacao",
+      entityId: id,
+      operation: "pay",
+      previousValues: current,
+      newValues: rows[0],
+      origin: auditMeta.origin || "api",
+      ip: auditMeta.ip,
+      userAgent: auditMeta.userAgent,
+      client,
+    });
+
     return { id: rows[0].id };
   });
 }
@@ -443,7 +564,7 @@ async function revertCardPurchase(client, current) {
   );
 }
 
-async function remove(userId, id) {
+async function remove(userId, id, auditMeta = {}) {
   return withTransaction(async (client) => {
     const current = await findRawById(client, userId, id);
     if (!current) return false;
@@ -452,9 +573,26 @@ async function remove(userId, id) {
     await revertCardPurchase(client, current);
 
     const { rowCount } = await client.query(
-      `DELETE FROM movimentacoes WHERE usuario_id = $1 AND id = $2`,
+      `UPDATE movimentacoes
+          SET excluido_em = now(), versao = versao + 1, updated_at = now()
+        WHERE usuario_id = $1 AND id = $2 AND excluido_em IS NULL`,
       [userId, id]
     );
+
+    if (rowCount > 0) {
+      await financialAudit.record({
+        userId,
+        entityType: "movimentacao",
+        entityId: id,
+        operation: "delete",
+        previousValues: current,
+        origin: auditMeta.origin || "api",
+        ip: auditMeta.ip,
+        userAgent: auditMeta.userAgent,
+        client,
+      });
+    }
+
     return rowCount > 0;
   });
 }

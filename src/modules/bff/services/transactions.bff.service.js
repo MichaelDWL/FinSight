@@ -12,7 +12,7 @@ const { parallel } = require("../utils/parallel");
 async function buildTransactions(userId) {
   const result = await parallel({
     user: () => usersService.getProfile(userId),
-    transactions: () => movementsService.listTransactions(userId),
+    transactions: () => movementsService.listTransactions(userId, { pageSize: 100, asArray: true }),
     accounts: { fn: () => accountsService.list(userId), optional: true, fallback: [] },
     categoryComparison: {
       fn: () => dashboardRepository.getCategorySpendingComparison(userId),

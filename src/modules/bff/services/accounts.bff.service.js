@@ -14,14 +14,14 @@ async function buildAccounts(userId) {
   const result = await parallel({
     user: () => usersService.getProfile(userId),
     accounts: () => accountsService.list(userId),
-    bills: { fn: () => movementsService.listBills(userId), optional: true, fallback: [] },
+    bills: { fn: () => movementsService.listBills(userId, { pageSize: 100, asArray: true }), optional: true, fallback: [] },
     invoices: {
       fn: () => invoicesService.listCurrent(userId),
       optional: true,
       fallback: [],
     },
     transactions: {
-      fn: () => movementsService.listTransactions(userId),
+      fn: () => movementsService.listTransactions(userId, { pageSize: 100, asArray: true }),
       optional: true,
       fallback: [],
     },
