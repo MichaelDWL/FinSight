@@ -162,11 +162,111 @@ CREATE TABLE investimentos (
     valor_atual NUMERIC(14,2) NOT NULL,
     data_investimento DATE NOT NULL,
     observacao TEXT,
+    tipo_investimento VARCHAR(40),
+    asset_code VARCHAR(40),
+    quantidade NUMERIC(18,8),
+    percentual_cdi NUMERIC(8,2),
+    taxa_prefixada NUMERIC(8,4),
+    taxa_ipca_spread NUMERIC(8,4),
+    moeda CHAR(3) NOT NULL DEFAULT 'BRL',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     CONSTRAINT chk_investimentos_valor_inicial CHECK (valor_inicial > 0),
     CONSTRAINT chk_investimentos_valor_atual CHECK (valor_atual >= 0)
+);
+
+-- ---------------------------------------------------------------------------
+-- Market Data (global): cotacoes e indicadores. Nunca escopo por usuario.
+-- ---------------------------------------------------------------------------
+CREATE TABLE market_data (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_code VARCHAR(40) NOT NULL,
+    asset_name VARCHAR(180) NOT NULL,
+    asset_type VARCHAR(40) NOT NULL,
+    current_price NUMERIC(18,6) NOT NULL DEFAULT 0,
+    currency CHAR(3) NOT NULL DEFAULT 'BRL',
+    daily_change NUMERIC(12,4),
+    monthly_change NUMERIC(12,4),
+    yearly_change NUMERIC(12,4),
+    source VARCHAR(40) NOT NULL,
+    last_update TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_market_data_asset_code UNIQUE (asset_code),
+    CONSTRAINT chk_market_data_asset_type CHECK (
+        asset_type IN ('stock', 'index', 'commodity', 'crypto', 'etf', 'fii', 'fx', 'other')
+    )
+);
+
+CREATE TABLE economic_rates (
+    id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    selic NUMERIC(12,4),
+    ipca NUMERIC(12,4),
+    cdi NUMERIC(12,4),
+    dolar NUMERIC(12,6),
+    euro NUMERIC(12,6),
+    last_update TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE market_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_code VARCHAR(40) NOT NULL,
+    price NUMERIC(18,6) NOT NULL,
+    date DATE NOT NULL,
+    provider VARCHAR(40),
+    source VARCHAR(40),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_market_history_asset_date UNIQUE (asset_code, date)
+);
+
+CREATE TABLE economic_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    indicator VARCHAR(20) NOT NULL,
+    value NUMERIC(18,6) NOT NULL,
+    reference_date DATE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_economic_history_indicator_date UNIQUE (indicator, reference_date),
+    CONSTRAINT chk_economic_history_indicator CHECK (
+        indicator IN ('SELIC', 'IPCA', 'CDI', 'USD', 'EUR')
+    )
+);
+
+CREATE TABLE market_watchlist (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_code VARCHAR(40) NOT NULL,
+    asset_name VARCHAR(180) NOT NULL,
+    asset_type VARCHAR(40) NOT NULL,
+    stooq_symbol VARCHAR(40) NOT NULL,
+    symbols JSONB,
+    active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT uq_market_watchlist_asset_code UNIQUE (asset_code)
+);
+
+CREATE TABLE market_quote_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_code VARCHAR(40) NOT NULL,
+    price NUMERIC(18,6) NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'BRL',
+    provider VARCHAR(40) NOT NULL,
+    source VARCHAR(40) NOT NULL,
+    quote_date DATE NOT NULL,
+    quote_time TIMESTAMPTZ NOT NULL DEFAULT now(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE market_provider_status (
+    provider VARCHAR(40) PRIMARY KEY,
+    status VARCHAR(20) NOT NULL DEFAULT 'unknown',
+    last_success TIMESTAMPTZ,
+    last_error TEXT,
+    response_time INTEGER,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT chk_market_provider_status CHECK (
+        status IN ('online', 'offline', 'degraded', 'unknown')
+    )
 );
 
 CREATE TABLE cartoes (

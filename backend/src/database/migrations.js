@@ -158,8 +158,216 @@ async function runMigrations() {
   await migrateTransacoesToMovimentacoes();
   await migrateAnalyticsViews();
   await migrateInvestmentAnalytics();
+  await migrateMarketData();
+  await migrateMarketProviders();
+  await migratePersonalization();
 
   logger.info("Migrations aplicadas com sucesso.");
+}
+
+async function migrateMarketData() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS market_data (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      asset_code VARCHAR(40) NOT NULL,
+      asset_name VARCHAR(180) NOT NULL,
+      asset_type VARCHAR(40) NOT NULL,
+      current_price NUMERIC(18,6) NOT NULL DEFAULT 0,
+      currency CHAR(3) NOT NULL DEFAULT 'BRL',
+      daily_change NUMERIC(12,4),
+      monthly_change NUMERIC(12,4),
+      yearly_change NUMERIC(12,4),
+      source VARCHAR(40) NOT NULL,
+      last_update TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT uq_market_data_asset_code UNIQUE (asset_code),
+      CONSTRAINT chk_market_data_asset_type CHECK (
+        asset_type IN ('stock', 'index', 'commodity', 'crypto', 'etf', 'fii', 'fx', 'other')
+      )
+    );
+
+    CREATE TABLE IF NOT EXISTS economic_rates (
+      id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+      selic NUMERIC(12,4),
+      ipca NUMERIC(12,4),
+      cdi NUMERIC(12,4),
+      dolar NUMERIC(12,6),
+      euro NUMERIC(12,6),
+      last_update TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS market_history (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      asset_code VARCHAR(40) NOT NULL,
+      price NUMERIC(18,6) NOT NULL,
+      date DATE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT uq_market_history_asset_date UNIQUE (asset_code, date)
+    );
+
+    CREATE TABLE IF NOT EXISTS economic_history (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      indicator VARCHAR(20) NOT NULL,
+      value NUMERIC(18,6) NOT NULL,
+      reference_date DATE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT uq_economic_history_indicator_date UNIQUE (indicator, reference_date),
+      CONSTRAINT chk_economic_history_indicator CHECK (
+        indicator IN ('SELIC', 'IPCA', 'CDI', 'USD', 'EUR')
+      )
+    );
+
+    CREATE TABLE IF NOT EXISTS market_watchlist (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      asset_code VARCHAR(40) NOT NULL,
+      asset_name VARCHAR(180) NOT NULL,
+      asset_type VARCHAR(40) NOT NULL,
+      stooq_symbol VARCHAR(40) NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT uq_market_watchlist_asset_code UNIQUE (asset_code)
+    );
+
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_market_data_updated_at') THEN
+        CREATE TRIGGER trg_market_data_updated_at
+        BEFORE UPDATE ON market_data
+        FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+      END IF;
+    END $$;
+
+    CREATE INDEX IF NOT EXISTS idx_market_data_type_update
+      ON market_data (asset_type, last_update DESC);
+    CREATE INDEX IF NOT EXISTS idx_market_data_last_update
+      ON market_data (last_update DESC);
+    CREATE INDEX IF NOT EXISTS idx_market_history_asset_date
+      ON market_history (asset_code, date DESC);
+    CREATE INDEX IF NOT EXISTS idx_economic_history_indicator_date
+      ON economic_history (indicator, reference_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_market_watchlist_active
+      ON market_watchlist (active) WHERE active = true;
+  `);
+
+  await pool.query(`
+    INSERT INTO economic_rates (id, selic, ipca, cdi, dolar, euro, last_update)
+    VALUES (1, NULL, NULL, NULL, NULL, NULL, NULL)
+    ON CONFLICT (id) DO NOTHING;
+  `);
+
+  await pool.query(`
+    INSERT INTO market_watchlist (asset_code, asset_name, asset_type, stooq_symbol)
+    VALUES
+      ('IBOV', 'Ibovespa', 'index', '^bvsp'),
+      ('PETR4', 'Petrobras PN', 'stock', 'petr4.br'),
+      ('VALE3', 'Vale ON', 'stock', 'vale3.br'),
+      ('ITUB4', 'Itau Unibanco PN', 'stock', 'itub4.br'),
+      ('BBDC4', 'Bradesco PN', 'stock', 'bbdc4.br'),
+      ('WEGE3', 'WEG ON', 'stock', 'wege3.br'),
+      ('BOVA11', 'iShares Ibovespa', 'etf', 'bova11.br'),
+      ('HGLG11', 'CSHG Logistica FII', 'fii', 'hglg11.br'),
+      ('GOLD', 'Ouro (XAU/USD)', 'commodity', 'xauusd'),
+      ('WTI', 'Petroleo WTI', 'commodity', 'cl.f'),
+      ('BTCUSD', 'Bitcoin', 'crypto', 'btcusd'),
+      ('ETHUSD', 'Ethereum', 'crypto', 'ethusd')
+    ON CONFLICT (asset_code) DO NOTHING;
+  `);
+
+  await pool.query(`
+    ALTER TABLE investimentos
+      ADD COLUMN IF NOT EXISTS tipo_investimento VARCHAR(40),
+      ADD COLUMN IF NOT EXISTS asset_code VARCHAR(40),
+      ADD COLUMN IF NOT EXISTS quantidade NUMERIC(18,8),
+      ADD COLUMN IF NOT EXISTS percentual_cdi NUMERIC(8,2),
+      ADD COLUMN IF NOT EXISTS taxa_prefixada NUMERIC(8,4),
+      ADD COLUMN IF NOT EXISTS taxa_ipca_spread NUMERIC(8,4),
+      ADD COLUMN IF NOT EXISTS moeda CHAR(3) NOT NULL DEFAULT 'BRL';
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'chk_investimentos_tipo'
+      ) THEN
+        ALTER TABLE investimentos
+          ADD CONSTRAINT chk_investimentos_tipo CHECK (
+            tipo_investimento IS NULL OR tipo_investimento IN (
+              'tesouro_selic', 'tesouro_ipca', 'tesouro_prefixado',
+              'cdb', 'lci', 'lca', 'poupanca',
+              'acoes', 'fiis', 'etfs', 'criptomoedas', 'fundos', 'outro'
+            )
+          );
+      END IF;
+    END $$;
+
+    CREATE INDEX IF NOT EXISTS idx_investimentos_tipo
+      ON investimentos (usuario_id, tipo_investimento);
+    CREATE INDEX IF NOT EXISTS idx_investimentos_asset_code
+      ON investimentos (asset_code)
+      WHERE asset_code IS NOT NULL;
+  `);
+}
+
+async function migrateMarketProviders() {
+  await pool.query(`
+    ALTER TABLE market_watchlist
+      ADD COLUMN IF NOT EXISTS symbols JSONB;
+
+    UPDATE market_watchlist
+    SET symbols = jsonb_build_object(
+      'brapi', asset_code,
+      'stooq', COALESCE(stooq_symbol, lower(asset_code) || '.br')
+    )
+    WHERE symbols IS NULL;
+
+    ALTER TABLE market_history
+      ADD COLUMN IF NOT EXISTS provider VARCHAR(40),
+      ADD COLUMN IF NOT EXISTS source VARCHAR(40);
+
+    CREATE TABLE IF NOT EXISTS market_quote_log (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      asset_code VARCHAR(40) NOT NULL,
+      price NUMERIC(18,6) NOT NULL,
+      currency CHAR(3) NOT NULL DEFAULT 'BRL',
+      provider VARCHAR(40) NOT NULL,
+      source VARCHAR(40) NOT NULL,
+      quote_date DATE NOT NULL,
+      quote_time TIMESTAMPTZ NOT NULL DEFAULT now(),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS market_provider_status (
+      provider VARCHAR(40) PRIMARY KEY,
+      status VARCHAR(20) NOT NULL DEFAULT 'unknown',
+      last_success TIMESTAMPTZ,
+      last_error TEXT,
+      response_time INTEGER,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT chk_market_provider_status CHECK (
+        status IN ('online', 'offline', 'degraded', 'unknown')
+      )
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_market_quote_log_asset_time
+      ON market_quote_log (asset_code, quote_time DESC);
+    CREATE INDEX IF NOT EXISTS idx_market_quote_log_provider
+      ON market_quote_log (provider, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_market_history_provider
+      ON market_history (provider)
+      WHERE provider IS NOT NULL;
+  `);
+
+  await pool.query(`
+    INSERT INTO market_provider_status (provider, status)
+    VALUES
+      ('bcb', 'unknown'),
+      ('brapi', 'unknown'),
+      ('stooq', 'unknown')
+    ON CONFLICT (provider) DO NOTHING;
+  `);
 }
 
 async function migrateInvestmentAnalytics() {
@@ -388,6 +596,75 @@ async function migrateAnalyticsViews() {
     CREATE INDEX IF NOT EXISTS idx_parcelas_vencimento
       ON parcelas (data_vencimento)
       WHERE status IS DISTINCT FROM 'paga';
+  `);
+}
+
+async function migratePersonalization() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS perfil_financeiro (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id UUID NOT NULL UNIQUE REFERENCES usuarios(id) ON DELETE CASCADE,
+      perfil_tipo VARCHAR(30) NOT NULL DEFAULT 'equilibrado',
+      fonte_renda VARCHAR(40),
+      renda_mensal NUMERIC(14,2) NOT NULL DEFAULT 0,
+      alocacao_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+      notificacoes_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      onboarding_concluido BOOLEAN NOT NULL DEFAULT false,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT chk_perfil_financeiro_tipo CHECK (
+        perfil_tipo IN ('equilibrado', 'conquistador', 'aproveitador', 'custom')
+      ),
+      CONSTRAINT chk_perfil_financeiro_renda CHECK (renda_mensal >= 0)
+    );
+
+    CREATE TABLE IF NOT EXISTS regras_orcamento (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      chave VARCHAR(40) NOT NULL,
+      label VARCHAR(80) NOT NULL,
+      percentual NUMERIC(7,2) NOT NULL,
+      valor_limite NUMERIC(14,2) NOT NULL,
+      valor_utilizado NUMERIC(14,2) NOT NULL DEFAULT 0,
+      mes_referencia DATE NOT NULL,
+      cor VARCHAR(7) DEFAULT '#0d6efd',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT uq_regras_orcamento_usuario_chave_mes UNIQUE (usuario_id, chave, mes_referencia),
+      CONSTRAINT chk_regras_orcamento_mes CHECK (date_trunc('month', mes_referencia)::date = mes_referencia),
+      CONSTRAINT chk_regras_orcamento_percentual CHECK (percentual >= 0 AND percentual <= 100),
+      CONSTRAINT chk_regras_orcamento_limite CHECK (valor_limite >= 0),
+      CONSTRAINT chk_regras_orcamento_utilizado CHECK (valor_utilizado >= 0)
+    );
+
+    CREATE TABLE IF NOT EXISTS historico_saude_financeira (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      usuario_id UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      pontuacao NUMERIC(5,2) NOT NULL,
+      fatores_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+      registrado_em DATE NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      CONSTRAINT uq_historico_saude_usuario_dia UNIQUE (usuario_id, registrado_em),
+      CONSTRAINT chk_historico_saude_pontuacao CHECK (pontuacao >= 0 AND pontuacao <= 100)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_regras_orcamento_usuario_mes
+      ON regras_orcamento (usuario_id, mes_referencia);
+
+    CREATE INDEX IF NOT EXISTS idx_historico_saude_usuario_data
+      ON historico_saude_financeira (usuario_id, registrado_em DESC);
+  `);
+
+  await pool.query(`
+    DROP TRIGGER IF EXISTS trg_perfil_financeiro_updated_at ON perfil_financeiro;
+    CREATE TRIGGER trg_perfil_financeiro_updated_at
+      BEFORE UPDATE ON perfil_financeiro
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+    DROP TRIGGER IF EXISTS trg_regras_orcamento_updated_at ON regras_orcamento;
+    CREATE TRIGGER trg_regras_orcamento_updated_at
+      BEFORE UPDATE ON regras_orcamento
+      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
   `);
 }
 
