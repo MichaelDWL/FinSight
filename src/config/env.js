@@ -91,6 +91,10 @@ const env = {
   corsOrigin: process.env.CORS_ORIGIN || "*",
   databaseUrl: process.env.DATABASE_URL,
   databaseSsl: process.env.DATABASE_SSL === "true",
+  /** CA PEM para validar certificado do Postgres (Neon/Supabase). Se ausente com SSL, usa rejectUnauthorized:true com CAs do sistema. */
+  databaseSslCa: process.env.DATABASE_SSL_CA || null,
+  /** Em producao com SSL, nunca desabilitar verificacao salvo DATABASE_SSL_INSECURE=true (emergencia). */
+  databaseSslInsecure: process.env.DATABASE_SSL_INSECURE === "true",
   dbPoolMax: Number(process.env.DB_POOL_MAX) || 10,
   /** Limite por instancia em serverless (Neon/Supabase free). */
   dbPoolMaxServerless: Number(process.env.DB_POOL_MAX_SERVERLESS) || 2,
@@ -141,6 +145,14 @@ const env = {
   adminSeedName: process.env.ADMIN_SEED_NAME || "Administrador",
   adminSeedEmail: process.env.ADMIN_SEED_EMAIL || null,
   adminSeedPassword,
+  allowAdminSeed: process.env.ALLOW_ADMIN_SEED === "true",
+
+  /** Retencao de historico de mercado (dias). 0 = sem purge automatico. */
+  marketDataRetentionDays: Number(process.env.MARKET_DATA_RETENTION_DAYS) || 365,
+
+  requireEmailVerified: process.env.REQUIRE_EMAIL_VERIFIED !== "false",
+  privacyPolicyVersion: process.env.PRIVACY_POLICY_VERSION || "1.0",
+  sentryDsn: process.env.SENTRY_DSN || null,
 
   emailProvider: process.env.EMAIL_PROVIDER || "console",
   emailFrom: process.env.EMAIL_FROM || "FinSight <noreply@finsight.local>",
