@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const env = require("../config/env");
 const AppError = require("../utils/AppError");
 
@@ -17,9 +18,16 @@ function verifyCronSecret(req, _res, next) {
   const bearer = String(req.headers.authorization || "");
   const fromBearer = bearer.startsWith("Bearer ") ? bearer.slice(7).trim() : null;
   const fromHeader = req.headers["x-cron-secret"];
-  const provided = fromBearer || fromHeader;
+  const provided = String(fromBearer || fromHeader || "");
 
-  if (!provided || provided !== expected) {
+  const expectedBuf = Buffer.from(expected);
+  const providedBuf = Buffer.from(provided);
+
+  if (
+    !provided ||
+    expectedBuf.length !== providedBuf.length ||
+    !crypto.timingSafeEqual(expectedBuf, providedBuf)
+  ) {
     return next(new AppError("Nao autorizado.", 401));
   }
 

@@ -175,10 +175,34 @@ async function revokeTokenFamily(tokenFamily, client = pool) {
 }
 
 async function touchSession(sessionId, client = pool) {
-  await client.query(
-    `UPDATE sessoes_usuario SET last_activity = now() WHERE id = $1`,
+  const { rowCount } = await client.query(
+    `
+      UPDATE sessoes_usuario
+         SET last_activity = now()
+       WHERE id = $1
+         AND status = 'ativa'
+         AND revoked_at IS NULL
+         AND expires_at > now()
+    `,
     [sessionId]
   );
+  return rowCount > 0;
+}
+
+async function findActiveSessionById(sessionId, client = pool) {
+  const { rows } = await client.query(
+    `
+      SELECT id, usuario_id, status, expires_at, revoked_at
+        FROM sessoes_usuario
+       WHERE id = $1
+         AND status = 'ativa'
+         AND revoked_at IS NULL
+         AND expires_at > now()
+       LIMIT 1
+    `,
+    [sessionId]
+  );
+  return rows[0] || null;
 }
 
 async function listUserSessions(userId, client = pool) {
@@ -219,4 +243,5 @@ module.exports = {
   touchSession,
   listUserSessions,
   findUserSession,
+  findActiveSessionById,
 };

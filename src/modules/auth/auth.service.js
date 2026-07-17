@@ -191,6 +191,14 @@ async function login(payload, req) {
   assertNotSuspended(user);
   assertNotLocked(user);
 
+  if (env.requireEmailVerified && !user.email_verificado_at) {
+    throw new AppError(
+      "Verifique seu e-mail antes de entrar. Confira a caixa de entrada.",
+      403,
+      { code: "EMAIL_NOT_VERIFIED" }
+    );
+  }
+
   const valid = await verifyPassword(user.senha_hash, payload.password);
   if (!valid) {
     await usersRepo.recordLoginFailure(user.id, {
@@ -408,6 +416,7 @@ async function changePassword(userId, { currentPassword, newPassword }, req) {
   const passwordHash = await hashPassword(newPassword);
   await withTransaction(async (client) => {
     await usersRepo.updatePassword(userId, passwordHash, client);
+    await sessionsRepo.revokeAllUserSessions(userId, client);
     await writeAudit(req, {
       userId,
       action: AUDIT_ACTIONS.PASSWORD_CHANGE,
@@ -421,7 +430,7 @@ async function changePassword(userId, { currentPassword, newPassword }, req) {
     vars: { name: user.nome },
   });
 
-  return { ok: true };
+  return { ok: true, sessionsRevoked: true };
 }
 
 async function listSessions(userId) {

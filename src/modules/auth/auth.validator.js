@@ -2,10 +2,12 @@ const { z } = require("zod");
 
 const passwordSchema = z
   .string()
-  .min(8, "A senha deve ter pelo menos 8 caracteres.")
+  .min(10, "A senha deve ter pelo menos 10 caracteres.")
   .max(128, "Senha muito longa.")
-  .regex(/[A-Za-z]/, "A senha deve conter letras.")
-  .regex(/[0-9]/, "A senha deve conter numeros.");
+  .regex(/[a-z]/, "A senha deve conter letra minuscula.")
+  .regex(/[A-Z]/, "A senha deve conter letra maiuscula.")
+  .regex(/[0-9]/, "A senha deve conter numeros.")
+  .regex(/[^A-Za-z0-9]/, "A senha deve conter um caractere especial.");
 
 const register = z.object({
   body: z.object({

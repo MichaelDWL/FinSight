@@ -51,7 +51,13 @@ function securityMiddleware(app) {
       origin: resolveCorsOrigin(),
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "X-CSRF-Token", "X-Requested-With"],
+      allowedHeaders: [
+        "Content-Type",
+        "X-CSRF-Token",
+        "X-Requested-With",
+        "Idempotency-Key",
+        "X-Request-Id",
+      ],
     })
   );
 

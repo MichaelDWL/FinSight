@@ -127,10 +127,13 @@ async function findById(userId, id) {
         cat.nome AS categoria
       FROM movimentacoes m
       LEFT JOIN categorias cat ON cat.id = m.categoria_id
-      WHERE m.usuario_id = $1 AND (m.conta_id = $2 OR m.conta_destino_id = $2)
+      WHERE m.usuario_id = $1
+        AND m.excluido_em IS NULL
+        AND (m.conta_id = $2 OR m.conta_destino_id = $2)
       ORDER BY m.data_transacao DESC, m.created_at DESC
+      LIMIT $3
     `,
-    [userId, id]
+    [userId, id, 100]
   );
 
   account.movements = movements.rows.map((row) => mapMovement(row, id));

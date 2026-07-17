@@ -4,15 +4,10 @@
 
 const SETTLED_STATUSES = ["confirmada", "paga"];
 
-// Uma movimentacao so impacta o saldo quando esta liquidada. Contas mensais
-// (despesa pendente) so afetam o saldo quando sao pagas.
 function isSettled(status) {
   return SETTLED_STATUSES.includes(status);
 }
 
-// Calcula os deltas que a movimentacao aplica em cada conta.
-// Retorna uma lista de { accountId, delta } para permitir movimentacoes que
-// tocam mais de uma conta (ex.: transferencia).
 function accountDeltas(movement) {
   if (!isSettled(movement.status)) return [];
 
@@ -29,9 +24,6 @@ function accountDeltas(movement) {
         movement.conta_destino_id ? { accountId: movement.conta_destino_id, delta: valor } : null,
       ].filter(Boolean);
 
-    // Despesa, conta mensal (recorrencia) e pagamento de fatura debitam a conta.
-    // Compra parcelada no cartao nao debita conta no momento da compra: o
-    // impacto ocorre no pagamento da fatura (tratado na Fase 2).
     case "despesa":
     case "recorrencia":
     case "pagamento_fatura":
@@ -42,15 +34,30 @@ function accountDeltas(movement) {
   }
 }
 
-// Aplica (direction = 1) ou reverte (direction = -1) o efeito da movimentacao
-// no saldo das contas. Deve ser chamado dentro de uma transacao SQL (client).
+/**
+ * Trava linhas de conta com SELECT FOR UPDATE antes de alterar saldo.
+ * Garante serializacao sob concorrencia (integridade financeira).
+ */
+async function lockAccounts(client, accountIds) {
+  const ids = [...new Set((accountIds || []).filter(Boolean))].sort();
+  for (const id of ids) {
+    await client.query(`SELECT id FROM contas WHERE id = $1 FOR UPDATE`, [id]);
+  }
+}
+
 async function applyMovement(client, movement, direction = 1) {
   const deltas = accountDeltas(movement);
+  await lockAccounts(
+    client,
+    deltas.map((d) => d.accountId)
+  );
 
   for (const { accountId, delta } of deltas) {
     await client.query(
       `UPDATE contas
-         SET saldo_atual = saldo_atual + $2, updated_at = now()
+         SET saldo_atual = saldo_atual + $2,
+             versao = versao + 1,
+             updated_at = now()
        WHERE id = $1`,
       [accountId, delta * direction]
     );
@@ -63,4 +70,4 @@ function revertMovement(client, movement) {
   return applyMovement(client, movement, -1);
 }
 
-module.exports = { applyMovement, revertMovement, accountDeltas, isSettled };
+module.exports = { applyMovement, revertMovement, accountDeltas, isSettled, lockAccounts };

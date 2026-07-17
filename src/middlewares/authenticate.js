@@ -1,6 +1,7 @@
 const AppError = require("../utils/AppError");
 const { verifyAccessToken } = require("../utils/jwt");
 const { getAccessTokenFromRequest } = require("../utils/cookies");
+const env = require("../config/env");
 const usersRepo = require("../modules/auth/auth.users.repository");
 const sessionsRepo = require("../modules/auth/sessions.repository");
 const {
@@ -34,7 +35,25 @@ async function authenticate(req, _res, next) {
     }
 
     if (payload.sid) {
-      await sessionsRepo.touchSession(payload.sid).catch(() => null);
+      const alive = await sessionsRepo.touchSession(payload.sid);
+      if (!alive) {
+        throw new AppError("Sessao revogada ou expirada.", 401);
+      }
+    }
+
+    if (env.requireEmailVerified && !user.email_verificado_at) {
+      const path = req.path || "";
+      const allowUnverified =
+        path.includes("/auth/") ||
+        path.includes("/privacy/consent") ||
+        path.endsWith("/users/me");
+      if (!allowUnverified) {
+        throw new AppError(
+          "Verifique seu e-mail antes de acessar o sistema.",
+          403,
+          { code: "EMAIL_NOT_VERIFIED" }
+        );
+      }
     }
 
     req.user = {
@@ -43,7 +62,9 @@ async function authenticate(req, _res, next) {
       name: user.nome,
       role: user.papel,
       status: user.status,
+      emailVerified: Boolean(user.email_verificado_at),
       sessionId: payload.sid || null,
+      mfaEnabled: false, // coluna mfa_enabled reservada (migration 010) — MFA futuro
     };
 
     return next();
