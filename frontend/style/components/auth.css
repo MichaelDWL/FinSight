@@ -1,0 +1,219 @@
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--pad-xl) var(--pad-md);
+  background:
+    radial-gradient(circle at top right, var(--brand-accent-soft), transparent 42%),
+    radial-gradient(circle at bottom left, rgba(15, 45, 79, 0.08), transparent 46%),
+    var(--bg);
+}
+
+.auth-card {
+  width: min(100%, 440px);
+  padding: var(--pad-xl);
+  border: var(--border-card);
+  border-radius: var(--border-radius-xl);
+  background: var(--surface-card), var(--surface-card-accent);
+  box-shadow: var(--bx-shadow-card-elevated);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1.15rem;
+  color: var(--brand-900);
+}
+
+.auth-brand-row i {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: var(--border-radius-md);
+  color: var(--pw);
+  background: linear-gradient(135deg, var(--brand-accent), #0965e8);
+  box-shadow: 0 10px 22px rgba(13, 110, 253, 0.28);
+}
+
+.auth-brand {
+  margin: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.auth-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0.65rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.auth-card h1 {
+  margin: 0;
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.auth-subtitle,
+.auth-banner {
+  margin: 0.55rem 0 0;
+  color: var(--pw6);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.auth-banner {
+  margin-top: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--border-radius-md);
+  background: var(--success-soft);
+  color: #166534;
+  border: 1px solid rgba(34, 197, 94, 0.18);
+}
+
+.auth-form {
+  display: grid;
+  gap: 0.95rem;
+  margin-top: 1.45rem;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.auth-field > span {
+  color: var(--brand-800);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.auth-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.85rem;
+  padding: 0 0.85rem;
+  border: var(--border-field);
+  border-radius: var(--border-radius-md);
+  background: var(--surface);
+  box-shadow: var(--bx-shadow-field);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.auth-input-wrap:focus-within {
+  border-color: rgba(13, 110, 253, 0.55);
+  box-shadow: var(--bx-shadow-field-focus);
+}
+
+.auth-input-wrap > i {
+  color: var(--brand-600);
+  opacity: 0.85;
+}
+
+.auth-input-wrap input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--brand-900);
+  font: inherit;
+  padding: 0.7rem 0;
+}
+
+.auth-toggle-password {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: var(--border-radius-sm);
+  background: transparent;
+  color: var(--brand-700);
+  cursor: pointer;
+}
+
+.auth-toggle-password:hover,
+.auth-toggle-password[aria-pressed="true"] {
+  background: var(--brand-accent-soft);
+  color: var(--brand-accent);
+}
+
+.auth-submit {
+  margin-top: 0.25rem;
+  min-height: 2.85rem;
+  border: 0;
+  border-radius: var(--border-radius-md);
+  color: var(--pw);
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(90deg, var(--brand-accent), #0965e8);
+  box-shadow: 0 14px 28px rgba(13, 110, 253, 0.27);
+}
+
+.auth-submit:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.auth-error {
+  margin: 0.85rem 0 0;
+  color: var(--expense);
+  font-size: 0.9rem;
+}
+
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.1rem;
+  margin-top: 1.25rem;
+}
+
+.auth-links button {
+  border: 0;
+  background: transparent;
+  color: var(--brand-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+body.is-auth-screen .header,
+body.is-auth-screen .sidebar,
+body.is-auth-screen aside,
+body.is-auth-screen .mobile-drawer,
+body.is-auth-screen .mobile-drawer-backdrop,
+body.is-auth-screen .mobile-bottom-nav,
+body.is-auth-screen #quickAction,
+body.is-auth-screen #quickActionMenu {
+  display: none !important;
+}
+
+body.is-auth-screen #app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.admin-only-nav.is-hidden {
+  display: none !important;
+}

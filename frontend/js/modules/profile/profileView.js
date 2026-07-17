@@ -90,20 +90,23 @@ export function renderProfilePage({
           <span class="page-eyebrow">Perfil</span>
           <h1 class="page-title">Preferências e personalização</h1>
           <p class="page-subtitle">Ajuste renda, perfil financeiro, orçamento e notificações. O FinSight se adapta automaticamente.</p>
+          <button type="button" class="btn-secondary" id="logoutBtn" style="margin-top:0.75rem">
+            <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> Sair
+          </button>
         </div>
       </div>
 
       <div class="profile-grid">
-        <section class="form-card">
-          <div class="item-left">
-            <span class="profile-picture">${initials}</span>
-            <div>
+        <section class="form-card profile-main-card">
+          <header class="profile-identity">
+            <span class="profile-picture profile-picture--page">${initials}</span>
+            <div class="profile-identity-copy">
               <h2>${escapeHtml(userName)}</h2>
               <p class="item-meta">${escapeHtml(userEmail)}</p>
             </div>
-          </div>
+          </header>
 
-          <form id="profilePersonalizationForm" class="new-expense-form" novalidate>
+          <form id="profilePersonalizationForm" class="new-expense-form profile-form" novalidate>
             <div class="form-grid">
               <label class="expense-field">
                 <span class="font-label">Nome</span>
@@ -211,6 +214,12 @@ export function bindProfilePage(root, { showToast, onSaved } = {}) {
     input.addEventListener("input", updateSum);
   });
   updateSum();
+
+  root.querySelector("#logoutBtn")?.addEventListener("click", async () => {
+    if (typeof window.finsightLogout === "function") {
+      await window.finsightLogout();
+    }
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
