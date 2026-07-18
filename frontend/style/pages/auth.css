@@ -196,6 +196,10 @@
   padding: 0;
 }
 
+body.is-auth-screen {
+  padding-left: 0;
+}
+
 body.is-auth-screen .header,
 body.is-auth-screen .sidebar,
 body.is-auth-screen aside,
