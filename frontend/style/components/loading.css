@@ -1,0 +1,98 @@
+/* Tela de loading do bootstrap — mesmo fundo do Login, sem piscadas. */
+
+#loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: var(--pad-xl) var(--pad-md);
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  background:
+    radial-gradient(circle at top right, var(--brand-accent-soft), transparent 42%),
+    radial-gradient(circle at bottom left, rgba(15, 45, 79, 0.08), transparent 46%),
+    var(--bg);
+}
+
+#loading-screen.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading-screen[hidden] {
+  display: none;
+}
+
+.loading-box {
+  display: grid;
+  justify-items: center;
+  gap: 1.5rem;
+  animation: loading-fade-in 0.4s ease both;
+}
+
+.loading-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--brand-900);
+}
+
+.loading-brand-row i {
+  display: grid;
+  place-items: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: var(--border-radius-md);
+  color: var(--pw);
+  background: linear-gradient(135deg, var(--brand-accent), #0965e8);
+  box-shadow: 0 10px 22px rgba(13, 110, 253, 0.28);
+}
+
+.loading-brand {
+  margin: 0;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.loading-spinner {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  border: 3px solid var(--brand-accent-soft);
+  border-top-color: var(--brand-accent);
+  animation: loading-spin 0.75s linear infinite;
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loading-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #loading-screen {
+    transition: none;
+  }
+
+  .loading-spinner {
+    animation-duration: 1.4s;
+  }
+
+  .loading-box {
+    animation: none;
+  }
+}

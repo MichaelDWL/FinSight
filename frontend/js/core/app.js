@@ -6,8 +6,6 @@
  */
 import { store } from "./store.js";
 import { bindAppEvents } from "./events.js";
-import { ensureAuthenticated } from "../modules/auth/authGate.js";
-import { authApi } from "../services/api.js";
 import { createOnboardingWizard } from "../modules/onboarding/onboardingWizard.js";
 import {
   setupCustomSelects,
@@ -64,36 +62,20 @@ bindAppEvents({
   },
 });
 
-async function bootApp() {
-  // Durante o boot ainda nao sabemos se ha sessao. Marcamos como tela de auth
-  // para que um "session-expired" disparado pela verificacao inicial NAO
-  // acione logout + reload (o que causaria um loop de recarregamento).
-  document.body.classList.add("is-auth-screen");
+/**
+ * Inicia o nucleo da SPA para um usuario JA autenticado.
+ * Chamado por app/app.js apos os templates estarem montados no DOM.
+ * A verificacao de sessao acontece antes, no bootstrap (core/auth.js).
+ */
+export async function startApp(user) {
+  applyAuthenticatedUser(user);
+  document.body.classList.remove("is-auth-screen");
+  await renderRoute();
 
-  const user = await ensureAuthenticated(async (authenticatedUser) => {
-    applyAuthenticatedUser(authenticatedUser);
-    document.body.classList.remove("is-auth-screen");
-    await renderRoute();
-    const forceOnboarding = window.location.hash === "#onboarding";
-    if (forceOnboarding) {
-      onboardingWizard.open({ force: true });
-      return;
-    }
-    onboardingWizard.maybeOpen();
-  });
-
-  if (!user) {
-    document.body.classList.add("is-auth-screen");
+  const forceOnboarding = window.location.hash === "#onboarding";
+  if (forceOnboarding) {
+    onboardingWizard.open({ force: true });
+    return;
   }
+  onboardingWizard.maybeOpen();
 }
-
-bootApp();
-
-window.finsightLogout = async () => {
-  try {
-    await authApi.logout();
-  } catch {
-    /* ignore */
-  }
-  window.location.reload();
-};

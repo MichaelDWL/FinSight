@@ -14,13 +14,24 @@
 </head>
 
 <body>
-  <!-- Shell e modais carregados por js/utils/template.js antes do boot -->
+  <!-- Tela de loading do bootstrap: visivel ate o Auth decidir Login x App -->
+  <div id="loading-screen" role="status" aria-live="polite" aria-label="Carregando FinSight">
+    <div class="loading-box">
+      <div class="loading-brand-row">
+        <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
+        <p class="loading-brand">FinSight</p>
+      </div>
+      <div class="loading-spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- Containers da SPA — preenchidos apenas apos a autenticacao -->
   <div id="shell-root"></div>
-  <main id="app" aria-live="polite"></main>
+  <main id="app" aria-live="polite" hidden></main>
   <div id="chrome-root"></div>
   <div id="modals-root"></div>
 
-  <script type="module" src="./js/main.js"></script>
+  <script type="module" src="./js/app/bootstrap.js"></script>
 </body>
 
 </html>

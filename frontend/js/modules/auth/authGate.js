@@ -1,4 +1,4 @@
-import { authApi, tryRefreshSession } from "../../services/api.js";
+import { Auth } from "../../core/auth.js";
 
 function getAppRoot() {
   return document.querySelector("#app") || document.body;
@@ -147,7 +147,7 @@ export function renderAuthScreen({ mode = "login", onSuccess, message = "" } = {
 
     try {
       if (mode === "login") {
-        const result = await authApi.login({
+        const result = await Auth.login({
           email: data.email,
           password: data.password,
         });
@@ -156,7 +156,7 @@ export function renderAuthScreen({ mode = "login", onSuccess, message = "" } = {
       }
 
       if (mode === "register") {
-        const result = await authApi.register({
+        const result = await Auth.register({
           name: data.name,
           email: data.email,
           password: data.password,
@@ -166,7 +166,7 @@ export function renderAuthScreen({ mode = "login", onSuccess, message = "" } = {
       }
 
       if (mode === "forgot") {
-        await authApi.forgotPassword({ email: data.email });
+        await Auth.forgotPassword({ email: data.email });
         renderAuthScreen({
           mode: "login",
           onSuccess,
@@ -179,7 +179,7 @@ export function renderAuthScreen({ mode = "login", onSuccess, message = "" } = {
         const params = new URLSearchParams(window.location.hash.split("?")[1] || "");
         const token = params.get("token");
         if (!token) throw new Error("Token de recuperacao ausente.");
-        await authApi.resetPassword({ token, password: data.password });
+        await Auth.resetPassword({ token, password: data.password });
         renderAuthScreen({
           mode: "login",
           onSuccess,
@@ -204,40 +204,4 @@ function submitLabel(mode) {
   if (mode === "forgot") return "Enviar link";
   if (mode === "reset") return "Salvar senha";
   return "Entrar";
-}
-
-export async function ensureAuthenticated(onReady) {
-  try {
-    const user = await authApi.me();
-    onReady?.(user);
-    return user;
-  } catch {
-    // Access pode ter expirado — tenta refresh antes de forcar login.
-    const refreshed = await tryRefreshSession();
-    if (refreshed) {
-      try {
-        const user = await authApi.me();
-        onReady?.(user);
-        return user;
-      } catch {
-        /* segue para tela de login */
-      }
-    }
-
-    const hash = window.location.hash || "";
-    if (hash.includes("reset-password")) {
-      renderAuthScreen({ mode: "reset", onSuccess: onReady });
-      return null;
-    }
-    if (hash.includes("verify-email")) {
-      renderAuthScreen({
-        mode: "login",
-        onSuccess: onReady,
-        message: "Confirme o email pelo link recebido e faca login.",
-      });
-      return null;
-    }
-    renderAuthScreen({ mode: "login", onSuccess: onReady });
-    return null;
-  }
 }

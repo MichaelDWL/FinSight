@@ -1,6 +1,6 @@
 # Arquitetura frontend — FinSight
 
-SPA vanilla (ES modules, sem bundler). Entry: `frontend/index.html` → `js/main.js` → templates → sidebar → `core/app.js`.
+SPA vanilla (ES modules, sem bundler). Entry: `frontend/index.html` → `js/app/bootstrap.js` → Loading → Auth → (Login **ou** App). Nenhuma tela interna é montada antes da autenticação.
 
 ## Árvore
 
@@ -18,9 +18,16 @@ frontend/
 │   ├── components/         # inputs, cards, select, calendar, modal/*
 │   └── pages/              # home, accounts, cards, investments, … + _parts/
 ├── js/
-│   ├── main.js             # boot: mountAppTemplates → sidebar → core/app
+│   ├── app/                # camada de inicialização (bootstrap)
+│   │   ├── bootstrap.js    # ÚNICO entry point: Loading → Auth → Login/App
+│   │   ├── app.js          # App.start(user): monta layout e inicia core/app
+│   │   └── router.js       # guarda de rotas privadas + resolução de auth
+│   ├── ui/
+│   │   └── loading.js      # tela de loading do boot (show/hide com fade)
 │   ├── core/
-│   │   ├── app.js          # orquestra rotas, formulários, bootstrap
+│   │   ├── auth.js         # autenticação centralizada (initialize/login/logout…)
+│   │   ├── session.js      # estado de sessão (isAuthenticated/user)
+│   │   ├── app.js          # startApp(user): orquestra rotas/formulários
 │   │   ├── store.js        # estado global mutável (store.*)
 │   │   ├── events.js       # bindAppEvents (listeners document/window)
 │   │   └── router.js       # routeTitles + getRoute
@@ -45,9 +52,11 @@ frontend/
 
 ## Fluxo de boot
 
-1. `main.js` chama `mountAppTemplates()` (`fetch` de `/templates/...`).
-2. Carrega `components/sidebar/sidebar.js`.
-3. Carrega `core/app.js`: autentica, `bindAppEvents`, `hashchange` → `renderRoute`.
+1. `app/bootstrap.js` mostra a tela de loading (`ui/loading.js`) e marca `is-auth-screen`.
+2. `core/auth.js` `Auth.initialize()` verifica a sessão (`/auth/me`) e, se preciso, renova o token (`/auth/refresh`).
+3. **Sem sessão** → renderiza Login (`modules/auth/authGate.js`); nenhum template de shell é montado.
+4. **Com sessão** → `App.start(user)` (`app/app.js`) monta `mountAppTemplates()`, carrega a sidebar e chama `startApp(user)` em `core/app.js` (`bindAppEvents`, `hashchange` → `renderRoute`, onboarding).
+5. `#app` é revelado por baixo do overlay e o loading some com fade (sem piscadas).
 
 **Requisito:** servir via HTTP (não `file://`). Em produção, rewrites Vercel devem expor `/js/*`, `/style/*`, `/templates/*`, `/assets/*`.
 

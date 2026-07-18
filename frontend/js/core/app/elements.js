@@ -1,6 +1,6 @@
 /**
  * Referencias aos elementos de DOM da shell da SPA.
- * Avaliadas no import (apos os templates serem montados por main.js).
+ * Avaliadas no import (apos os templates serem montados por app/app.js).
  */
 export const app = document.querySelector("#app");
 export const pageTitle = document.querySelector("#pageTitle");

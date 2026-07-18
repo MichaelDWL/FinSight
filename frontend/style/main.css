@@ -15,6 +15,7 @@
 @import "./layout/fab.css";
 
 /* Components */
+@import "./components/loading.css";
 @import "./components/inputs.css";
 @import "./components/custom-select.css";
 @import "./components/custom-calendar.css";
