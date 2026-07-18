@@ -1,6 +1,7 @@
-import { hideModal, showModal } from "../../ui/modalFocus.js";
-import { initCustomSelects } from "../../ui/customSelect.js";
-import { mountChart, destroyAllCharts } from "../../charts/ChartWrapper.js";
+import { escapeHtml } from "../../utils/dom.js";
+import { hideModal, showModal } from "../../components/modal/modalFocus.js";
+import { initCustomSelects } from "../../components/select/customSelect.js";
+import { mountChart, destroyAllCharts } from "../../components/charts/ChartWrapper.js";
 import { chartService, formatBRL } from "../../services/chartService.js";
 import {
   STEP_IDS,
@@ -27,31 +28,7 @@ import {
   moneyFromPercent,
 } from "./state.js";
 import { applyOnboardingSetup } from "./applySetup.js";
-
-const currency = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function formatMoney(value) {
-  return currency.format(Number(value) || 0);
-}
-
-function progressPercent(stepIndex) {
-  return Math.round(((stepIndex + 1) / STEP_IDS.length) * 100);
-}
-
-function stepsLeft(stepIndex) {
-  return Math.max(STEP_IDS.length - stepIndex - 1, 0);
-}
+import { formatMoney, progressPercent, stepsLeft } from "./helpers.js";
 
 export function createOnboardingWizard({
   onComplete,

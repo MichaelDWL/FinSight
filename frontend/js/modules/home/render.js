@@ -1,71 +1,6 @@
-function formatCurrency(value) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(Number(value) || 0);
-}
-
-function formatDateLabel(isoDate) {
-  if (!isoDate) return "";
-  return new Intl.DateTimeFormat("pt-BR").format(
-    new Date(`${String(isoDate).slice(0, 10)}T00:00:00`),
-  );
-}
-
-function metricCard(label, value, icon, caption, tone = "brand", trend = null) {
-  const toneClass =
-    tone === "income"
-      ? "text-income"
-      : tone === "expense"
-        ? "text-expense"
-        : "text-brand";
-
-  const trendHtml = trend ? trendBadge(trend, tone) : "";
-
-  return `
-    <article class="metric-card">
-      <div class="metric-top">
-        <span>${label}</span>
-        <span class="metric-icon ${toneClass}"><i class="fa-solid ${icon}"></i></span>
-      </div>
-      <strong class="metric-value">${value}</strong>
-      <small class="metric-caption">${caption}</small>
-      ${trendHtml}
-    </article>
-  `;
-}
-
-function trendBadge(trend, tone = "brand") {
-  if (!trend) return "";
-
-  const invertTone = tone === "expense";
-  let direction = trend.direction || "neutral";
-
-  if (invertTone) {
-    if (direction === "up") direction = "down";
-    else if (direction === "down") direction = "up";
-  }
-
-  const icon =
-    direction === "up"
-      ? "fa-arrow-trend-up"
-      : direction === "down"
-        ? "fa-arrow-trend-down"
-        : "fa-minus";
-  const className =
-    direction === "up"
-      ? "metric-trend-up"
-      : direction === "down"
-        ? "metric-trend-down"
-        : "metric-trend-neutral";
-
-  return `
-    <span class="metric-trend ${className}">
-      <i class="fa-solid ${icon}"></i>
-      ${trend.label || "Sem variação"}
-    </span>
-  `;
-}
+import { formatCurrency } from "../../utils/currency.js";
+import { formatDateLabel } from "../../utils/dates.js";
+import { metricCard } from "../../components/metric/metricCard.js";
 
 function healthChip(item) {
   const toneClass =
@@ -364,7 +299,7 @@ function orderedMetricCards({ balance, income, expenses, netWorth, trends, kpiOr
   return unique.slice(0, 4).map((key) => catalog[key]()).join("");
 }
 
-export function renderHomeDashboard({
+export function render({
   dashboardData = {},
   transactions = [],
   investments = [],
@@ -584,3 +519,5 @@ export function renderHomeDashboard({
     </section>
   `;
 }
+
+export { render as renderHomeDashboard };

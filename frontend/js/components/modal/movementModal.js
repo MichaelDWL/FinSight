@@ -1,120 +1,19 @@
-import { movementsService } from "../services/movements.js";
-import { initCustomSelects } from "./customSelect.js";
-import { initCustomCalendars, closeAllCustomCalendars } from "./customCalendar.js";
+import { movementsService } from "../../services/movements.js";
+import { initCustomSelects } from "../select/customSelect.js";
+import { initCustomCalendars, closeAllCustomCalendars } from "../calendar/customCalendar.js";
 import { hideModal, showModal } from "./modalFocus.js";
+import { escapeHtml } from "../../utils/dom.js";
+import { TYPES, TYPE_MAP, CATEGORIES, PAYMENTS } from "./movement/constants.js";
+import {
+  todayIso,
+  toIso,
+  formatDateBr,
+  paymentLabelFromCode,
+  formatMoney,
+} from "./movement/helpers.js";
 
 // Modal dinamico unico de "Nova Movimentacao".
 // Fluxo: (1) escolha do tipo -> (2) formulario dinamico -> (3) resumo -> salvar.
-// Reaproveita as classes visuais de .new-expense-card / .expense-field.
-
-const TYPES = [
-  {
-    key: "receita",
-    icon: "💰",
-    title: "Receita",
-    desc: "Entrada de dinheiro na sua conta.",
-    accent: "#16a34a",
-  },
-  {
-    key: "despesa",
-    icon: "💸",
-    title: "Despesa",
-    desc: "Um gasto pontual do dia a dia.",
-    accent: "#ef4444",
-  },
-  {
-    key: "conta",
-    icon: "🧾",
-    title: "Conta Mensal",
-    desc: "Contas fixas, assinaturas e recorrências.",
-    accent: "#f59e0b",
-  },
-  {
-    key: "cartao",
-    icon: "💳",
-    title: "Compra no Cartão",
-    desc: "À vista ou parcelada na fatura.",
-    accent: "#8b5cf6",
-  },
-  {
-    key: "transferencia",
-    icon: "🔄",
-    title: "Transferência",
-    desc: "Mova saldo entre suas contas.",
-    accent: "#0ea5e9",
-  },
-];
-
-const TYPE_MAP = Object.fromEntries(TYPES.map((type) => [type.key, type]));
-
-const CATEGORIES = {
-  receita: ["Salário", "Freelance", "Investimentos", "Outros"],
-  despesa: [
-    "Moradia",
-    "Alimentação",
-    "Transporte",
-    "Saúde",
-    "Lazer",
-    "Educação",
-    "Assinaturas",
-    "Outros",
-  ],
-};
-CATEGORIES.conta = CATEGORIES.despesa;
-CATEGORIES.cartao = CATEGORIES.despesa;
-
-const PAYMENTS = [
-  { label: "Pix", code: "pix" },
-  { label: "Cartão de Débito", code: "debito" },
-  { label: "Cartão de Crédito", code: "cartao_credito" },
-  { label: "Dinheiro", code: "dinheiro" },
-  { label: "Boleto", code: "boleto" },
-];
-
-const currency = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function todayIso() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, 10);
-}
-
-function toIso(value) {
-  if (!value) return "";
-  const raw = String(value);
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return "";
-  const offset = parsed.getTimezoneOffset() * 60000;
-  return new Date(parsed.getTime() - offset).toISOString().slice(0, 10);
-}
-
-function formatDateBr(iso) {
-  const value = toIso(iso);
-  if (!value) return "-";
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
-}
-
-function paymentLabelFromCode(code) {
-  const found = PAYMENTS.find((item) => item.code === code);
-  if (found) return found.label;
-  const byLabel = PAYMENTS.find(
-    (item) => item.label.toLowerCase() === String(code || "").toLowerCase(),
-  );
-  return byLabel ? byLabel.label : "Pix";
-}
 
 export function createMovementModal({
   getAccounts,
@@ -575,18 +474,18 @@ export function createMovementModal({
       push("Tipo", "🔄 Transferência");
       push("De", accountName(payload.fromAccountId));
       push("Para", accountName(payload.toAccountId));
-      push("Valor", currency.format(payload.value));
+      push("Valor", formatMoney(payload.value));
       push("Data", formatDateBr(payload.date));
     } else if (type === "cartao" || isCardExpense) {
       const installments = payload.installments || 1;
       push("Tipo", isCardExpense ? "💸 Despesa no cartão" : "💳 Compra no Cartão");
       push("Descrição", payload.description);
       push("Cartão", cardName(payload.cardId));
-      push("Valor total", currency.format(payload.value));
+      push("Valor total", formatMoney(payload.value));
       push(
         "Parcelas",
         installments > 1
-          ? `${installments}x de ${currency.format(payload.value / installments)}`
+          ? `${installments}x de ${formatMoney(payload.value / installments)}`
           : "À vista",
       );
       push("Categoria", payload.category || "-");
@@ -594,7 +493,7 @@ export function createMovementModal({
     } else {
       push("Tipo", `${TYPE_MAP[type].icon} ${TYPE_MAP[type].title}`);
       push("Descrição", payload.description);
-      push("Valor", currency.format(payload.value));
+      push("Valor", formatMoney(payload.value));
       push(type === "conta" ? "Vencimento" : "Data", formatDateBr(payload.date));
       push("Categoria", payload.category || "-");
       if (payload.accountId) push("Conta", accountName(payload.accountId));

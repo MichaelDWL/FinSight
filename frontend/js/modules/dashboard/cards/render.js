@@ -1,5 +1,5 @@
 import { chartService } from "../../../services/chartService.js";
-import { mountChart } from "../../../charts/ChartWrapper.js";
+import { mountChart } from "../../../components/charts/ChartWrapper.js";
 import { renderPeriodFilter } from "../shared/PeriodFilter.js";
 import { renderDashboardNav } from "../shared/DashboardNav.js";
 import { periodLabel } from "../shared/periodLabels.js";

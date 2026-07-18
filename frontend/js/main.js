@@ -1,13 +1,13 @@
-import "./components/sidebar/sidebar.js";
+import { mountAppTemplates } from "./utils/template.js";
 
 /**
- * Bootstrap lazy: carrega o nucleo da app sob demanda.
- * Reduz parse/compile inicial; dashboards/admin entram via grafo de app.js
- * (proximos splits podem isolar admin/onboarding em chunks separados).
+ * Bootstrap: templates -> sidebar -> nucleo da app.
  */
 async function boot() {
   try {
-    await import("./app.js");
+    await mountAppTemplates();
+    await import("./components/sidebar/sidebar.js");
+    await import("./core/app.js");
   } catch (error) {
     console.error("[FinSight] falha ao carregar app", error);
     const root = document.getElementById("app") || document.body;

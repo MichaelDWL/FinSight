@@ -1,21 +1,5 @@
 import { formatBRL } from "../../../services/chartService.js";
-
-const ICON_ALIASES = {
-  car: "fa-car",
-  heart: "fa-heart",
-  gamepad: "fa-gamepad",
-  "book-open": "fa-book-open",
-  repeat: "fa-repeat",
-  wallet: "fa-wallet",
-  "file-invoice-dollar": "fa-file-invoice-dollar",
-};
-
-function resolveFaIcon(rawIcon, fallback = "fa-wallet") {
-  if (!rawIcon) return fallback;
-  const value = String(rawIcon).trim();
-  if (value.startsWith("fa-")) return value;
-  return ICON_ALIASES[value] || `fa-${value}`;
-}
+import { resolveFaIcon } from "../../../utils/icons.js";
 
 function toneClass(tone) {
   if (tone === "positive") return "health-score-tone--positive";
