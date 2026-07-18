@@ -14,6 +14,7 @@
     "migrate:supabase": "node --env-file=backend/.env.supabase backend/src/database/migrate-cli.js",
     "cron:market": "node -e \"process.env.RUNTIME='long'; require('./backend/src/modules/market-data/market.sync.job').runDailySync().then(r=>{console.log(JSON.stringify(r,null,2)); process.exit(r.ok?0:1)}).catch(e=>{console.error(e); process.exit(1)})\"",
     "lint": "eslint \"backend/src/**/*.js\" \"api/**/*.js\" \"tests/**/*.js\" --max-warnings 200",
+    "check:frontend": "node scripts/check-frontend-imports.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:smoke": "vitest run tests/api/smoke.test.js"

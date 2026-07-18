@@ -12,6 +12,8 @@
     "start:supabase": "npm run start:supabase --prefix ..",
     "migrate": "npm run migrate --prefix ..",
     "migrate:supabase": "npm run migrate:supabase --prefix ..",
-    "cron:market": "npm run cron:market --prefix .."
+    "cron:market": "npm run cron:market --prefix ..",
+    "test": "npm test --prefix ..",
+    "lint": "npm run lint --prefix .."
   }
 }
