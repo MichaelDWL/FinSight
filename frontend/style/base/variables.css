@@ -1,0 +1,108 @@
+/*
+  FinSight breakpoint contract (documentation + CSS vars for JS/layout helpers).
+  Media queries use literal px values — custom properties are not reliably
+  interpolated inside @media across all browsers.
+
+  Desktop:  ≥ 1200px
+  Notebook: 992px – 1199px
+  Tablet:   768px – 991px
+  Mobile:   ≤ 767px   ← shell: compact header + bottom nav + drawer
+  Compact:  ≤ 480px
+  Small:    ≤ 360px
+*/
+
+:root {
+  --bp-desktop: 1200px;
+  --bp-notebook: 992px;
+  --bp-tablet: 768px;
+  --bp-mobile: 767px;
+  --bp-compact: 480px;
+  --bp-small: 360px;
+
+  --mobile-header-height: 64px;
+  --mobile-bottom-nav-height: 64px;
+  --touch-min: 48px;
+}
+
+:root {
+  --gap-sm: 0.25rem;
+  --gap-md: 1rem;
+  --gap-lg: 1.5rem;
+  --gap-xl: 2rem;
+
+  --pad-xs: 0.5rem;
+  --pad-sm: 1rem;
+  --pad-md: 1.125rem;
+  --pad-lg: 1.5rem;
+  --pad-xl: 2rem;
+  --pad-btnNav: 0.5rem 1rem;
+
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 16px;
+  --border-radius-xl: 22px;
+
+  --bx-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --bx-shadow-item: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --bx-shadow-card-elevated: 0 18px 40px rgba(15, 45, 79, 0.09);
+  --bx-shadow-item-elevated: 0 12px 24px rgba(15, 45, 79, 0.08);
+  --bx-shadow-hover: 0 22px 44px rgba(15, 45, 79, 0.13);
+  --bx-shadow-field: 0 8px 20px rgba(15, 45, 79, 0.05);
+  --bx-shadow-field-focus: 0 12px 28px rgba(13, 110, 253, 0.14);
+
+  --border-card: 1px solid rgba(255, 255, 255, 0.82);
+  --border-field: 1px solid rgba(177, 177, 177, 0.55);
+  --surface-card: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(248, 251, 255, 0.94)
+  );
+  --surface-card-accent: radial-gradient(
+    circle at top right,
+    var(--brand-accent-soft),
+    transparent 38%
+  );
+}
+
+:root {
+  --p1: #1e1e1e;
+  --p2: #2e2e2e;
+  --p3: #3e3e3e;
+  --p4: #4e4e4e;
+  --p5: #5e5e5e;
+  --p6: #6e6e6e;
+  --p7: #7e7e7e;
+
+  --pw: white;
+  --pw1: #f0f0f0;
+  --pw2: #e0e0e0;
+  --pw3: #d0d0d0;
+  --pw4: #d0d0d0da;
+  --pw5: #b1b1b1;
+  --pw6: #4a5568;
+  --pw7: #4a5d6e;
+  --pw8: #2d3748;
+
+  --bg: aliceblue;
+
+  --brand-900: #0f2d4f;
+  --brand-800: #1f3a5f;
+  --brand-700: #2c4e7a;
+  --brand-600: #3b5f8a;
+  --brand-accent: #0d6efd;
+  --brand-accent-soft: rgba(13, 110, 253, 0.16);
+  --surface: #ffffff;
+  --surface-soft: #f8fbff;
+  --surface-blue: #eef6ff;
+  --income: #14b8a6;
+  --income-soft: rgba(20, 184, 166, 0.12);
+  --expense: #ef5d86;
+  --expense-soft: rgba(239, 93, 134, 0.12);
+  --warning: #f5b82e;
+  --warning-soft: rgba(245, 184, 46, 0.14);
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.12);
+
+  --border-color: #cccccc51;
+  --border-color-input: #b1b1b1;
+}

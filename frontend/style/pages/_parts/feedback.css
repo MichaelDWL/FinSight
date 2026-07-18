@@ -1,0 +1,73 @@
+.empty-state {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  padding: var(--pad-xl);
+  color: var(--pw6);
+  text-align: center;
+}
+
+.empty-state i {
+  display: grid;
+  width: 3.4rem;
+  height: 3.4rem;
+  margin: 0 auto 0.9rem;
+  place-items: center;
+  border-radius: 18px;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+  font-size: 1.35rem;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  min-height: 92px;
+  border-radius: var(--border-radius-lg);
+  background: #eaf2fb;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.62),
+    transparent
+  );
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.toast {
+  position: fixed;
+  right: 2rem;
+  bottom: 6rem;
+  z-index: 90;
+  max-width: min(360px, calc(100vw - 2rem));
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  color: var(--brand-900);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(15, 45, 79, 0.16);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+

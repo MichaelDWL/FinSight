@@ -1,0 +1,39 @@
+/* FinSight — CSS entry (única referência no HTML) */
+
+/* Base */
+@import "./base/variables.css";
+@import "./base/reset.css";
+@import "./base/typography.css";
+@import "./base/global.css";
+@import "./base/animations.css";
+@import "./base/utilities.css";
+
+/* Layout */
+@import "./layout/header.css";
+@import "./layout/sidebar.css";
+@import "./layout/shell.css";
+@import "./layout/fab.css";
+
+/* Components */
+@import "./components/inputs.css";
+@import "./components/custom-select.css";
+@import "./components/custom-calendar.css";
+@import "./components/cards.css";
+@import "./components/modal/modal.css";
+@import "./components/modal/expenses.css";
+@import "./components/modal/movement.css";
+@import "./components/modal/confirm.css";
+
+/* Pages */
+@import "./pages/auth.css";
+@import "./pages/onboarding.css";
+@import "./pages/admin.css";
+@import "./pages/dashboard/dashboard.css";
+@import "./pages/shared.css";
+@import "./pages/home.css";
+@import "./pages/cards-invoices.css";
+@import "./pages/transactions.css";
+@import "./pages/goals.css";
+
+/* Mobile shell last — overrides layout only ≤767px */
+@import "./layout/mobile.css";

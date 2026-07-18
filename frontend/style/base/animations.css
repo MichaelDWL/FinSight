@@ -1,0 +1,33 @@
+/* Keyframes canônicos da app.
+   Cópias idênticas ainda existem em pages/* (fatias do app.css) para preservar
+   o conteúdo original; na Fase 3 as duplicatas podem ser removidas. */
+
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes purchases-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

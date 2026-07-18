@@ -1,0 +1,171 @@
+.app-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+  animation: pageFade 0.22s ease;
+}
+
+@keyframes pageFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-hero,
+.premium-card,
+.metric-card,
+.chart-card,
+.table-shell,
+.form-card {
+  border: var(--border-card);
+  border-radius: var(--border-radius-xl);
+  background: var(--surface-card), var(--surface-card-accent);
+  box-shadow: var(--bx-shadow-card-elevated);
+}
+
+.page-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-lg);
+  padding: var(--pad-xl);
+  overflow: hidden;
+  position: relative;
+}
+
+.page-eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0.75rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+  font-family: "Inter", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.page-title {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.35rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.page-subtitle {
+  margin-top: 0.55rem;
+  max-width: 58ch;
+  color: var(--pw6);
+  line-height: 1.65;
+}
+
+.hero-actions,
+.card-title-row,
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 20px;
+}
+
+.btn-primary {
+  color: var(--pw);
+  background: linear-gradient(90deg, var(--brand-accent), #0965e8);
+  box-shadow: 0 14px 28px rgba(13, 110, 253, 0.27);
+}
+
+.btn-secondary {
+  color: var(--brand-800);
+  border: 1px solid rgba(13, 110, 253, 0.14);
+  background: var(--surface);
+}
+
+.btn-danger {
+  color: var(--expense);
+  border: 1px solid rgba(239, 93, 134, 0.2);
+  background: var(--expense-soft);
+}
+
+.icon-button {
+  width: 2.55rem;
+  min-height: 2.55rem;
+  padding: 0;
+  color: var(--brand-700);
+  border: 1px solid rgba(13, 110, 253, 0.1);
+  background: var(--surface);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-md);
+}
+
+.metric-card {
+  display: flex;
+  min-height: 128px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  padding: var(--pad-lg);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.metric-card:hover,
+.premium-card:hover,
+.investment-card:hover,
+.goal-card:hover {
+  box-shadow: var(--bx-shadow-hover);
+  transform: translateY(-3px);
+}
+
+.metric-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  color: var(--pw6);
+}
+
+.metric-icon {
+  display: grid;
+  width: 2.65rem;
+  height: 2.65rem;
+  place-items: center;
+  border-radius: 16px;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+.metric-value {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.55rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-caption {
+  color: var(--pw6);
+  font-size: 0.86rem;
+}
+
+.dashboard-grid,
+.wealth-grid,
+.detail-grid,
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.75fr);
+  gap: var(--gap-lg);
+}
+

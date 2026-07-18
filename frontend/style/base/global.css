@@ -1,9 +1,3 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
   --sidebar-width: 15.5rem;
   min-height: 100vh;
@@ -18,27 +12,6 @@ body {
 
 body.sidebar-closed {
   --sidebar-width: 5.5rem;
-}
-
-a {
-  text-decoration: none;
-  list-style: none;
-  color: inherit;
-}
-
-ul {
-  list-style: none;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button {
-  border: 0;
 }
 
 main {

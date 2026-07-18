@@ -1,0 +1,779 @@
+/* Home */
+.home-page {
+  gap: calc(var(--gap-lg) + 0.35rem);
+}
+
+.home-hero {
+  align-items: center;
+}
+
+.home-greeting {
+  font-size: clamp(1.75rem, 3vw, 2.2rem);
+}
+
+.home-subtitle {
+  max-width: 42ch;
+  margin-top: 0.35rem;
+}
+
+.home-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.home-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+}
+
+.home-section-head h2 {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.home-section-meta,
+.home-section-link {
+  color: var(--pw6);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.home-section-link {
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.home-section-link:hover {
+  color: var(--brand-accent);
+}
+
+.metric-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.metric-trend-up {
+  color: var(--income);
+}
+
+.metric-trend-down {
+  color: var(--expense);
+}
+
+.metric-trend-neutral {
+  color: var(--pw6);
+}
+
+.health-strip {
+  display: flex;
+  gap: var(--gap-md);
+  padding-bottom: 0.15rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.health-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gap-sm);
+  min-width: 13.5rem;
+  flex: 1 1 13.5rem;
+  padding: var(--pad-md);
+  border: 1px solid rgba(13, 110, 253, 0.08);
+  border-radius: var(--border-radius-lg);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--bx-shadow-item);
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.health-chip:hover {
+  border-color: rgba(13, 110, 253, 0.18);
+  box-shadow: var(--bx-shadow-item-elevated);
+  transform: translateY(-2px);
+}
+
+.health-chip-icon {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+.health-chip-warning .health-chip-icon {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.14);
+}
+
+.health-chip-positive .health-chip-icon {
+  color: var(--income);
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.health-chip-body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.health-chip-label {
+  color: var(--pw6);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.health-chip-value {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.health-chip-meta {
+  color: var(--pw6);
+  font-size: 0.8rem;
+}
+
+.home-flow-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: var(--gap-lg);
+}
+
+.home-flow-card {
+  min-height: 280px;
+}
+
+.home-flow-chart {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  gap: var(--gap-md);
+}
+
+.home-flow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.25rem;
+  color: var(--pw6);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.home-flow-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.home-flow-legend i {
+  display: inline-block;
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+}
+
+.legend-income {
+  background: var(--income);
+}
+
+.legend-expense {
+  background: var(--expense);
+}
+
+.legend-balance {
+  background: var(--brand-accent);
+}
+
+.home-flow-bars {
+  display: flex;
+  align-items: flex-end;
+  flex: 1;
+  gap: 0.85rem;
+  min-height: 190px;
+  padding-top: var(--pad-sm);
+}
+
+.home-flow-month {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.home-flow-month small {
+  color: var(--pw6);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.home-flow-group {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  height: 170px;
+  gap: 0.28rem;
+}
+
+.home-flow-bar {
+  width: 0.72rem;
+  min-height: 6px;
+  border-radius: 999px 999px 8px 8px;
+  transition: height 0.35s ease;
+}
+
+.home-flow-bar.income {
+  background: linear-gradient(180deg, var(--income), #a7f3d0);
+}
+
+.home-flow-bar.expense {
+  background: linear-gradient(180deg, var(--expense), #fecaca);
+}
+
+.home-flow-bar.balance {
+  background: linear-gradient(180deg, var(--brand-accent), #9bc5ff);
+}
+
+.home-flow-empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  color: var(--pw6);
+  font-size: 0.9rem;
+}
+
+.home-flow-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--gap-md);
+}
+
+.home-flow-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(13, 110, 253, 0.08);
+}
+
+.home-flow-summary-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.home-flow-summary-label {
+  color: var(--pw6);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.home-flow-summary-title {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.home-flow-summary-meta {
+  color: var(--pw6);
+  font-size: 0.84rem;
+}
+
+.home-transaction-item {
+  align-items: center;
+}
+
+.home-transaction-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+  text-align: right;
+}
+
+.wealth-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-md);
+}
+
+.wealth-mini-card {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-md);
+  padding: var(--pad-md);
+  border: 1px solid rgba(13, 110, 253, 0.08);
+  border-radius: var(--border-radius-lg);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--bx-shadow-item);
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.wealth-mini-card:hover {
+  border-color: rgba(13, 110, 253, 0.18);
+  box-shadow: var(--bx-shadow-item-elevated);
+  transform: translateY(-2px);
+}
+
+.wealth-mini-icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 15px;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+.wealth-mini-label {
+  display: block;
+  color: var(--pw6);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.wealth-mini-value {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap-lg);
+}
+
+.home-spotlight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.home-spotlight:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--bx-shadow-card-elevated);
+}
+
+.home-spotlight-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.home-budget-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--gap-md);
+}
+
+.profile-notifications {
+  margin-top: 0.85rem;
+}
+
+.profile-notification-check {
+  min-height: 2.6rem;
+}
+
+#allocationSumHint {
+  margin-top: 0.5rem;
+  font-weight: 600;
+}
+
+.home-budget-card .progress-warning {
+  background: linear-gradient(90deg, var(--warning), #fbbf24);
+}
+
+.home-insight-item .item-title {
+  line-height: 1.45;
+}
+
+@media (max-width: 1200px) {
+  .metrics-grid,
+  .detail-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-flow-grid,
+  .home-bottom-grid,
+  .wealth-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wealth-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid,
+  .wealth-grid,
+  .detail-grid,
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .investments-grid,
+  .financial-grid,
+  .cards-grid,
+  .goals-page-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .page-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .hero-actions,
+  .form-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .hero-actions > *,
+  .form-actions > * {
+    flex: 1 1 180px;
+  }
+
+  .charts-grid,
+  .filters-grid,
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .investments-grid,
+  .financial-grid,
+  .cards-grid,
+  .goals-page-grid,
+  .metrics-grid,
+  .detail-stat-grid,
+  .wealth-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-transaction-item,
+  .home-transaction-side {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .home-transaction-item {
+    flex-direction: column;
+  }
+
+  .invoice-summary-values {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .page-hero,
+  .premium-card,
+  .chart-card,
+  .table-shell,
+  .form-card,
+  .metric-card {
+    padding: var(--pad-md);
+    border-radius: var(--border-radius-lg);
+  }
+
+  .list-item,
+  .setting-row,
+  .bill-card,
+  .history-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .bill-card {
+    display: flex;
+  }
+
+  .bill-card-side,
+  .bill-actions {
+    align-items: flex-start;
+    justify-content: flex-start;
+  }
+
+  .detail-investment-values {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+.tx-card-list {
+  display: none;
+}
+
+/* —— Mobile Home density + lists (≤767) —— */
+@media (max-width: 767px) {
+  .home-page {
+    gap: 0.85rem;
+  }
+
+  .home-hero {
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: var(--pad-md);
+  }
+
+  .home-greeting {
+    font-size: 1.35rem;
+  }
+
+  .home-subtitle {
+    margin-top: 0.2rem;
+    font-size: 0.86rem;
+  }
+
+  .home-hero .hero-actions .btn-primary,
+  .mobile-hide-fab-duplicate {
+    display: none;
+  }
+
+  .home-hero .hero-actions {
+    width: 100%;
+  }
+
+  .home-hero .hero-actions > * {
+    flex: 1 1 auto;
+    min-height: var(--touch-min, 48px);
+  }
+
+  .home-section {
+    gap: 0.65rem;
+  }
+
+  .home-section-head h2 {
+    font-size: 1rem;
+  }
+
+  .home-metrics.metrics-grid,
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .metric-card {
+    width: 100%;
+    padding: 0.85rem;
+    gap: 0.35rem;
+  }
+
+  .metric-value {
+    font-size: 1.15rem;
+  }
+
+  .metric-caption {
+    font-size: 0.72rem;
+  }
+
+  .health-strip {
+    gap: 0.65rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .health-chip {
+    min-width: 11.5rem;
+    flex: 0 0 72%;
+    padding: 0.85rem;
+    scroll-snap-align: start;
+  }
+
+  .home-flow-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .home-flow-card {
+    min-height: 220px;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .home-flow-chart,
+  .chart-card,
+  .premium-card {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .wealth-mini-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .wealth-mini-card {
+    min-height: var(--touch-min, 48px);
+    padding: 0.85rem;
+  }
+
+  .page-hero {
+    gap: 0.75rem;
+    padding: var(--pad-md);
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.86rem;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .icon-button {
+    min-height: var(--touch-min, 48px);
+    min-width: var(--touch-min, 48px);
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+  }
+
+  .filters-grid .field:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .table-wrap .data-table {
+    display: none;
+  }
+
+  .tx-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+  }
+
+  .tx-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+    padding: 0.9rem 1rem;
+    border: var(--border-card);
+    border-radius: var(--border-radius-lg);
+    background: var(--surface-card);
+    box-shadow: var(--bx-shadow-item);
+  }
+
+  .tx-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .tx-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.65rem;
+    color: var(--pw6);
+    font-size: 0.8rem;
+  }
+
+  .tx-card-actions .btn-secondary {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .home-greeting {
+    font-size: 1.25rem;
+  }
+
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .filters-grid .field:last-child {
+    grid-column: auto;
+  }
+
+  .metric-card {
+    padding: 0.75rem;
+  }
+
+  .health-chip {
+    flex-basis: 78%;
+  }
+}
+
+@media (max-width: 360px) {
+  .home-metrics.metrics-grid,
+  .metrics-grid {
+    gap: 0.5rem;
+  }
+
+  .metric-value {
+    font-size: 1.05rem;
+  }
+
+  .wealth-mini-grid {
+    gap: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-page,
+  .skeleton::after,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .icon-button,
+  .metric-card,
+  .premium-card,
+  .investment-card,
+  .goal-card,
+  .list-item {
+    animation: none;
+    transition: none;
+  }
+}
+

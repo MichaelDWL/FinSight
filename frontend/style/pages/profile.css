@@ -1,0 +1,60 @@
+/* Perfil — identidade / formulário da página */
+.profile-main-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.45rem 1.5rem 1.35rem;
+  background:
+    radial-gradient(
+      circle at top right,
+      var(--brand-accent-soft),
+      transparent 46%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.96),
+      rgba(248, 251, 255, 0.92)
+    );
+  border-bottom: 1px solid rgba(15, 45, 79, 0.08);
+  border-radius: var(--border-radius-xl) var(--border-radius-xl) 0 0;
+}
+
+.profile-identity-copy {
+  min-width: 0;
+}
+
+.profile-identity-copy h2 {
+  margin: 0;
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.profile-identity-copy .item-meta {
+  margin-top: 0.25rem;
+}
+
+.profile-picture--page {
+  width: 3.4rem;
+  height: 3.4rem;
+  flex-shrink: 0;
+  border: 1px solid rgba(13, 110, 253, 0.14);
+  color: var(--pw);
+  background: linear-gradient(135deg, var(--brand-accent), #0965e8);
+  box-shadow: 0 10px 22px rgba(13, 110, 253, 0.24);
+  font-size: 1rem;
+}
+
+.profile-form {
+  padding: 1.45rem 1.5rem 1.5rem;
+}

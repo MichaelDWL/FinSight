@@ -1,0 +1,60 @@
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-lg);
+}
+
+.premium-card,
+.chart-card,
+.table-shell,
+.form-card {
+  padding: var(--pad-lg);
+}
+
+.card-title-row {
+  justify-content: space-between;
+  margin-bottom: var(--gap-md);
+}
+
+.card-title-row h2,
+.premium-card h2,
+.chart-card h2,
+.form-card h2 {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.list-item,
+.investment-card,
+.goal-card,
+.history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  padding: 0.95rem;
+  border: 1px solid rgba(13, 110, 253, 0.08);
+  border-radius: var(--border-radius-lg);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: var(--bx-shadow-item);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.list-item:hover {
+  border-color: rgba(13, 110, 253, 0.18);
+  box-shadow: var(--bx-shadow-item-elevated);
+  transform: translateY(-2px);
+}
+

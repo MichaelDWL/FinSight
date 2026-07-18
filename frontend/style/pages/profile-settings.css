@@ -1,0 +1,38 @@
+/* Perfil — settings/switch (posição original após investimentos) */
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--gap-md);
+  padding: 0.95rem;
+  border-radius: var(--border-radius-lg);
+  color: inherit;
+  background: rgba(255, 255, 255, 0.72);
+  text-align: left;
+}
+
+.switch {
+  width: 3.2rem;
+  height: 1.75rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--brand-accent);
+}
+
+.switch::before {
+  content: "";
+  display: block;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--pw);
+}
+

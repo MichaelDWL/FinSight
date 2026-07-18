@@ -1,0 +1,233 @@
+.investments-grid,
+.goals-page-grid,
+.financial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap-md);
+}
+
+.investment-projection-panel {
+  margin-top: var(--gap-md);
+  padding: var(--pad-md);
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-blue));
+}
+
+.investment-projection-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+  margin-bottom: 0.75rem;
+}
+
+.projection-horizons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.projection-horizon {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.projection-horizon strong {
+  font-size: 0.95rem;
+}
+
+.investment-projection-disclaimer,
+.investment-projection-empty .font-small {
+  margin: 0.75rem 0 0;
+  color: var(--pw6);
+  line-height: 1.45;
+}
+
+.investment-detail-list {
+  display: grid;
+  gap: var(--gap-md);
+}
+
+.investment-detail-card .investment-projection-panel,
+.investment-detail-card .variable-market-block {
+  margin-top: var(--gap-md);
+}
+
+.market-history-chart {
+  min-height: 240px;
+  margin-top: 0.75rem;
+}
+
+.rates-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.rate-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, var(--surface-blue));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.rate-chip strong {
+  font-size: 1rem;
+}
+
+.modal .investment-modal-card {
+  max-height: min(92vh, 900px);
+  overflow: auto;
+}
+
+@media (max-width: 900px) {
+  .rates-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .projection-horizons {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rates-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.investment-card,
+.goal-card,
+.financial-card,
+.credit-card-summary {
+  align-items: stretch;
+  flex-direction: column;
+}
+
+.financial-card,
+.credit-card-summary {
+  display: flex;
+  gap: var(--gap-md);
+  padding: 0.95rem;
+  border: 1px solid rgba(13, 110, 253, 0.08);
+  border-radius: var(--border-radius-lg);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: var(--bx-shadow-item);
+}
+
+.investment-head,
+.goal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap-sm);
+}
+
+.investment-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--surface-blue);
+  font-size: 1.45rem;
+}
+
+.investment-value {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.return-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  color: var(--income);
+  background: var(--income-soft);
+  font-weight: 800;
+}
+
+.progress-bar {
+  height: 0.72rem;
+}
+
+.goal-card .progress {
+  width: var(--progress-width);
+}
+
+.credit-progress {
+  width: var(--progress-width);
+  background: linear-gradient(90deg, var(--expense), #fda4af);
+  box-shadow: 0 6px 14px rgba(239, 93, 134, 0.22);
+}
+
+.patrimony-breakdown {
+  margin-top: var(--gap-lg);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap-md);
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.detail-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-md);
+}
+
+.detail-stat {
+  padding: var(--pad-md);
+  border-radius: var(--border-radius-lg);
+  background: var(--surface-blue);
+}
+
+.detail-stat span {
+  color: var(--pw6);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.detail-stat strong {
+  display: block;
+  margin-top: 0.4rem;
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+  font-size: 1.15rem;
+}
+
+.detail-investment-values {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.detail-investment-values strong {
+  color: var(--brand-900);
+  font-family: "Outfit", sans-serif;
+}
+
+.detail-investment-values span {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+

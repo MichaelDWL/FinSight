@@ -1,0 +1,91 @@
+.credit-card-panel {
+  display: flex;
+  min-height: 360px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--gap-md);
+  padding: var(--pad-lg);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: var(--border-radius-xl);
+  color: var(--pw);
+  background:
+    radial-gradient(
+      circle at 85% 0%,
+      rgba(255, 255, 255, 0.24),
+      transparent 34%
+    ),
+    linear-gradient(135deg, var(--card-accent), var(--brand-900));
+  box-shadow: var(--bx-shadow-card-elevated);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.credit-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-md);
+}
+
+.credit-card-top h3 {
+  margin-top: 0.35rem;
+  font-family: "Outfit", sans-serif;
+  font-size: 1.35rem;
+}
+
+.credit-card-top p,
+.credit-card-panel .item-meta {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.credit-card-top i {
+  font-size: 1.8rem;
+}
+
+.credit-card-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.credit-card-info span {
+  display: block;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.credit-card-info strong {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--pw);
+  font-family: "Outfit", sans-serif;
+}
+
+.account-balance {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.account-balance span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.account-balance strong {
+  font-family: "Outfit", sans-serif;
+  font-size: 2rem;
+  line-height: 1.1;
+  color: var(--pw);
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+

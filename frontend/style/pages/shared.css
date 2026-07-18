@@ -1,0 +1,11 @@
+/* Orquestra o bloco legado do app.css (linhas 1–1042) na ordem de cascata original. */
+
+@import "./_parts/chrome.css";
+@import "./profile.css";
+@import "./_parts/lists.css";
+@import "./accounts.css";
+@import "./cards.css";
+@import "./_parts/fields.css";
+@import "./investments.css";
+@import "./profile-settings.css";
+@import "./_parts/feedback.css";

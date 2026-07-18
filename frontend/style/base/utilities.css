@@ -47,3 +47,11 @@
 :is(.btn-primary, .btn-secondary, .btn-danger, .icon-button, .expense-primary-btn, .expense-secondary-btn):hover {
   transform: translateY(-2px);
 }
+
+.c-pw {
+  color: var(--pw);
+}
+
+.c-desc {
+  color: var(--pw6);
+}
