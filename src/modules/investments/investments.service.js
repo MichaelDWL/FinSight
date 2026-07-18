@@ -218,10 +218,11 @@ async function simulate(payload) {
 }
 
 async function portfolioSummary(userId) {
-  const [investments, rates] = await Promise.all([
+  const [investmentsPage, rates] = await Promise.all([
     repository.findAll(userId),
     rateService.getCurrentRates(),
   ]);
+  const investments = investmentsPage.items;
 
   const invested = investments.reduce((sum, item) => sum + item.invested, 0);
   const current = investments.reduce((sum, item) => sum + item.value, 0);

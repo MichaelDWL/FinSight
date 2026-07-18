@@ -6,10 +6,12 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "start:supabase": "node --env-file=backend/.env.supabase src/server.js",
     "dev": "nodemon src/server.js",
     "stop": "node backend/scripts/free-port.js",
     "restart": "npm run stop && npm start",
     "migrate": "node src/database/migrate-cli.js",
+    "migrate:supabase": "node --env-file=backend/.env.supabase src/database/migrate-cli.js",
     "cron:market": "node -e \"process.env.RUNTIME='long'; require('./src/modules/market-data/market.sync.job').runDailySync().then(r=>{console.log(JSON.stringify(r,null,2)); process.exit(r.ok?0:1)}).catch(e=>{console.error(e); process.exit(1)})\"",
     "lint": "eslint \"src/**/*.js\" \"api/**/*.js\" \"tests/**/*.js\" --max-warnings 200",
     "test": "vitest run",

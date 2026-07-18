@@ -796,6 +796,10 @@ VALUES
 -- 8. Consultas uteis para o modulo de investimentos
 -- ------------------------------------------------------------
 
+-- Estas sao consultas de exemplo usadas pela aplicacao (o driver substitui
+-- :usuario_id em tempo de execucao). Ficam comentadas para nao quebrar a
+-- execucao do schema no SQL Editor do Supabase.
+/*
 -- 8.1 Resumo da carteira: total investido, valor atual, lucro, prejuizo, rentabilidade e quantidade.
 -- Substitua :usuario_id pelo UUID do usuario autenticado.
 SELECT
@@ -861,6 +865,7 @@ SELECT
     END AS rentabilidade_percentual
 FROM investimentos
 WHERE usuario_id = :usuario_id;
+*/
 
 -- ------------------------------------------------------------
 -- 9. Autenticacao, sessoes e auditoria

@@ -9,6 +9,9 @@
     "stop": "npm run stop --prefix ..",
     "restart": "npm run restart --prefix ..",
     "dev": "npm run dev --prefix ..",
+    "start:supabase": "npm run start:supabase --prefix ..",
+    "migrate": "npm run migrate --prefix ..",
+    "migrate:supabase": "npm run migrate:supabase --prefix ..",
     "cron:market": "npm run cron:market --prefix .."
   }
 }

@@ -3,10 +3,11 @@ const projectionService = require("../../investments/projection.service");
 const investmentsRepository = require("../../investments/investments.repository");
 
 async function consolidatePortfolioAnalytics(userId) {
-  const [investments, rates] = await Promise.all([
+  const [investmentsPage, rates] = await Promise.all([
     investmentsRepository.findAll(userId),
     rateService.getCurrentRates(),
   ]);
+  const investments = investmentsPage.items;
 
   const invested = investments.reduce((sum, item) => sum + item.invested, 0);
   const current = investments.reduce((sum, item) => sum + item.value, 0);
