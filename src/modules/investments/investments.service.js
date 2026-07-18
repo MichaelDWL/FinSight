@@ -1,6 +1,6 @@
 const AppError = require("../../utils/AppError");
 const { invalidateUserAnalytics } = require("../analytics/analytics.invalidation");
-const { notifyMutation, EVENTS } = require("../personalization");
+const personalization = require("../personalization");
 const rateService = require("../market-data/rate.service");
 const marketService = require("../market-data/market.service");
 const { PROJECTION_DISCLAIMER } = require("../market-data/market.constants");
@@ -8,9 +8,9 @@ const repository = require("./investments.repository");
 const { detectInvestmentType, resolveCategoryName } = require("./investmentType.detector");
 const projectionService = require("./projection.service");
 
-function bustCaches(userId, eventName = EVENTS.INVESTMENT_ADDED) {
+function bustCaches(userId, eventName = personalization.EVENTS.INVESTMENT_ADDED) {
   invalidateUserAnalytics(userId).catch(() => undefined);
-  notifyMutation(userId, eventName).catch(() => undefined);
+  personalization.notifyMutation(userId, eventName).catch(() => undefined);
 }
 
 async function resolveTypeAndCategory(payload) {

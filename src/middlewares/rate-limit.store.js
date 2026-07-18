@@ -3,9 +3,9 @@
  * Memoria (L1) por padrao; promove para Redis compartilhado quando disponivel.
  */
 const { MemoryStore } = require("express-rate-limit");
-const env = require("../../config/env");
-const logger = require("../../utils/logger");
-const sharedRedis = require("../../platform/redis");
+const env = require("../config/env");
+const logger = require("../utils/logger");
+const sharedRedis = require("../platform/redis");
 
 const bridges = new Map();
 

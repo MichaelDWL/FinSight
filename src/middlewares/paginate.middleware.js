@@ -1,4 +1,4 @@
-const { paginationService } = require("../services/pagination/PaginationService");
+const { paginationService } = require("../services/pagination/pagination.service");
 const asyncHandler = require("../utils/asyncHandler");
 
 /**

@@ -1,8 +1,8 @@
 const { Router } = require("express");
 
-const validate = require("../../middlewares/validate");
+const validate = require("../../middlewares/validate.middleware");
 const controller = require("./dashboard.controller");
-const { dashboardLimiter } = require("../../middlewares/rateLimiters");
+const { dashboardLimiter } = require("../../middlewares/rate-limit.middleware");
 const { periodQuery } = require("./dashboard.validator");
 
 const router = Router();

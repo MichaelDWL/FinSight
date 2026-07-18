@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const { paginationService } = require("../../src/services/pagination/PaginationService");
-const { SafeQueryBuilder } = require("../../src/services/query/SafeQueryBuilder");
-const rateLimitConfig = require("../../src/config/rateLimit.config");
+const { paginationService } = require("../../src/services/pagination/pagination.service");
+const { SafeQueryBuilder } = require("../../src/services/query/safe-query-builder");
+const rateLimitConfig = require("../../src/config/rate-limit.config");
 
 describe("PaginationService", () => {
   it("aplica default pageSize 20", () => {

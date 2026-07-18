@@ -45,7 +45,7 @@ Vercel Cron → `GET /api/cron/market` + `Authorization: Bearer $CRON_SECRET`
 
 ## Rate limit
 
-Store adaptativo (`src/middlewares/rateLimit/store.js`):
+Store adaptativo (`src/middlewares/rate-limit.store.js`):
 - Sem `REDIS_URL`: memoria (dev / single instance)
 - Com Redis: promove automaticamente no bootstrap (compartilhado entre instancias)
 

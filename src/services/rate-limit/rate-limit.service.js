@@ -2,9 +2,9 @@ const rateLimit = require("express-rate-limit");
 const { ipKeyGenerator } = require("express-rate-limit");
 const slowDown = require("express-slow-down");
 const env = require("../../config/env");
-const rateLimitConfig = require("../../config/rateLimit.config");
+const rateLimitConfig = require("../../config/rate-limit.config");
 const logger = require("../../utils/logger");
-const { getBridge, getStatus } = require("../../middlewares/rateLimit/store");
+const { getBridge, getStatus } = require("../../middlewares/rate-limit.store");
 const AppError = require("../../utils/AppError");
 
 /**

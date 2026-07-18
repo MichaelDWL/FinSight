@@ -1,5 +1,5 @@
 const pool = require("../../database/pool");
-const { paginationService } = require("../../services/pagination/PaginationService");
+const { paginationService } = require("../../services/pagination/pagination.service");
 const paginationConfig = require("../../config/pagination.config");
 
 function mapGoal(row) {

@@ -1,7 +1,7 @@
 const { Router } = require("express");
 
 const controller = require("./invoices.controller");
-const validate = require("../../middlewares/validate");
+const validate = require("../../middlewares/validate.middleware");
 const { cardParam, idParam } = require("./invoices.validator");
 
 const router = Router();

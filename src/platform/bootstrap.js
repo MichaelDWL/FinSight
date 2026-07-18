@@ -1,7 +1,7 @@
 const sharedRedis = require("./redis");
 const { initCache } = require("../modules/analytics/analytics.cache");
 const CacheService = require("../modules/bff/cache/cache.service");
-const { promoteAllToRedis } = require("../middlewares/rateLimit/store");
+const { promoteAllToRedis } = require("../middlewares/rate-limit.store");
 const logger = require("../utils/logger");
 
 let bootPromise = null;

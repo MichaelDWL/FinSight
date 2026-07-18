@@ -2,8 +2,8 @@
 
 ## Rate Limit
 
-Configuracao central: [`src/config/rateLimit.config.js`](../src/config/rateLimit.config.js)  
-Servico: [`src/services/rateLimit/RateLimitService.js`](../src/services/rateLimit/RateLimitService.js)
+Configuracao central: [`src/config/rate-limit.config.js`](../src/config/rate-limit.config.js)  
+Servico: [`src/services/rate-limit/rate-limit.service.js`](../src/services/rate-limit/rate-limit.service.js)
 
 ### Armazenamento
 
@@ -64,7 +64,7 @@ Eventos `429` sao logados com: IP, userId, endpoint, requestId, group, retryAfte
 ## Paginacao
 
 Configuracao: [`src/config/pagination.config.js`](../src/config/pagination.config.js)  
-Servico: [`src/services/pagination/PaginationService.js`](../src/services/pagination/PaginationService.js)  
+Servico: [`src/services/pagination/pagination.service.js`](../src/services/pagination/pagination.service.js)  
 Middleware: `paginate({ resource })`
 
 ### Parametros
@@ -122,7 +122,7 @@ Apenas filtros cadastrados em `pagination.config.js` — sem concatenacao SQL.
 
 ## Boas praticas
 
-1. Alterar limites **somente** em `src/config/rateLimit.config.js` e `pagination.config.js`.
+1. Alterar limites **somente** em `src/config/rate-limit.config.js` e `pagination.config.js`.
 2. Controllers leves: `req.pagination` via middleware.
 3. Repositories usam `LIMIT`/`OFFSET` + `ORDER BY` whitelistado.
 4. Redis obrigatorio em producao multi-instancia / Vercel.

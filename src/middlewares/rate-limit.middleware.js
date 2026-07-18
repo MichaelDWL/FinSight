@@ -2,7 +2,7 @@
  * Fachada de rate limiters — valores vem de config/rateLimit.config.js
  * via RateLimitService (sem magic numbers).
  */
-const { rateLimitService } = require("../services/rateLimit/RateLimitService");
+const { rateLimitService } = require("../services/rate-limit/rate-limit.service");
 
 const globalApiLimiter = rateLimitService.global();
 const loginLimiter = rateLimitService.forGroup("login");

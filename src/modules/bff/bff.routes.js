@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const controller = require("./bff.controller");
-const validate = require("../../middlewares/validate");
+const validate = require("../../middlewares/validate.middleware");
 const { idParam } = require("../accounts/accounts.validator");
 const {
   bffLimiter,
@@ -9,7 +9,7 @@ const {
   accountsLimiter,
   cardsLimiter,
   reportsLimiter,
-} = require("../../middlewares/rateLimiters");
+} = require("../../middlewares/rate-limit.middleware");
 
 /**
  * Rotas BFF — uma chamada HTTP por tela.

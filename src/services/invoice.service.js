@@ -2,7 +2,7 @@
 // a criacao automatica de faturas, o rateio em parcelas e o pagamento.
 // Reutilizado pelo modulo de movimentacoes e pelo modulo de faturas.
 
-const { applyMovement } = require("./balanceService");
+const { applyMovement } = require("./balance.service");
 
 function firstOfMonth(date) {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));

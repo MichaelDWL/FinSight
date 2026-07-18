@@ -4,11 +4,11 @@ const cookieParser = require("cookie-parser");
 const compression = require("compression");
 
 const apiRoutes = require("./routes");
-const healthRoutes = require("./routes/healthRoutes");
+const healthRoutes = require("./modules/health/health.routes");
 const cronRoutes = require("./modules/cron/cron.routes");
-const { errorMiddleware, notFoundMiddleware } = require("./middlewares/errorMiddleware");
-const securityMiddleware = require("./middlewares/securityMiddleware");
-const requestLogger = require("./middlewares/requestLogger");
+const { errorMiddleware, notFoundMiddleware } = require("./middlewares/error.middleware");
+const securityMiddleware = require("./middlewares/security.middleware");
+const requestLogger = require("./middlewares/request-logger.middleware");
 const { bootstrapMiddleware } = require("./platform/bootstrap");
 const { initSentry } = require("./observability/sentry");
 const { success } = require("./utils/apiResponse");
@@ -57,8 +57,8 @@ app.get("/", (_req, res) => {
 
 app.use("/health", healthRoutes);
 // Atalhos na raiz (Vercel rewrites /live e /ready)
-app.get("/live", require("./controllers/healthController").getLive);
-app.get("/ready", require("./controllers/healthController").getReady);
+app.get("/live", require("./modules/health/health.controller").getLive);
+app.get("/ready", require("./modules/health/health.controller").getReady);
 // Cron fora do authenticate/CSRF — protegido por CRON_SECRET
 app.use("/api/cron", cronRoutes);
 app.use("/api", apiRoutes);

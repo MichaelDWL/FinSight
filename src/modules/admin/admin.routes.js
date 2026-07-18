@@ -1,10 +1,10 @@
 const { Router } = require("express");
 
 const controller = require("./admin.controller");
-const validate = require("../../middlewares/validate");
-const { authenticate, requireAdmin } = require("../../middlewares/authenticate");
-const { csrfProtection } = require("../../middlewares/csrf");
-const { adminLimiter } = require("../../middlewares/rateLimiters");
+const validate = require("../../middlewares/validate.middleware");
+const { authenticate, requireAdmin } = require("../../middlewares/authenticate.middleware");
+const { csrfProtection } = require("../../middlewares/csrf.middleware");
+const { adminLimiter } = require("../../middlewares/rate-limit.middleware");
 const schemas = require("./admin.validator");
 
 const router = Router();

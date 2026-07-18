@@ -2,7 +2,7 @@ const { Router } = require("express");
 const { z } = require("zod");
 
 const controller = require("./recurrences.controller");
-const validate = require("../../middlewares/validate");
+const validate = require("../../middlewares/validate.middleware");
 
 const idParam = z.object({
   params: z.object({

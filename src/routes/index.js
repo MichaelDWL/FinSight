@@ -16,8 +16,8 @@ const privacyRoutes = require("../modules/privacy/privacy.routes");
 const authRoutes = require("../modules/auth/auth.routes");
 const adminRoutes = require("../modules/admin/admin.routes");
 const bffRoutes = require("../modules/bff/bff.routes");
-const { authenticate } = require("../middlewares/authenticate");
-const { csrfProtection } = require("../middlewares/csrf");
+const { authenticate } = require("../middlewares/authenticate.middleware");
+const { csrfProtection } = require("../middlewares/csrf.middleware");
 
 const router = Router();
 

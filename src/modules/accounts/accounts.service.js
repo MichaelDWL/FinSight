@@ -1,11 +1,11 @@
 const AppError = require("../../utils/AppError");
 const { invalidateUserAnalytics } = require("../analytics/analytics.invalidation");
-const { notifyMutation, EVENTS } = require("../personalization");
+const personalization = require("../personalization");
 const repository = require("./accounts.repository");
 
 function bustCaches(userId) {
   invalidateUserAnalytics(userId).catch(() => undefined);
-  notifyMutation(userId, EVENTS.CACHE_BUST).catch(() => undefined);
+  personalization.notifyMutation(userId, personalization.EVENTS.CACHE_BUST).catch(() => undefined);
 }
 
 async function list(userId) {

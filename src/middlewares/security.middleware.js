@@ -1,7 +1,7 @@
 const cors = require("cors");
 const helmet = require("helmet");
 const env = require("../config/env");
-const { globalApiLimiter } = require("./rateLimiters");
+const { globalApiLimiter } = require("./rate-limit.middleware");
 
 function resolveCorsOrigin() {
   if (!env.corsOrigin || env.corsOrigin === "*") {

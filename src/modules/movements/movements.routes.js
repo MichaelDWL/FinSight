@@ -1,10 +1,10 @@
 const { Router } = require("express");
 
 const controller = require("./movements.controller");
-const validate = require("../../middlewares/validate");
-const { idempotency } = require("../../middlewares/idempotency");
-const { paginate } = require("../../middlewares/paginate");
-const { movementsLimiter } = require("../../middlewares/rateLimiters");
+const validate = require("../../middlewares/validate.middleware");
+const { idempotency } = require("../../middlewares/idempotency.middleware");
+const { paginate } = require("../../middlewares/paginate.middleware");
+const { movementsLimiter } = require("../../middlewares/rate-limit.middleware");
 const { createMovement, idParam, updateMovement, payMovement } = require("./movements.validator");
 
 const router = Router();

@@ -1,12 +1,12 @@
 const pool = require("../../database/pool");
 const AppError = require("../../utils/AppError");
 const { withTransaction } = require("../../database/transaction");
-const { applyMovement, revertMovement } = require("../../services/balanceService");
-const invoiceService = require("../../services/invoiceService");
-const recurrenceService = require("../../services/recurrenceService");
+const { applyMovement, revertMovement } = require("../../services/balance.service");
+const invoiceService = require("../../services/invoice.service");
+const recurrenceService = require("../../services/recurrence.service");
 const financialAudit = require("../audit/financialAudit.service");
-const { paginationService } = require("../../services/pagination/PaginationService");
-const { SafeQueryBuilder } = require("../../services/query/SafeQueryBuilder");
+const { paginationService } = require("../../services/pagination/pagination.service");
+const { SafeQueryBuilder } = require("../../services/query/safe-query-builder");
 const paginationConfig = require("../../config/pagination.config");
 
 function round2(value) {

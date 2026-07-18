@@ -1,8 +1,8 @@
 const { Router } = require("express");
 
 const controller = require("./market.controller");
-const validate = require("../../middlewares/validate");
-const { marketLimiter } = require("../../middlewares/rateLimiters");
+const validate = require("../../middlewares/validate.middleware");
+const { marketLimiter } = require("../../middlewares/rate-limit.middleware");
 const {
   assetCodeParam,
   historyQuery,

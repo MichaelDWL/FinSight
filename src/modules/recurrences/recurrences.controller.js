@@ -2,7 +2,7 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { getCurrentUserId } = require("../../utils/demoUser");
 const { success } = require("../../utils/apiResponse");
 const AppError = require("../../utils/AppError");
-const recurrenceService = require("../../services/recurrenceService");
+const recurrenceService = require("../../services/recurrence.service");
 
 const list = asyncHandler(async (req, res) => {
   const data = await recurrenceService.list(getCurrentUserId(req));

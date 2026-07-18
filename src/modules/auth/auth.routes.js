@@ -1,16 +1,16 @@
 const { Router } = require("express");
 
 const controller = require("./auth.controller");
-const validate = require("../../middlewares/validate");
-const { authenticate } = require("../../middlewares/authenticate");
-const { csrfProtection } = require("../../middlewares/csrf");
+const validate = require("../../middlewares/validate.middleware");
+const { authenticate } = require("../../middlewares/authenticate.middleware");
+const { csrfProtection } = require("../../middlewares/csrf.middleware");
 const {
   loginLimiter,
   loginSlowDown,
   registerLimiter,
   passwordResetLimiter,
   refreshLimiter,
-} = require("../../middlewares/rateLimiters");
+} = require("../../middlewares/rate-limit.middleware");
 const schemas = require("./auth.validator");
 
 const router = Router();

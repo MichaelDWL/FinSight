@@ -1,4 +1,4 @@
-const recurrenceService = require("../../services/recurrenceService");
+const recurrenceService = require("../../services/recurrence.service");
 const { cacheAdapter, buildCacheKey } = require("./analytics.cache");
 const { CACHE_TTL } = require("./constants");
 const { resolvePeriod } = require("./period.resolver");

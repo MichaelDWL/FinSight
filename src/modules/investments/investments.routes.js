@@ -1,9 +1,9 @@
 const { Router } = require("express");
 
 const controller = require("./investments.controller");
-const validate = require("../../middlewares/validate");
-const { paginate } = require("../../middlewares/paginate");
-const { investmentsLimiter } = require("../../middlewares/rateLimiters");
+const validate = require("../../middlewares/validate.middleware");
+const { paginate } = require("../../middlewares/paginate.middleware");
+const { investmentsLimiter } = require("../../middlewares/rate-limit.middleware");
 const {
   createInvestment,
   idParam,

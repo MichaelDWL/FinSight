@@ -1,7 +1,7 @@
 const pool = require("../../database/pool");
 const AppError = require("../../utils/AppError");
 const { withTransaction } = require("../../database/transaction");
-const invoiceService = require("../../services/invoiceService");
+const invoiceService = require("../../services/invoice.service");
 const { invalidateUserAnalytics } = require("../analytics/analytics.invalidation");
 
 function mapInvoice(row) {

@@ -5,7 +5,7 @@
 
 const pool = require("../database/pool");
 const { withTransaction } = require("../database/transaction");
-const { applyMovement } = require("./balanceService");
+const { applyMovement } = require("./balance.service");
 
 function pad(value) {
   return String(value).padStart(2, "0");

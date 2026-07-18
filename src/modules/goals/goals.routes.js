@@ -1,8 +1,8 @@
 const { Router } = require("express");
 
 const controller = require("./goals.controller");
-const validate = require("../../middlewares/validate");
-const { paginate } = require("../../middlewares/paginate");
+const validate = require("../../middlewares/validate.middleware");
+const { paginate } = require("../../middlewares/paginate.middleware");
 const { createGoal, idParam, updateGoal } = require("./goals.validator");
 
 const router = Router();

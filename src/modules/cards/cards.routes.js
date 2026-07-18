@@ -1,8 +1,8 @@
 const { Router } = require("express");
 
 const controller = require("./cards.controller");
-const validate = require("../../middlewares/validate");
-const { cardsLimiter } = require("../../middlewares/rateLimiters");
+const validate = require("../../middlewares/validate.middleware");
+const { cardsLimiter } = require("../../middlewares/rate-limit.middleware");
 const { createCard, idParam, updateCard } = require("./cards.validator");
 
 const router = Router();

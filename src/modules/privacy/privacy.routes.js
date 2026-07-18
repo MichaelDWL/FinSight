@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const controller = require("./privacy.controller");
-const validate = require("../../middlewares/validate");
-const { privacyExportLimiter } = require("../../middlewares/rateLimiters");
+const validate = require("../../middlewares/validate.middleware");
+const { privacyExportLimiter } = require("../../middlewares/rate-limit.middleware");
 const { consent } = require("./privacy.validator");
 
 const router = Router();

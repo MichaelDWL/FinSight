@@ -1,5 +1,5 @@
 const pool = require("../../database/pool");
-const invoiceService = require("../../services/invoiceService");
+const invoiceService = require("../../services/invoice.service");
 
 function normalizeLastDigits(value, fallbackId) {
   const raw = value || String(fallbackId || "").replaceAll("-", "").slice(-3);

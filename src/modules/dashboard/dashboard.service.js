@@ -3,7 +3,7 @@ const cardsService = require("../cards/cards.service");
 const goalsService = require("../goals/goals.service");
 const investmentsService = require("../investments/investments.service");
 const movementsService = require("../movements/movements.service");
-const recurrenceService = require("../../services/recurrenceService");
+const recurrenceService = require("../../services/recurrence.service");
 const repository = require("./dashboard.repository");
 const personalizationEngine = require("../personalization/engine/PersonalizationEngine");
 

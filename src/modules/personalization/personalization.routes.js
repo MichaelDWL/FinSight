@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const controller = require("./personalization.controller");
-const validate = require("../../middlewares/validate");
+const validate = require("../../middlewares/validate.middleware");
 const { updateProfile, completeOnboarding } = require("./personalization.validator");
 
 const router = Router();

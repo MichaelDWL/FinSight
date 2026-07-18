@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const controller = require("./cron.controller");
-const { verifyCronSecret } = require("../../middlewares/cronAuth");
+const { verifyCronSecret } = require("../../middlewares/cron-auth.middleware");
 
 const router = Router();
 
