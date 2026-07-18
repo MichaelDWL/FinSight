@@ -65,6 +65,11 @@ bindAppEvents({
 });
 
 async function bootApp() {
+  // Durante o boot ainda nao sabemos se ha sessao. Marcamos como tela de auth
+  // para que um "session-expired" disparado pela verificacao inicial NAO
+  // acione logout + reload (o que causaria um loop de recarregamento).
+  document.body.classList.add("is-auth-screen");
+
   const user = await ensureAuthenticated(async (authenticatedUser) => {
     applyAuthenticatedUser(authenticatedUser);
     document.body.classList.remove("is-auth-screen");
