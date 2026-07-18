@@ -1,0 +1,103 @@
+<div class="modal isHidden" id="cardModal" aria-hidden="true">
+    <div class="card-1 new-expense-card" role="dialog" aria-modal="true" aria-labelledby="cardModalTitle">
+      <div class="new-expense-header">
+        <div>
+          <span class="new-expense-tag font-label">Novo cartão</span>
+          <h2 class="font-title-md" id="cardModalTitle">Adicionar Cartão</h2>
+          <p class="font-small">Informe apenas dados de identificação. Nunca pedimos o número completo do cartão.</p>
+        </div>
+
+        <button class="expense-modal-close" id="closeCardModal" type="button" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form class="new-expense-form" id="cardForm">
+        <div class="inputs-list">
+          <label class="expense-field" for="cardName">
+            <span class="font-label">Nome do cartão</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-credit-card"></i>
+              <input id="cardName" name="name" type="text" class="input-basic" required placeholder="Ex.: Nubank">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardBank">
+            <span class="font-label">Banco</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-building-columns"></i>
+              <input id="cardBank" name="bank" type="text" class="input-basic" required placeholder="Ex.: Nubank">
+            </div>
+          </label>
+
+          <label class="expense-field">
+            <span class="font-label">Bandeira</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-regular fa-credit-card"></i>
+              <select id="cardBrand" name="brand" class="input-basic">
+                <option>Mastercard</option>
+                <option>Visa</option>
+                <option>Elo</option>
+                <option>American Express</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardLastDigits">
+            <span class="font-label">Últimos 3 números</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-hashtag"></i>
+              <input id="cardLastDigits" name="lastDigits" type="text" class="input-basic" required maxlength="3" minlength="3" inputmode="numeric" pattern="[0-9]{3}" placeholder="458">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardColor">
+            <span class="font-label">Cor do cartão</span>
+            <div class="expense-input-wrapper card-color-picker" style="--selected-card-color: #0d6efd">
+              <i class="fa-solid fa-palette"></i>
+              <input id="cardColor" name="color" type="color" class="input-basic" value="#0d6efd">
+              <span class="card-color-preview" aria-hidden="true"></span>
+              <span class="card-color-value">#0d6efd</span>
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardLimit">
+            <span class="font-label">Limite</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="cardLimit" name="totalLimit" type="number" class="input-basic" required min="0.01" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardClosingDay">
+            <span class="font-label">Dia do fechamento</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-regular fa-calendar"></i>
+              <input id="cardClosingDay" name="closingDay" type="number" class="input-basic" required min="1" max="31" placeholder="10">
+            </div>
+          </label>
+
+          <label class="expense-field" for="cardDueDay">
+            <span class="font-label">Dia do vencimento</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-regular fa-calendar-check"></i>
+              <input id="cardDueDay" name="dueDay" type="number" class="input-basic" required min="1" max="31" placeholder="17">
+            </div>
+          </label>
+
+          <label class="expense-field expense-field-wide obs-expense" for="cardNotes">
+            <span class="font-label">Observações</span>
+            <textarea id="cardNotes" name="notes" placeholder="Adicione uma observação, se quiser."></textarea>
+          </label>
+        </div>
+
+        <div class="new-expense-actions">
+          <button class="expense-secondary-btn" id="cancelCardForm" type="button">Cancelar</button>
+          <button class="expense-primary-btn" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Salvar cartão
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>

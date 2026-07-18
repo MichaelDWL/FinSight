@@ -1,0 +1,75 @@
+<aside>
+    <nav class="sidebar" id="mobileDrawer" aria-label="Menu lateral">
+      <div class="sidebar-btn">
+        <div class="sidebar-brand">
+          <i class="fa-solid fa-chart-simple"></i>
+          <h1 class="font-title-md">FinSight</h1>
+        </div>
+        <button class="sidebar-toggle" type="button" aria-label="Fechar menu" aria-expanded="true">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button class="mobile-drawer-close" id="mobileDrawerClose" type="button" aria-label="Fechar menu">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <ul class="nav-list">
+        <li class="nav-item nav-active"><a href="#dashboard" data-route="dashboard"><i class="fa-solid fa-house"></i> Home</a></li>
+        <li class="nav-item nav-group" data-nav-group="dashboards">
+          <button class="nav-group-toggle" type="button" data-action="toggle-dashboards-menu" aria-expanded="false" aria-controls="dashboardsSubmenu">
+            <span><i class="fa-solid fa-chart-pie"></i> Dashboards</span>
+            <i class="fa-solid fa-chevron-down nav-group-chevron"></i>
+          </button>
+          <ul class="nav-submenu" id="dashboardsSubmenu">
+            <li><a href="#dashboards/geral" data-route="dashboards/geral">Geral</a></li>
+            <li><a href="#dashboards/gastos" data-route="dashboards/gastos">Gastos</a></li>
+            <li><a href="#dashboards/fluxo-caixa" data-route="dashboards/fluxo-caixa">Fluxo de Caixa</a></li>
+            <li><a href="#dashboards/cartoes" data-route="dashboards/cartoes">Cartões</a></li>
+            <li><a href="#dashboards/investimentos" data-route="dashboards/investimentos">Investimentos</a></li>
+          </ul>
+        </li>
+        <li class="nav-item"><a href="#transacoes" data-route="transacoes"><i class="fa-solid fa-arrow-right-arrow-left"></i> Transações</a></li>
+        <li class="nav-item nav-group" data-nav-group="investments">
+          <button class="nav-group-toggle" type="button" data-action="toggle-investments-menu" aria-expanded="false" aria-controls="investmentsSubmenu">
+            <span><i class="fa-solid fa-wallet"></i> Patrimônio</span>
+            <i class="fa-solid fa-chevron-down nav-group-chevron"></i>
+          </button>
+          <ul class="nav-submenu" id="investmentsSubmenu">
+            <li><a href="#patrimonio" data-route="patrimonio">Carteira</a></li>
+            <li><a href="#investimento-novo" data-action="add-investment" data-subroute="investimento-novo">Investir</a></li>
+            <li><a href="#investimento-detalhe" data-route="investimento-detalhe">Detalhes</a></li>
+          </ul>
+        </li>
+        <li class="nav-item nav-group" data-nav-group="accounts">
+          <button class="nav-group-toggle" type="button" data-action="toggle-accounts-menu" aria-expanded="false" aria-controls="accountsSubmenu">
+            <span><i class="fa-solid fa-credit-card"></i> Contas</span>
+            <i class="fa-solid fa-chevron-down nav-group-chevron"></i>
+          </button>
+          <ul class="nav-submenu" id="accountsSubmenu">
+            <li><a href="#contas-resumo" data-route="contas-resumo">Resumo</a></li>
+            <li><a href="#contas-bancos" data-route="contas-bancos">Minhas Contas</a></li>
+            <li><a href="#contas-despesas" data-route="contas-despesas">Despesas</a></li>
+            <li><a href="#contas-cartoes" data-route="contas-cartoes">Cartões</a></li>
+            <li><a href="#contas-bancos" data-action="add-account">Nova Conta</a></li>
+          </ul>
+        </li>
+        <li class="nav-item"><a href="#metas" data-route="metas"><i class="fa-solid fa-bullseye"></i> Metas</a></li>
+        <li class="nav-item"><a href="#perfil" data-route="perfil"><i class="fa-solid fa-user-gear"></i> Perfil</a></li>
+        <li class="nav-item admin-only-nav is-hidden"><a href="#admin" data-route="admin"><i class="fa-solid fa-shield-halved"></i> Admin</a></li>
+      </ul>
+
+      <div class="sidebar-tip">
+        <div class="sidebar-tip-icon">
+          <i class="fa-solid fa-lightbulb"></i>
+        </div>
+        <h2 class="font-title-sm">Dica do dia</h2>
+        <p class="font-small">Separe 10 minutos por semana para revisar seus gastos com calma.</p>
+        <a href="#insights" class="font-label" data-action="show-toast">Ver insight</a>
+      </div>
+
+      <button class="logout" type="button" data-action="logout">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        <p>Sair</p>
+      </button>
+    </nav>
+  </aside>

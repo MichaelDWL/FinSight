@@ -20,6 +20,8 @@
     { "source": "/privacy.html", "destination": "/frontend/privacy.html" },
     { "source": "/js/(.*)", "destination": "/frontend/js/$1" },
     { "source": "/style/(.*)", "destination": "/frontend/style/$1" },
+    { "source": "/templates/(.*)", "destination": "/frontend/templates/$1" },
+    { "source": "/assets/(.*)", "destination": "/frontend/assets/$1" },
     { "source": "/(.*)", "destination": "/frontend/index.html" }
   ],
   "headers": [

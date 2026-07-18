@@ -1,0 +1,98 @@
+<div class="modal isHidden" id="accountModal" aria-hidden="true">
+    <div class="card-1 new-expense-card" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+      <div class="new-expense-header">
+        <div>
+          <span class="new-expense-tag font-label">Nova conta</span>
+          <h2 class="font-title-md" id="accountModalTitle">Adicionar Conta</h2>
+          <p class="font-small">Cadastre apenas onde você guarda seu dinheiro. Nunca pedimos agência, número da conta, CPF ou PIX.</p>
+        </div>
+
+        <button class="expense-modal-close" id="closeAccountModal" type="button" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form class="new-expense-form" id="accountForm">
+        <div class="inputs-list">
+          <label class="expense-field" for="accountName">
+            <span class="font-label">Nome da conta</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-building-columns"></i>
+              <input id="accountName" name="name" type="text" class="input-basic" required placeholder="Ex.: Banco Inter">
+            </div>
+          </label>
+
+          <label class="expense-field">
+            <span class="font-label">Tipo</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-layer-group"></i>
+              <select id="accountType" name="type" class="input-basic">
+                <option value="corrente">Conta Corrente</option>
+                <option value="poupanca">Conta Poupança</option>
+                <option value="carteira">Carteira</option>
+                <option value="dinheiro">Dinheiro</option>
+                <option value="investimento">Conta Digital</option>
+                <option value="outros">Conta Conjunta</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="accountInstitution">
+            <span class="font-label">Instituição</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-landmark"></i>
+              <input id="accountInstitution" name="institution" type="text" class="input-basic" placeholder="Ex.: Banco Inter">
+            </div>
+          </label>
+
+          <label class="expense-field" for="accountColor">
+            <span class="font-label">Cor da conta</span>
+            <div class="expense-input-wrapper card-color-picker" style="--selected-card-color: #0d6efd">
+              <i class="fa-solid fa-palette"></i>
+              <input id="accountColor" name="color" type="color" class="input-basic" value="#0d6efd">
+              <span class="card-color-preview" aria-hidden="true"></span>
+              <span class="card-color-value">#0d6efd</span>
+            </div>
+          </label>
+
+          <div class="expense-field expense-field-wide">
+            <span class="font-label">Ícone</span>
+            <input id="accountIcon" name="icon" type="hidden" value="fa-building-columns">
+            <div class="account-icon-picker" id="accountIconPicker" role="radiogroup" aria-label="Selecione um ícone">
+              <button class="account-icon-option" type="button" data-account-icon="fa-building-columns" aria-label="Banco"><i class="fa-solid fa-building-columns"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-landmark" aria-label="Instituição"><i class="fa-solid fa-landmark"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-piggy-bank" aria-label="Poupança"><i class="fa-solid fa-piggy-bank"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-wallet" aria-label="Carteira"><i class="fa-solid fa-wallet"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-money-bill-wave" aria-label="Dinheiro"><i class="fa-solid fa-money-bill-wave"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-sack-dollar" aria-label="Reserva"><i class="fa-solid fa-sack-dollar"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-coins" aria-label="Moedas"><i class="fa-solid fa-coins"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-mobile-screen-button" aria-label="Conta digital"><i class="fa-solid fa-mobile-screen-button"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-credit-card" aria-label="Cartão"><i class="fa-solid fa-credit-card"></i></button>
+              <button class="account-icon-option" type="button" data-account-icon="fa-user-group" aria-label="Conta conjunta"><i class="fa-solid fa-user-group"></i></button>
+            </div>
+          </div>
+
+          <label class="expense-field" for="accountBalance">
+            <span class="font-label">Saldo inicial (opcional)</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="accountBalance" name="balance" type="number" class="input-basic" min="0" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field expense-field-wide obs-expense" for="accountNotes">
+            <span class="font-label">Observação (opcional)</span>
+            <textarea id="accountNotes" name="notes" placeholder="Adicione uma observação, se quiser."></textarea>
+          </label>
+        </div>
+
+        <div class="new-expense-actions">
+          <button class="expense-secondary-btn" id="cancelAccountForm" type="button">Cancelar</button>
+          <button class="expense-primary-btn" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Salvar conta
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>

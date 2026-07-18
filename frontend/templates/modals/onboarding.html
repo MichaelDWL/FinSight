@@ -1,0 +1,30 @@
+<div class="modal isHidden onboarding-modal" id="onboardingModal" aria-hidden="true" role="presentation">
+    <div
+      class="card-1 new-expense-card onboarding-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboardingModalTitle"
+      aria-describedby="onboardingProgressLabel"
+    >
+      <div class="onboarding-header">
+        <div class="onboarding-header-copy">
+          <span class="new-expense-tag font-label">Assistente inicial</span>
+          <h2 class="font-title-md" id="onboardingModalTitle">Configuração do FinSight</h2>
+        </div>
+        <button class="expense-modal-close" id="closeOnboardingModal" type="button" aria-label="Fechar assistente e salvar progresso">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="onboarding-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10" aria-labelledby="onboardingProgressLabel">
+        <div class="onboarding-progress-meta">
+          <span class="font-small" id="onboardingProgressLabel">Faltam 9 etapas</span>
+        </div>
+        <div class="onboarding-progress-track">
+          <div class="onboarding-progress-fill" id="onboardingProgressFill"></div>
+        </div>
+      </div>
+
+      <div class="onboarding-body" id="onboardingBody"></div>
+    </div>
+  </div>

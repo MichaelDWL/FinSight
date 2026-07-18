@@ -1,0 +1,142 @@
+<div class="modal isHidden" id="investmentModal" aria-hidden="true">
+    <div class="card-1 new-expense-card investment-modal-card" role="dialog" aria-modal="true" aria-labelledby="investmentModalTitle">
+      <div class="new-expense-header">
+        <div>
+          <span class="new-expense-tag font-label">Novo ativo</span>
+          <h2 class="font-title-md" id="investmentModalTitle">Adicionar Investimento</h2>
+          <p class="font-small">Cadastre um investimento com as informações principais da sua carteira.</p>
+        </div>
+
+        <button class="expense-modal-close" id="closeInvestmentModal" type="button" aria-label="Fechar modal">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form class="new-expense-form" id="investmentForm">
+        <div class="inputs-list">
+          <label class="expense-field" for="investmentName">
+            <span class="font-label">Nome</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-chart-line"></i>
+              <input id="investmentName" name="name" type="text" class="input-basic" required placeholder="Ex.: Tesouro Selic">
+            </div>
+          </label>
+
+          <label class="expense-field">
+            <span class="font-label">Tipo</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-layer-group"></i>
+              <select id="investmentType" name="investmentType" class="input-basic" required>
+                <option value="tesouro_selic">Tesouro Selic</option>
+                <option value="tesouro_ipca">Tesouro IPCA+</option>
+                <option value="tesouro_prefixado">Tesouro Prefixado</option>
+                <option value="cdb">CDB</option>
+                <option value="lci">LCI</option>
+                <option value="lca">LCA</option>
+                <option value="poupanca">Poupança</option>
+                <option value="acoes">Ações</option>
+                <option value="fiis">FIIs</option>
+                <option value="etfs">ETFs</option>
+                <option value="criptomoedas">Criptomoedas</option>
+                <option value="fundos">Fundos</option>
+                <option value="outro">Outro</option>
+              </select>
+            </div>
+          </label>
+
+          <label class="expense-field" for="investmentInstitution">
+            <span class="font-label">Instituição</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-building-columns"></i>
+              <input id="investmentInstitution" name="institution" type="text" class="input-basic" placeholder="Ex.: Nubank">
+            </div>
+          </label>
+
+          <label class="expense-field custom-date-field">
+            <span class="font-label">Data</span>
+            <div class="expense-input-wrapper custom-date-input" data-custom-calendar-trigger>
+              <i class="fa-regular fa-calendar-days"></i>
+              <input id="investmentDateDisplay" type="text" class="input-basic custom-date-display" readonly required placeholder="Selecione a data">
+              <input id="investmentDate" name="date" type="hidden" class="custom-date-native" required>
+            </div>
+            <div class="custom-calendar is-hidden" id="investmentCalendar" aria-label="Calendário"></div>
+          </label>
+
+          <label class="expense-field" for="investmentInvested">
+            <span class="font-label">Valor investido</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="investmentInvested" name="invested" type="number" class="input-basic" required min="0.01" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field" for="investmentCurrent">
+            <span class="font-label">Valor atual</span>
+            <div class="expense-input-wrapper expense-value-field">
+              <i class="fa-solid fa-brazilian-real-sign"></i>
+              <input id="investmentCurrent" name="current" type="number" class="input-basic" required min="0.01" step="0.01" placeholder="0,00">
+            </div>
+          </label>
+
+          <label class="expense-field is-hidden" data-field="cdiPercent" for="investmentCdiPercent" hidden>
+            <span class="font-label">% do CDI</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-percent"></i>
+              <input id="investmentCdiPercent" name="cdiPercent" type="number" class="input-basic" min="0" max="500" step="0.01" value="100" placeholder="100" disabled>
+            </div>
+          </label>
+
+          <label class="expense-field is-hidden" data-field="prefixedRate" for="investmentPrefixedRate" hidden>
+            <span class="font-label">Taxa prefixada (% a.a.)</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-percent"></i>
+              <input id="investmentPrefixedRate" name="prefixedRate" type="number" class="input-basic" min="0" max="100" step="0.01" placeholder="12,00" disabled>
+            </div>
+          </label>
+
+          <label class="expense-field is-hidden" data-field="ipcaSpread" for="investmentIpcaSpread" hidden>
+            <span class="font-label">IPCA + spread (% a.a.)</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-plus"></i>
+              <input id="investmentIpcaSpread" name="ipcaSpread" type="number" class="input-basic" min="-50" max="100" step="0.01" placeholder="6,00" disabled>
+            </div>
+          </label>
+
+          <label class="expense-field is-hidden" data-field="assetCode" for="investmentAssetCode" hidden>
+            <span class="font-label">Código do ativo</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-barcode"></i>
+              <input id="investmentAssetCode" name="assetCode" type="text" class="input-basic" maxlength="40" placeholder="Ex.: PETR4" disabled>
+            </div>
+          </label>
+
+          <label class="expense-field is-hidden" data-field="quantity" for="investmentQuantity" hidden>
+            <span class="font-label">Quantidade</span>
+            <div class="expense-input-wrapper">
+              <i class="fa-solid fa-hashtag"></i>
+              <input id="investmentQuantity" name="quantity" type="number" class="input-basic" min="0.00000001" step="any" placeholder="Ex.: 10" disabled>
+            </div>
+          </label>
+
+          <label class="expense-field expense-field-wide obs-expense" for="investmentNotes">
+            <span class="font-label">Observações</span>
+            <textarea id="investmentNotes" name="notes" placeholder="Adicione uma observação curta, se quiser."></textarea>
+          </label>
+        </div>
+
+        <div id="investmentProjectionPanel" class="investment-projection-panel is-hidden" hidden>
+          <div id="investmentProjectionContent" class="investment-projection-empty">
+            <p class="font-small">Informe o valor e o tipo para ver a projeção automática.</p>
+          </div>
+        </div>
+
+        <div class="new-expense-actions">
+          <button class="expense-secondary-btn" id="cancelInvestmentForm" type="button">Cancelar</button>
+          <button class="expense-primary-btn" type="submit">
+            <i class="fa-solid fa-check"></i>
+            Salvar investimento
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
