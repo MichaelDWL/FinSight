@@ -2,8 +2,8 @@ const path = require("path");
 const dotenv = require("dotenv");
 
 // Ordem: backend/.env (dev legado) → raiz/.env → cwd
-dotenv.config({ path: path.join(__dirname, "../../backend/.env") });
 dotenv.config({ path: path.join(__dirname, "../../.env") });
+dotenv.config({ path: path.join(__dirname, "../../../.env") });
 dotenv.config();
 
 function requiredInProduction(name, value) {

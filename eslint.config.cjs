@@ -6,7 +6,7 @@ module.exports = [
   },
   {
     ...js.configs.recommended,
-    files: ["src/**/*.js", "api/**/*.js", "tests/**/*.js"],
+    files: ["backend/src/**/*.js", "api/**/*.js", "tests/**/*.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "commonjs",

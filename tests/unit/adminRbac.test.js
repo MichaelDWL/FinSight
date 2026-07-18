@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const { hasAnyRole, ROLES } = require("../../src/modules/auth/constants");
+const { hasAnyRole, ROLES } = require("../../backend/src/modules/auth/constants");
 
 describe("admin RBAC", () => {
   it("ADMIN e SUPER_ADMIN passam requireAdmin", () => {

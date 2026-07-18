@@ -21,7 +21,7 @@ describe("API smoke", () => {
         "postgres://finsight:finsight_dev_password@127.0.0.1:15432/finsight";
     }
 
-    app = require("../../src/app");
+    app = require("../../backend/src/app");
   });
 
   it("GET /live responde 200", async () => {

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "Compat: scripts locais apontam para src/ na raiz do monorepo.",
-  "main": "../src/server.js",
+  "main": "./src/server.js",
   "scripts": {
     "start": "npm start --prefix ..",
     "stop": "npm run stop --prefix ..",

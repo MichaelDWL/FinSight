@@ -4,4 +4,4 @@
 
 process.env.RUNTIME = process.env.RUNTIME || "serverless";
 
-module.exports = require("../src/platform/httpHandler");
+module.exports = require("../../backend/src/platform/httpHandler");

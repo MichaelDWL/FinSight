@@ -2,8 +2,8 @@
 
 ## Rate Limit
 
-Configuracao central: [`src/config/rate-limit.config.js`](../src/config/rate-limit.config.js)  
-Servico: [`src/services/rate-limit/rate-limit.service.js`](../src/services/rate-limit/rate-limit.service.js)
+Configuracao central: [`backend/src/config/rate-limit.config.js`](../../backend/src/config/rate-limit.config.js)  
+Servico: [`backend/src/services/rate-limit/rate-limit.service.js`](../../backend/src/services/rate-limit/rate-limit.service.js)
 
 ### Armazenamento
 
@@ -63,8 +63,8 @@ Eventos `429` sao logados com: IP, userId, endpoint, requestId, group, retryAfte
 
 ## Paginacao
 
-Configuracao: [`src/config/pagination.config.js`](../src/config/pagination.config.js)  
-Servico: [`src/services/pagination/pagination.service.js`](../src/services/pagination/pagination.service.js)  
+Configuracao: [`backend/src/config/pagination.config.js`](../../backend/src/config/pagination.config.js)  
+Servico: [`backend/src/services/pagination/pagination.service.js`](../../backend/src/services/pagination/pagination.service.js)  
 Middleware: `paginate({ resource })`
 
 ### Parametros

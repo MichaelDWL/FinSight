@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
-const { accountDeltas, isSettled } = require("../../src/services/balance.service");
+const { accountDeltas, isSettled } = require("../../backend/src/services/balance.service");
 
 describe("balanceService", () => {
   it("nao aplica delta se status nao liquidado", () => {
