@@ -42,6 +42,13 @@ async function startServer() {
 }
 
 startServer().catch((error) => {
-  logger.error("Falha ao iniciar servidor", { error: error.message });
+  // AggregateError (ex.: ECONNREFUSED do pool) tem message vazio; extrai detalhe util.
+  const detail =
+    error?.message ||
+    error?.code ||
+    (Array.isArray(error?.errors)
+      ? error.errors.map((e) => `${e.code || e.name}: ${e.message || `${e.address}:${e.port}`}`).join("; ")
+      : String(error));
+  logger.error("Falha ao iniciar servidor", { error: detail, code: error?.code });
   process.exit(1);
 });
