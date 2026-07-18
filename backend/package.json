@@ -10,5 +10,8 @@
     "restart": "npm run restart --prefix ..",
     "dev": "npm run dev --prefix ..",
     "cron:market": "npm run cron:market --prefix .."
+  },
+  "dependencies": {
+    "postgres": "^3.4.9"
   }
 }
