@@ -357,7 +357,7 @@ Checklist de produção:
 | Paginação | Middleware `paginate` em listagens | Manter pageSize baixo |
 | Compressão | `compression` (≥1KB) | OK |
 | Cache BFF | TTLs por endpoint + Redis | **REDIS_URL obrigatório prático** |
-| Lazy loading FE | Bootstrap parcial | Continuar quebrando `app.js` |
+| Lazy loading FE | Templates + modules + `core/store`/`events` | Ver `docs/frontend-architecture.md` |
 | Payload | BFF agregado | Evitar N+1 no FE |
 | SQL | Views analytics + índices | Rodar `EXPLAIN` em staging (`docs/database/query-plan.md`) |
 | Pool serverless | max 1–2 conexões | Usar pooler Supabase |
@@ -540,7 +540,7 @@ Valores aproximados em USD/mês — planos free sujeitos a mudança.
 - MFA
 - Upload real (Cloudinary)
 - Soft-delete consistente em todos os repositórios de leitura
-- Quebrar `frontend/js/app.js`
+- Continuar fatiando `frontend/js/core/app.js` (handlers de formulário / rotas restantes)
 - Observabilidade de SLO (p95 BFF, taxa de erro cron)
 - RLS Supabase como defesa em profundidade
 

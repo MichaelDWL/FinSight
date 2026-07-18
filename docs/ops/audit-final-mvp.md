@@ -38,7 +38,7 @@ Data: 2026-07-17
 
 1. Redis ainda opcional — sem ele, rate-limit/cache por instancia
 2. MFA apenas preparado (coluna), nao implementado
-3. `app.js` ainda monolítico (lazy bootstrap parcial)
+3. `core/app.js` ainda orquestra muitas rotas (~2.2k linhas); store/events/modules já extraídos — ver `docs/frontend-architecture.md`
 4. EXPLAIN ANALYZE precisa ser rodado em staging com dados reais
 5. E2E Playwright e estrutura, nao suite ativa
 6. Soft-delete em contas/cartoes ainda nao em todos os repositories de leitura
@@ -53,7 +53,7 @@ Data: 2026-07-17
 | Seguranca | 8.0 |
 | Banco de Dados | 7.5 |
 | Performance | 7.0 |
-| Frontend | 6.5 |
+| Frontend | 7.5 |
 | Backend | 8.0 |
 | UX | 7.0 |
 | Escalabilidade | 7.5 |
