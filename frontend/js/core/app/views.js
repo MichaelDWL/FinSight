@@ -1,6 +1,4 @@
 import { store } from "../store.js";
-import { escapeHtml } from "../../utils/dom.js";
-import { formatCurrency } from "../../utils/currency.js";
 import { getUserFirstName } from "./userHeader.js";
 import { renderHomeDashboard } from "../../modules/home/render.js";
 import {
@@ -13,50 +11,6 @@ import * as investmentsModule from "../../modules/investments/render.js";
 import * as goalsModule from "../../modules/goals/render.js";
 import { renderProfilePage } from "../../modules/profile/render.js";
 import { renderAdminPage } from "../../modules/admin/render.js";
-
-export function getTransactionStatus(transaction) {
-  const status = String(transaction.status || "confirmada").toLowerCase();
-
-  if (status === "paga" || status === "confirmada") {
-    return {
-      label: "Confirmada",
-      className: "status-paid",
-      icon: "fa-circle-check",
-    };
-  }
-
-  if (status === "pendente") {
-    return {
-      label: "Pendente",
-      className: "status-pending",
-      icon: "fa-hourglass-half",
-    };
-  }
-
-  return {
-    label: status,
-    className: "status-pending",
-    icon: "fa-circle",
-  };
-}
-
-export function transactionItem(transaction) {
-  const amountClass =
-    transaction.value >= 0 ? "amount-positive" : "amount-negative";
-
-  return `
-    <div class="list-item">
-      <div class="item-left">
-        <span class="item-icon"><i class="fa-solid ${transaction.icon}"></i></span>
-        <div>
-          <p class="item-title">${escapeHtml(transaction.description)}</p>
-          <p class="item-meta">${transaction.category} • ${transaction.account}</p>
-        </div>
-      </div>
-      <strong class="${amountClass}">${formatCurrency(transaction.value)}</strong>
-    </div>
-  `;
-}
 
 export function dashboardView() {
   return renderHomeDashboard({
@@ -111,10 +65,6 @@ export function restoreAllPurchases() {
 
 export function swapPurchasesContent(html) {
   cardsModule.swapPurchasesContent(html);
-}
-
-export function renderPurchasesList(purchases) {
-  return cardsModule.renderPurchasesList(purchases);
 }
 
 export function renderInvoiceItems(items) {

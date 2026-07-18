@@ -8,13 +8,6 @@ export function closeQuickActionMenu() {
   quickAction?.setAttribute("aria-expanded", "false");
 }
 
-export function toggleQuickActionMenu() {
-  if (!quickActionMenu) return;
-
-  const isHidden = quickActionMenu.classList.toggle("is-hidden");
-  quickAction?.setAttribute("aria-expanded", String(!isHidden));
-}
-
 export function setInvestmentsMenuExpanded(expanded) {
   const group = document.querySelector("[data-nav-group='investments']");
   const toggle = group?.querySelector(

@@ -176,11 +176,3 @@ export async function reloadDashboardWithPeriod(period) {
     await renderAnalyticsDashboardPage(store.currentAnalyticsRoute);
   }
 }
-
-export async function loadGeneralDashboard(period = store.currentDashboardPeriod) {
-  return loadAnalyticsDashboard("dashboards/geral", period);
-}
-
-export async function renderDashboardPage() {
-  return renderAnalyticsDashboardPage("dashboards/geral");
-}
