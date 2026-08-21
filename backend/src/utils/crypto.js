@@ -1,19 +1,32 @@
 const crypto = require("crypto");
-const argon2 = require("argon2");
 
-const ARGON2_OPTIONS = {
-  type: argon2.argon2id,
-  memoryCost: 65536,
-  timeCost: 3,
-  parallelism: 1,
-};
+/** Lazy: argon2 e native e so necessario em login/register/reset — nao no cold path de GET BFF. */
+let argon2Module = null;
+function getArgon2() {
+  if (!argon2Module) {
+    argon2Module = require("argon2");
+  }
+  return argon2Module;
+}
+
+function argon2Options() {
+  const argon2 = getArgon2();
+  return {
+    type: argon2.argon2id,
+    memoryCost: 65536,
+    timeCost: 3,
+    parallelism: 1,
+  };
+}
 
 async function hashPassword(password) {
-  return argon2.hash(password, ARGON2_OPTIONS);
+  const argon2 = getArgon2();
+  return argon2.hash(password, argon2Options());
 }
 
 async function verifyPassword(hash, password) {
   try {
+    const argon2 = getArgon2();
     return await argon2.verify(hash, password);
   } catch {
     return false;

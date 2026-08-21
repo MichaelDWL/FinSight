@@ -1,10 +1,9 @@
 const crypto = require("crypto");
-const { parseDeviceInfo } = require("../utils/requestMeta");
+const { getClientIp } = require("../utils/requestMeta");
 const logger = require("../utils/logger");
 
 function requestLogger(req, res, next) {
   const started = Date.now();
-  const meta = parseDeviceInfo(req);
   const requestId =
     req.headers["x-request-id"] ||
     req.headers["x-correlation-id"] ||
@@ -22,7 +21,7 @@ function requestLogger(req, res, next) {
       status: res.statusCode,
       durationMs: Date.now() - started,
       userId: req.user?.id || null,
-      ip: meta.ip,
+      ip: getClientIp(req),
       sqlCount: res.getHeader?.("X-BFF-SQL-Count") || null,
       sqlMs: res.getHeader?.("X-BFF-SQL-Ms") || null,
       bffDurationMs: res.getHeader?.("X-BFF-Duration-Ms") || null,

@@ -1,48 +1,50 @@
 const { Router } = require("express");
 
-const appRoutes = require("../modules/app/app.routes");
-const accountsRoutes = require("../modules/accounts/accounts.routes");
-const cardsRoutes = require("../modules/cards/cards.routes");
-const dashboardRoutes = require("../modules/dashboard/dashboard.routes");
-const goalsRoutes = require("../modules/goals/goals.routes");
-const invoicesRoutes = require("../modules/invoices/invoices.routes");
-const investmentsRoutes = require("../modules/investments/investments.routes");
-const marketRoutes = require("../modules/market-data/market.routes");
-const movementsRoutes = require("../modules/movements/movements.routes");
-const recurrencesRoutes = require("../modules/recurrences/recurrences.routes");
-const usersRoutes = require("../modules/users/users.routes");
-const personalizationRoutes = require("../modules/personalization/personalization.routes");
-const privacyRoutes = require("../modules/privacy/privacy.routes");
-const authRoutes = require("../modules/auth/auth.routes");
-const adminRoutes = require("../modules/admin/admin.routes");
-const bffRoutes = require("../modules/bff/bff.routes");
 const { authenticate } = require("../middlewares/authenticate.middleware");
 const { csrfProtection } = require("../middlewares/csrf.middleware");
 
+/**
+ * Monta router sob demanda na 1a request do mountPath.
+ * Evita carregar CRUD/market/admin no cold start de /api/home e /ready.
+ */
+function mountLazy(parent, mountPath, loader) {
+  let cached = null;
+  parent.use(mountPath, (req, res, next) => {
+    if (!cached) {
+      cached = loader();
+    }
+    return cached(req, res, next);
+  });
+}
+
 const router = Router();
 
-router.use("/auth", authRoutes);
-router.use("/admin", adminRoutes);
+// Auth e BFF no caminho critico — eager.
+const authRoutes = require("../modules/auth/auth.routes");
+const bffRoutes = require("../modules/bff/bff.routes");
 
-// Demais rotas da API exigem autenticacao + CSRF em mutacoes
+router.use("/auth", authRoutes);
+
+// Admin nao e necessario para BFF/home — lazy.
+mountLazy(router, "/admin", () => require("../modules/admin/admin.routes"));
+
 router.use(authenticate);
 router.use(csrfProtection);
 
-// BFF — uma chamada HTTP por tela (registrado antes dos CRUDs)
 router.use(bffRoutes);
 
-router.use("/app", appRoutes);
-router.use("/accounts", accountsRoutes);
-router.use("/cards", cardsRoutes);
-router.use("/dashboard", dashboardRoutes);
-router.use("/goals", goalsRoutes);
-router.use("/invoices", invoicesRoutes);
-router.use("/investments", investmentsRoutes);
-router.use("/market", marketRoutes);
-router.use("/movements", movementsRoutes);
-router.use("/personalization", personalizationRoutes);
-router.use("/privacy", privacyRoutes);
-router.use("/recurrences", recurrencesRoutes);
-router.use("/users", usersRoutes);
+mountLazy(router, "/app", () => require("../modules/app/app.routes"));
+mountLazy(router, "/accounts", () => require("../modules/accounts/accounts.routes"));
+mountLazy(router, "/cards", () => require("../modules/cards/cards.routes"));
+mountLazy(router, "/dashboard", () => require("../modules/dashboard/dashboard.routes"));
+mountLazy(router, "/goals", () => require("../modules/goals/goals.routes"));
+mountLazy(router, "/invoices", () => require("../modules/invoices/invoices.routes"));
+mountLazy(router, "/investments", () => require("../modules/investments/investments.routes"));
+mountLazy(router, "/market", () => require("../modules/market-data/market.routes"));
+mountLazy(router, "/movements", () => require("../modules/movements/movements.routes"));
+mountLazy(router, "/personalization", () => require("../modules/personalization/personalization.routes"));
+mountLazy(router, "/privacy", () => require("../modules/privacy/privacy.routes"));
+mountLazy(router, "/recurrences", () => require("../modules/recurrences/recurrences.routes"));
+mountLazy(router, "/users", () => require("../modules/users/users.routes"));
 
 module.exports = router;

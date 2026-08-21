@@ -1,8 +1,16 @@
-const { UAParser } = require("ua-parser-js");
+/** Lazy: ua-parser so quando parseDeviceInfo e chamado (auth audit / logs). */
+let UAParser = null;
+function getUAParser() {
+  if (!UAParser) {
+    ({ UAParser } = require("ua-parser-js"));
+  }
+  return UAParser;
+}
 
 function parseDeviceInfo(req) {
   const ua = req.headers["user-agent"] || "";
-  const parser = new UAParser(ua);
+  const Parser = getUAParser();
+  const parser = new Parser(ua);
   const result = parser.getResult();
 
   const browser = [result.browser.name, result.browser.version].filter(Boolean).join(" ") || "Desconhecido";

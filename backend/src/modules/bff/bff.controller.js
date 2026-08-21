@@ -9,16 +9,17 @@ function runBffTracked(fn) {
   return runWithSqlTracking(() => runWithRequestContext(fn));
 }
 
-const homeBffService = require("./services/home.bff.service");
-const dashboardBffService = require("./services/dashboard.bff.service");
-const investmentsBffService = require("./services/investments.bff.service");
-const accountsBffService = require("./services/accounts.bff.service");
-const cardsBffService = require("./services/cards.bff.service");
-const transactionsBffService = require("./services/transactions.bff.service");
-const reportsBffService = require("./services/reports.bff.service");
-const insightsBffService = require("./services/insights.bff.service");
-const accountDetailBffService = require("./services/account-detail.bff.service");
-const cardDetailBffService = require("./services/card-detail.bff.service");
+/**
+ * Carrega o service BFF so na 1a invocacao daquele endpoint.
+ * Evita puxar investments/reports/etc. no cold start de /api/home.
+ */
+function lazyFn(loader) {
+  let fn = null;
+  return (...args) => {
+    if (!fn) fn = loader();
+    return fn(...args);
+  };
+}
 
 function createHandler(endpoint, serviceFn, message) {
   return asyncHandler(async (req, res) => {
@@ -69,51 +70,59 @@ function createDetailHandler(endpoint, serviceFn, message) {
   });
 }
 
-const home = createHandler("home", homeBffService.getHome, "Home carregada.");
+const home = createHandler(
+  "home",
+  lazyFn(() => require("./services/home.bff.service").getHome),
+  "Home carregada.",
+);
 const homeSecondary = createHandler(
   "home-secondary",
-  homeBffService.getHomeSecondary,
+  lazyFn(() => require("./services/home.bff.service").getHomeSecondary),
   "Home secundaria carregada.",
 );
 const dashboard = createHandler(
   "dashboard",
-  dashboardBffService.getDashboard,
+  lazyFn(() => require("./services/dashboard.bff.service").getDashboard),
   "Dashboard carregado.",
 );
 const investments = createHandler(
   "investments",
-  investmentsBffService.getInvestments,
+  lazyFn(() => require("./services/investments.bff.service").getInvestments),
   "Investimentos carregados.",
 );
 const accounts = createHandler(
   "accounts",
-  accountsBffService.getAccounts,
+  lazyFn(() => require("./services/accounts.bff.service").getAccounts),
   "Contas carregadas.",
 );
-const cards = createHandler("cards", cardsBffService.getCards, "Cartoes carregados.");
+const cards = createHandler(
+  "cards",
+  lazyFn(() => require("./services/cards.bff.service").getCards),
+  "Cartoes carregados.",
+);
 const transactions = createHandler(
   "transactions",
-  transactionsBffService.getTransactions,
+  lazyFn(() => require("./services/transactions.bff.service").getTransactions),
   "Transacoes carregadas.",
 );
 const reports = createHandler(
   "reports",
-  reportsBffService.getReports,
+  lazyFn(() => require("./services/reports.bff.service").getReports),
   "Relatorios carregados.",
 );
 const insights = createHandler(
   "insights",
-  insightsBffService.getInsights,
+  lazyFn(() => require("./services/insights.bff.service").getInsights),
   "Insights carregados.",
 );
 const accountDetail = createDetailHandler(
   "account-detail",
-  accountDetailBffService.getAccountDetail,
+  lazyFn(() => require("./services/account-detail.bff.service").getAccountDetail),
   "Detalhe da conta carregado.",
 );
 const cardDetail = createDetailHandler(
   "card-detail",
-  cardDetailBffService.getCardDetail,
+  lazyFn(() => require("./services/card-detail.bff.service").getCardDetail),
   "Detalhe do cartao carregado.",
 );
 
