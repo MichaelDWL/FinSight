@@ -7,6 +7,8 @@ const { BFF_CACHE_PREFIX } = require("../bff.constants");
  * Em serverless, este cache e local por instancia e descartavel.
  */
 const memoryStore = new Map();
+/** Coalesce concurrent MISS na mesma key (evita thundering herd com pool max=2). */
+const inflightWrap = new Map();
 
 let cacheMode = "memory";
 let initialized = false;
@@ -92,12 +94,25 @@ async function wrap(key, ttlSeconds, factory) {
     return { data: cached, cacheHit: true };
   }
 
-  const data = await factory();
-  if (ttlSeconds > 0 && data !== null && data !== undefined) {
-    await set(key, data, ttlSeconds);
+  let pending = inflightWrap.get(key);
+  const isLeader = !pending;
+  if (!pending) {
+    pending = Promise.resolve()
+      .then(factory)
+      .then(async (data) => {
+        if (ttlSeconds > 0 && data !== null && data !== undefined) {
+          await set(key, data, ttlSeconds);
+        }
+        return data;
+      })
+      .finally(() => {
+        inflightWrap.delete(key);
+      });
+    inflightWrap.set(key, pending);
   }
 
-  return { data, cacheHit: false };
+  const data = await pending;
+  return { data, cacheHit: !isLeader };
 }
 
 function getStatus() {
