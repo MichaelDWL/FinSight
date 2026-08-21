@@ -93,6 +93,12 @@ const env = {
   databaseSsl: process.env.DATABASE_SSL === "true",
   /** CA PEM para validar certificado do Postgres (Neon/Supabase). Se ausente com SSL, usa rejectUnauthorized:true com CAs do sistema. */
   databaseSslCa: process.env.DATABASE_SSL_CA || null,
+  /**
+   * Caminho para arquivo PEM.
+   * Em Vercel: `backend/certs/supabase-root-2021-ca.crt` (empacotado no repo)
+   * ou omitir — o runtime carrega a CA bundled automaticamente.
+   */
+  databaseSslCaFile: process.env.DATABASE_SSL_CA_FILE || null,
   /** Em producao com SSL, nunca desabilitar verificacao salvo DATABASE_SSL_INSECURE=true (emergencia). */
   databaseSslInsecure: process.env.DATABASE_SSL_INSECURE === "true",
   dbPoolMax: Number(process.env.DB_POOL_MAX) || 10,
@@ -100,8 +106,6 @@ const env = {
   dbPoolMaxServerless: Number(process.env.DB_POOL_MAX_SERVERLESS) || 2,
   rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
-  redisUrl: process.env.REDIS_URL || null,
-  redisEnabled: Boolean(process.env.REDIS_URL),
   /**
    * Em long-running: node-cron in-process.
    * Em serverless: desligado; use CRON_SECRET + /api/cron/market (Vercel Cron / crontab).

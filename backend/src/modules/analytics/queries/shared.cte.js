@@ -36,19 +36,36 @@ function buildGeneralQuery() {
             WHERE usuario_id = $1
           ) AS investments
       ),
-      period_summary AS (
+      -- Um unico scan no intervalo [prev_start, end_date]; period/previous derivados em memoria.
+      summaries AS (
         SELECT
-          COALESCE(SUM(CASE WHEN v.is_receita_liquidada AND v.data_transacao BETWEEN b.start_date AND b.end_date THEN v.valor END), 0) AS income,
-          COALESCE(SUM(CASE WHEN v.is_despesa_periodo AND v.data_transacao BETWEEN b.start_date AND b.end_date THEN v.valor END), 0) AS expenses
+          COALESCE(SUM(CASE
+            WHEN v.is_receita_liquidada AND v.data_transacao BETWEEN b.start_date AND b.end_date
+            THEN v.valor
+          END), 0) AS income,
+          COALESCE(SUM(CASE
+            WHEN v.is_despesa_periodo AND v.data_transacao BETWEEN b.start_date AND b.end_date
+            THEN v.valor
+          END), 0) AS expenses,
+          COALESCE(SUM(CASE
+            WHEN v.is_receita_liquidada AND v.data_transacao BETWEEN b.prev_start AND b.prev_end
+            THEN v.valor
+          END), 0) AS prev_income,
+          COALESCE(SUM(CASE
+            WHEN v.is_despesa_periodo AND v.data_transacao BETWEEN b.prev_start AND b.prev_end
+            THEN v.valor
+          END), 0) AS prev_expenses
         FROM bounds b
-        LEFT JOIN vw_analytics_movimentacoes v ON v.usuario_id = $1
+        LEFT JOIN vw_analytics_movimentacoes v
+          ON v.usuario_id = $1
+         AND v.data_transacao BETWEEN b.prev_start AND b.end_date
+         AND (v.is_receita_liquidada OR v.is_despesa_periodo)
+      ),
+      period_summary AS (
+        SELECT income, expenses FROM summaries
       ),
       previous_summary AS (
-        SELECT
-          COALESCE(SUM(CASE WHEN v.is_receita_liquidada AND v.data_transacao BETWEEN b.prev_start AND b.prev_end THEN v.valor END), 0) AS income,
-          COALESCE(SUM(CASE WHEN v.is_despesa_periodo AND v.data_transacao BETWEEN b.prev_start AND b.prev_end THEN v.valor END), 0) AS expenses
-        FROM bounds b
-        LEFT JOIN vw_analytics_movimentacoes v ON v.usuario_id = $1
+        SELECT prev_income AS income, prev_expenses AS expenses FROM summaries
       ),
       monthly_flow AS (
         SELECT
@@ -65,7 +82,9 @@ function buildGeneralQuery() {
         ) m
         LEFT JOIN vw_analytics_movimentacoes v
           ON v.usuario_id = $1
-          AND date_trunc('month', v.data_transacao)::date = m.month_start
+          AND v.data_transacao >= m.month_start
+          AND v.data_transacao < (m.month_start + interval '1 month')::date
+          AND (v.is_receita_liquidada OR v.is_despesa_periodo)
         GROUP BY m.month_start
         ORDER BY m.month_start
       ),

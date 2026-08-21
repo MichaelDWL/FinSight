@@ -1,11 +1,15 @@
-// Servico de dominio das recorrencias. Gera automaticamente as proximas
-// movimentacoes (ex.: contas mensais) de forma "lazy": e chamado quando o
-// usuario carrega o dashboard e cria todas as ocorrencias vencidas ate o fim
-// do mes corrente. A idempotencia vem de avancar e persistir proxima_geracao.
+// Servico de dominio das recorrencias. Gera movimentacoes pendentes (ex.: contas mensais)
+// via syncRecurringTransactions (POST /recurrences/sync, cron, mutacoes).
+// GETs de leitura nao disparam geracao automatica.
+// Dedupe: request-scoped (ensureGeneratedOnce) + janela curta por userId (warm serverless).
 
 const pool = require("../database/pool");
 const { withTransaction } = require("../database/transaction");
 const { applyMovement } = require("./balance.service");
+const { memoize } = require("../modules/bff/utils/requestContext");
+
+const ENSURE_WINDOW_MS = 15_000;
+const ensureState = new Map();
 
 function pad(value) {
   return String(value).padStart(2, "0");
@@ -119,9 +123,99 @@ async function generate(client, userId) {
   return generated;
 }
 
-// Ponto de entrada usado pelo carregamento do dashboard.
+// Sincronizacao explicita de recorrencias (POST /recurrences/sync, cron, mutacoes).
+// Nao deve ser invocado automaticamente em GET de leitura.
+async function syncRecurringTransactions(userId) {
+  const now = Date.now();
+  const current = ensureState.get(userId);
+
+  if (current?.promise) {
+    return current.promise;
+  }
+
+  if (current && now - current.lastRunAt < ENSURE_WINDOW_MS) {
+    return current.lastGenerated || 0;
+  }
+
+  const promise = withTransaction((client) => generate(client, userId))
+    .then((generated) => {
+      ensureState.set(userId, {
+        lastRunAt: Date.now(),
+        lastGenerated: generated,
+      });
+      return generated;
+    })
+    .catch((error) => {
+      ensureState.delete(userId);
+      throw error;
+    });
+
+  ensureState.set(userId, {
+    lastRunAt: current?.lastRunAt || 0,
+    lastGenerated: current?.lastGenerated || 0,
+    promise,
+  });
+
+  return promise;
+}
+
+/**
+ * Dedupe por request: multiplas chamadas no mesmo request reutilizam a Promise.
+ * Fora de request context, delega para syncRecurringTransactions (Map por userId).
+ */
+async function ensureGeneratedOnce(userId) {
+  return memoize(`ensureGenerated:${userId}`, () =>
+    module.exports.syncRecurringTransactions(userId),
+  );
+}
+
+/** @deprecated Use syncRecurringTransactions / ensureGeneratedOnce. */
 async function ensureGenerated(userId) {
-  return withTransaction((client) => generate(client, userId));
+  return ensureGeneratedOnce(userId);
+}
+
+function invalidateEnsureGenerated(userId) {
+  if (!userId) return;
+  ensureState.delete(userId);
+}
+
+/**
+ * Cron / batch: gera pendencias de todos os usuarios com recorrencias vencidas.
+ * Processa sequencialmente para respeitar pool pequeno (serverless).
+ */
+async function syncAllDueRecurrences({ limit = 200 } = {}) {
+  const { rows } = await pool.query(
+    `
+      SELECT DISTINCT r.usuario_id
+        FROM recorrencias r
+       WHERE r.ativa = true
+         AND r.proxima_geracao <= (date_trunc('month', CURRENT_DATE) + interval '1 month' - interval '1 day')::date
+       ORDER BY r.usuario_id
+       LIMIT $1
+    `,
+    [Math.max(1, Math.min(Number(limit) || 200, 500))]
+  );
+
+  let generated = 0;
+  const errors = [];
+
+  for (const row of rows) {
+    try {
+      generated += await syncRecurringTransactions(row.usuario_id);
+    } catch (error) {
+      errors.push({
+        userId: row.usuario_id,
+        message: error?.message || String(error),
+      });
+    }
+  }
+
+  return {
+    users: rows.length,
+    generated,
+    errors,
+    ok: errors.length === 0,
+  };
 }
 
 // Cria um modelo de recorrencia (usado ao cadastrar uma conta recorrente).
@@ -147,6 +241,7 @@ async function createRecurrence(client, userId, data) {
       data.observacao || null,
     ]
   );
+  invalidateEnsureGenerated(userId);
   return rows[0].id;
 }
 
@@ -180,12 +275,17 @@ async function deactivate(userId, id) {
     `UPDATE recorrencias SET ativa = false, updated_at = now() WHERE usuario_id = $1 AND id = $2`,
     [userId, id]
   );
+  if (rowCount > 0) invalidateEnsureGenerated(userId);
   return rowCount > 0;
 }
 
 module.exports = {
   nextOccurrence,
+  syncRecurringTransactions,
+  syncAllDueRecurrences,
+  ensureGeneratedOnce,
   ensureGenerated,
+  invalidateEnsureGenerated,
   generate,
   createRecurrence,
   list,

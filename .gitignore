@@ -4,7 +4,11 @@ node_modules/
 !.env.example
 *.log
 
-backend/node_modules/
-backend/.env
-backend/.env.*
+# Certificados locais de teste — nao commitar dumps temporarios
+/certs/
+*.pem
+
+# CA publica Supabase Root 2021 empacotada no backend (OK no repo)
+!backend/certs/
+!backend/certs/supabase-root-2021-ca.crt
 !backend/.env.example

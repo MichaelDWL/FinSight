@@ -11,11 +11,11 @@ function deadlineInMonths(months) {
 }
 
 async function getContext(userId) {
-  return engine.rebuildContext(userId);
+  return engine.readContext(userId);
 }
 
 async function getProfile(userId) {
-  const context = await engine.rebuildContext(userId);
+  const context = await engine.readContext(userId);
   return context.profile;
 }
 

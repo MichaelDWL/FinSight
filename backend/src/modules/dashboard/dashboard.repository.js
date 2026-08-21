@@ -4,66 +4,124 @@ const SETTLED = "('confirmada', 'paga')";
 const EXPENSE_TYPES = "('despesa', 'recorrencia', 'compra_parcelada')";
 const EXPENSE_STATUS = "('confirmada', 'paga', 'pendente')";
 
-async function getFinancialSummary(userId) {
-  const { rows } = await pool.query(
-    `
-      SELECT
-        COALESCE((SELECT SUM(saldo_atual) FROM contas WHERE usuario_id = $1 AND status = 'ativa'), 0) AS balance,
-        COALESCE((
-          SELECT SUM(valor) FROM movimentacoes
-          WHERE usuario_id = $1 AND tipo = 'receita' AND status IN ${SETTLED}
-            AND date_trunc('month', data_transacao) = date_trunc('month', CURRENT_DATE)
-        ), 0) AS income,
-        COALESCE((
-          SELECT SUM(valor) FROM movimentacoes
-          WHERE usuario_id = $1 AND tipo IN ${EXPENSE_TYPES} AND status IN ${EXPENSE_STATUS}
-            AND date_trunc('month', data_transacao) = date_trunc('month', CURRENT_DATE)
-        ), 0) AS expenses,
-        COALESCE((SELECT SUM(valor_atual) FROM investimentos WHERE usuario_id = $1), 0) AS investments,
-        COALESCE((
-          SELECT SUM(valor) FROM movimentacoes
-          WHERE usuario_id = $1 AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura') AND status = 'pendente'
-        ), 0) AS pending_bills
-    `,
-    [userId],
-  );
+const MONTH_BOUNDS_CTE = `
+  bounds AS (
+    SELECT
+      date_trunc('month', CURRENT_DATE)::date AS current_month,
+      (date_trunc('month', CURRENT_DATE) - interval '1 month')::date AS previous_month,
+      (date_trunc('month', CURRENT_DATE) + interval '1 month')::date AS next_month
+  )
+`;
 
-  const summary = rows[0];
-  const balance = Number(summary.balance);
-  const investments = Number(summary.investments);
+function mapFinancialSummaryRow(row) {
+  const balance = Number(row.balance);
+  const investments = Number(row.investments);
 
   return {
-    balance,
-    income: Number(summary.income),
-    expenses: Number(summary.expenses),
-    netWorth: balance + investments,
-    pendingBills: Number(summary.pending_bills),
-    investmentsTotal: investments,
+    summary: {
+      balance,
+      income: Number(row.income),
+      expenses: Number(row.expenses),
+      netWorth: balance + investments,
+      pendingBills: Number(row.pending_bills),
+      investmentsTotal: investments,
+    },
+    previousMonth: {
+      income: Number(row.previous_income),
+      expenses: Number(row.previous_expenses),
+    },
   };
 }
 
-async function getPreviousMonthSummary(userId) {
+async function getFinancialSummaries(userId) {
   const { rows } = await pool.query(
     `
+      WITH ${MONTH_BOUNDS_CTE},
+      mov_totals AS (
+        SELECT
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo = 'receita'
+                AND m.status IN ${SETTLED}
+                AND m.data_transacao >= b.current_month
+                AND m.data_transacao < b.next_month
+              THEN m.valor
+            END
+          ), 0) AS income,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo IN ${EXPENSE_TYPES}
+                AND m.status IN ${EXPENSE_STATUS}
+                AND m.data_transacao >= b.current_month
+                AND m.data_transacao < b.next_month
+              THEN m.valor
+            END
+          ), 0) AS expenses,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo = 'receita'
+                AND m.status IN ${SETTLED}
+                AND m.data_transacao >= b.previous_month
+                AND m.data_transacao < b.current_month
+              THEN m.valor
+            END
+          ), 0) AS previous_income,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo IN ${EXPENSE_TYPES}
+                AND m.status IN ${EXPENSE_STATUS}
+                AND m.data_transacao >= b.previous_month
+                AND m.data_transacao < b.current_month
+              THEN m.valor
+            END
+          ), 0) AS previous_expenses,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')
+                AND m.status = 'pendente'
+              THEN m.valor
+            END
+          ), 0) AS pending_bills
+        FROM movimentacoes m
+        CROSS JOIN bounds b
+        WHERE m.usuario_id = $1
+      ),
+      account_totals AS (
+        SELECT COALESCE(SUM(saldo_atual), 0) AS balance
+        FROM contas
+        WHERE usuario_id = $1 AND status = 'ativa'
+      ),
+      investment_totals AS (
+        SELECT COALESCE(SUM(valor_atual), 0) AS investments
+        FROM investimentos
+        WHERE usuario_id = $1
+      )
       SELECT
-        COALESCE((
-          SELECT SUM(valor) FROM movimentacoes
-          WHERE usuario_id = $1 AND tipo = 'receita' AND status IN ${SETTLED}
-            AND date_trunc('month', data_transacao) = date_trunc('month', CURRENT_DATE - interval '1 month')
-        ), 0) AS income,
-        COALESCE((
-          SELECT SUM(valor) FROM movimentacoes
-          WHERE usuario_id = $1 AND tipo IN ${EXPENSE_TYPES} AND status IN ${EXPENSE_STATUS}
-            AND date_trunc('month', data_transacao) = date_trunc('month', CURRENT_DATE - interval '1 month')
-        ), 0) AS expenses
+        a.balance,
+        i.investments,
+        m.income,
+        m.expenses,
+        m.previous_income,
+        m.previous_expenses,
+        m.pending_bills
+      FROM mov_totals m
+      CROSS JOIN account_totals a
+      CROSS JOIN investment_totals i
     `,
     [userId],
   );
 
-  return {
-    income: Number(rows[0].income),
-    expenses: Number(rows[0].expenses),
-  };
+  return mapFinancialSummaryRow(rows[0]);
+}
+
+async function getFinancialSummary(userId) {
+  const { summary } = await getFinancialSummaries(userId);
+  return summary;
+}
+
+async function getPreviousMonthSummary(userId) {
+  const { previousMonth } = await getFinancialSummaries(userId);
+  return previousMonth;
 }
 
 async function getMonthlyFlow(userId, months = 6) {
@@ -75,22 +133,29 @@ async function getMonthlyFlow(userId, months = 6) {
           date_trunc('month', CURRENT_DATE),
           interval '1 month'
         )::date AS month_start
+      ),
+      month_ends AS (
+        SELECT
+          month_start,
+          (month_start + interval '1 month')::date AS month_end
+        FROM months
       )
       SELECT
-        m.month_start,
-        to_char(m.month_start, 'Mon') AS month_label,
+        me.month_start,
+        to_char(me.month_start, 'Mon') AS month_label,
         COALESCE(SUM(CASE
           WHEN mov.tipo = 'receita' AND mov.status IN ${SETTLED} THEN mov.valor
         END), 0) AS income,
         COALESCE(SUM(CASE
           WHEN mov.tipo IN ${EXPENSE_TYPES} AND mov.status IN ${EXPENSE_STATUS} THEN mov.valor
         END), 0) AS expenses
-      FROM months m
+      FROM month_ends me
       LEFT JOIN movimentacoes mov
         ON mov.usuario_id = $1
-        AND date_trunc('month', mov.data_transacao) = m.month_start
-      GROUP BY m.month_start
-      ORDER BY m.month_start ASC
+        AND mov.data_transacao >= me.month_start
+        AND mov.data_transacao < me.month_end
+      GROUP BY me.month_start
+      ORDER BY me.month_start ASC
     `,
     [userId, months],
   );
@@ -111,27 +176,42 @@ async function getMonthlyFlow(userId, months = 6) {
 async function getCategorySpendingComparison(userId) {
   const { rows } = await pool.query(
     `
+      WITH ${MONTH_BOUNDS_CTE}
       SELECT
         COALESCE(c.nome, 'Outros') AS category,
-        COALESCE(SUM(CASE
-          WHEN date_trunc('month', m.data_transacao) = date_trunc('month', CURRENT_DATE) THEN m.valor
-        END), 0) AS current_month,
-        COALESCE(SUM(CASE
-          WHEN date_trunc('month', m.data_transacao) = date_trunc('month', CURRENT_DATE - interval '1 month') THEN m.valor
-        END), 0) AS previous_month
+        COALESCE(SUM(
+          CASE
+            WHEN m.data_transacao >= b.current_month AND m.data_transacao < b.next_month
+            THEN m.valor
+          END
+        ), 0) AS current_month,
+        COALESCE(SUM(
+          CASE
+            WHEN m.data_transacao >= b.previous_month AND m.data_transacao < b.current_month
+            THEN m.valor
+          END
+        ), 0) AS previous_month
       FROM movimentacoes m
+      CROSS JOIN bounds b
       LEFT JOIN categorias c ON c.id = m.categoria_id
       WHERE m.usuario_id = $1
         AND m.tipo IN ${EXPENSE_TYPES}
         AND m.status IN ${EXPENSE_STATUS}
-        AND m.data_transacao >= date_trunc('month', CURRENT_DATE - interval '1 month')
+        AND m.data_transacao >= b.previous_month
+        AND m.data_transacao < b.next_month
       GROUP BY COALESCE(c.nome, 'Outros')
-      HAVING COALESCE(SUM(CASE
-        WHEN date_trunc('month', m.data_transacao) = date_trunc('month', CURRENT_DATE) THEN m.valor
-      END), 0) > 0
-        OR COALESCE(SUM(CASE
-          WHEN date_trunc('month', m.data_transacao) = date_trunc('month', CURRENT_DATE - interval '1 month') THEN m.valor
-        END), 0) > 0
+      HAVING COALESCE(SUM(
+          CASE
+            WHEN m.data_transacao >= b.current_month AND m.data_transacao < b.next_month
+            THEN m.valor
+          END
+        ), 0) > 0
+        OR COALESCE(SUM(
+          CASE
+            WHEN m.data_transacao >= b.previous_month AND m.data_transacao < b.current_month
+            THEN m.valor
+          END
+        ), 0) > 0
     `,
     [userId],
   );
@@ -146,16 +226,23 @@ async function getCategorySpendingComparison(userId) {
 async function getTopIncomeThisMonth(userId) {
   const { rows } = await pool.query(
     `
+      WITH bounds AS (
+        SELECT
+          date_trunc('month', CURRENT_DATE)::date AS current_month,
+          (date_trunc('month', CURRENT_DATE) + interval '1 month')::date AS next_month
+      )
       SELECT
         m.descricao AS description,
         m.valor AS value,
         COALESCE(c.nome, m.tipo::text) AS category
       FROM movimentacoes m
+      CROSS JOIN bounds b
       LEFT JOIN categorias c ON c.id = m.categoria_id
       WHERE m.usuario_id = $1
         AND m.tipo = 'receita'
         AND m.status IN ${SETTLED}
-        AND date_trunc('month', m.data_transacao) = date_trunc('month', CURRENT_DATE)
+        AND m.data_transacao >= b.current_month
+        AND m.data_transacao < b.next_month
       ORDER BY m.valor DESC
       LIMIT 1
     `,
@@ -174,6 +261,9 @@ async function getTopIncomeThisMonth(userId) {
 async function getCurrentMonthInvoices(userId) {
   const { rows } = await pool.query(
     `
+      WITH bounds AS (
+        SELECT date_trunc('month', CURRENT_DATE)::date AS current_month
+      )
       SELECT
         c.id AS card_id,
         c.nome AS card_name,
@@ -188,9 +278,10 @@ async function getCurrentMonthInvoices(userId) {
         f.valor_pago AS paid,
         f.status
       FROM cartoes c
+      CROSS JOIN bounds b
       LEFT JOIN faturas f
         ON f.cartao_id = c.id
-        AND f.mes_referencia = date_trunc('month', CURRENT_DATE)::date
+        AND f.mes_referencia = b.current_month
       WHERE c.usuario_id = $1
       ORDER BY c.created_at ASC
     `,
@@ -217,11 +308,199 @@ async function getCurrentMonthInvoices(userId) {
   }));
 }
 
+/**
+ * Bundle da Home secondary: 1 round-trip no lugar de
+ * getFinancialSummaries + getCategorySpendingComparison + getTopIncomeThisMonth.
+ * Mantem semantica equivalente via CTEs.
+ */
+async function getHomeSecondaryBundle(userId) {
+  const { rows } = await pool.query(
+    `
+      WITH ${MONTH_BOUNDS_CTE},
+      mov_totals AS (
+        SELECT
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo = 'receita'
+                AND m.status IN ${SETTLED}
+                AND m.data_transacao >= b.current_month
+                AND m.data_transacao < b.next_month
+              THEN m.valor
+            END
+          ), 0) AS income,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo IN ${EXPENSE_TYPES}
+                AND m.status IN ${EXPENSE_STATUS}
+                AND m.data_transacao >= b.current_month
+                AND m.data_transacao < b.next_month
+              THEN m.valor
+            END
+          ), 0) AS expenses,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo = 'receita'
+                AND m.status IN ${SETTLED}
+                AND m.data_transacao >= b.previous_month
+                AND m.data_transacao < b.current_month
+              THEN m.valor
+            END
+          ), 0) AS previous_income,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo IN ${EXPENSE_TYPES}
+                AND m.status IN ${EXPENSE_STATUS}
+                AND m.data_transacao >= b.previous_month
+                AND m.data_transacao < b.current_month
+              THEN m.valor
+            END
+          ), 0) AS previous_expenses,
+          COALESCE(SUM(
+            CASE
+              WHEN m.tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')
+                AND m.status = 'pendente'
+              THEN m.valor
+            END
+          ), 0) AS pending_bills
+        FROM movimentacoes m
+        CROSS JOIN bounds b
+        WHERE m.usuario_id = $1
+      ),
+      account_totals AS (
+        SELECT COALESCE(SUM(saldo_atual), 0) AS balance
+        FROM contas
+        WHERE usuario_id = $1 AND status = 'ativa'
+      ),
+      investment_totals AS (
+        SELECT COALESCE(SUM(valor_atual), 0) AS investments
+        FROM investimentos
+        WHERE usuario_id = $1
+      ),
+      categories AS (
+        SELECT
+          COALESCE(c.nome, 'Outros') AS category,
+          COALESCE(SUM(
+            CASE
+              WHEN m.data_transacao >= b.current_month AND m.data_transacao < b.next_month
+              THEN m.valor
+            END
+          ), 0) AS current_month,
+          COALESCE(SUM(
+            CASE
+              WHEN m.data_transacao >= b.previous_month AND m.data_transacao < b.current_month
+              THEN m.valor
+            END
+          ), 0) AS previous_month
+        FROM movimentacoes m
+        CROSS JOIN bounds b
+        LEFT JOIN categorias c ON c.id = m.categoria_id
+        WHERE m.usuario_id = $1
+          AND m.tipo IN ${EXPENSE_TYPES}
+          AND m.status IN ${EXPENSE_STATUS}
+          AND m.data_transacao >= b.previous_month
+          AND m.data_transacao < b.next_month
+        GROUP BY COALESCE(c.nome, 'Outros')
+        HAVING COALESCE(SUM(
+            CASE
+              WHEN m.data_transacao >= b.current_month AND m.data_transacao < b.next_month
+              THEN m.valor
+            END
+          ), 0) > 0
+          OR COALESCE(SUM(
+            CASE
+              WHEN m.data_transacao >= b.previous_month AND m.data_transacao < b.current_month
+              THEN m.valor
+            END
+          ), 0) > 0
+      ),
+      top_income AS (
+        SELECT
+          m.descricao AS description,
+          m.valor AS value,
+          COALESCE(c.nome, m.tipo::text) AS category
+        FROM movimentacoes m
+        CROSS JOIN bounds b
+        LEFT JOIN categorias c ON c.id = m.categoria_id
+        WHERE m.usuario_id = $1
+          AND m.tipo = 'receita'
+          AND m.status IN ${SETTLED}
+          AND m.data_transacao >= b.current_month
+          AND m.data_transacao < b.next_month
+        ORDER BY m.valor DESC
+        LIMIT 1
+      )
+      SELECT
+        a.balance,
+        i.investments,
+        m.income,
+        m.expenses,
+        m.previous_income,
+        m.previous_expenses,
+        m.pending_bills,
+        COALESCE(
+          (SELECT json_agg(json_build_object(
+            'category', category,
+            'current_month', current_month,
+            'previous_month', previous_month
+          ) ORDER BY current_month DESC)
+          FROM categories),
+          '[]'::json
+        ) AS categories,
+        (SELECT json_build_object(
+          'description', description,
+          'value', value,
+          'category', category
+        ) FROM top_income) AS top_income
+      FROM mov_totals m
+      CROSS JOIN account_totals a
+      CROSS JOIN investment_totals i
+    `,
+    [userId],
+  );
+
+  const row = rows[0] || {};
+  const financial = mapFinancialSummaryRow({
+    balance: row.balance,
+    investments: row.investments,
+    income: row.income,
+    expenses: row.expenses,
+    previous_income: row.previous_income,
+    previous_expenses: row.previous_expenses,
+    pending_bills: row.pending_bills,
+  });
+
+  const categoriesRaw = Array.isArray(row.categories)
+    ? row.categories
+    : typeof row.categories === "string"
+      ? JSON.parse(row.categories)
+      : [];
+
+  const categoryComparison = categoriesRaw.map((item) => ({
+    category: item.category,
+    currentMonth: Number(item.current_month),
+    previousMonth: Number(item.previous_month),
+  }));
+
+  let topIncome = null;
+  const top = row.top_income;
+  if (top && (top.description || top.value != null)) {
+    topIncome = {
+      description: top.description,
+      value: Number(top.value),
+      category: top.category,
+    };
+  }
+
+  return { financial, categoryComparison, topIncome };
+}
+
 module.exports = {
+  getFinancialSummaries,
   getFinancialSummary,
   getPreviousMonthSummary,
   getMonthlyFlow,
   getCategorySpendingComparison,
   getTopIncomeThisMonth,
   getCurrentMonthInvoices,
+  getHomeSecondaryBundle,
 };

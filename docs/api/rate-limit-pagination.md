@@ -9,9 +9,9 @@ Servico: [`backend/src/services/rate-limit/rate-limit.service.js`](../../backend
 
 | Ambiente | Store |
 |----------|--------|
-| Com `REDIS_URL` | Redis (compartilhado) |
-| Desenvolvimento sem Redis | Memoria local |
-| Producao sem Redis | Memoria + **log de erro** (ineficaz multi-instancia) |
+| Desenvolvimento | Memoria local |
+| Producao serverless | Memoria local por instancia |
+| Observacao | Nao depende de Redis externo |
 
 ### Limites (padrao)
 
@@ -125,4 +125,4 @@ Apenas filtros cadastrados em `pagination.config.js` — sem concatenacao SQL.
 1. Alterar limites **somente** em `src/config/rate-limit.config.js` e `pagination.config.js`.
 2. Controllers leves: `req.pagination` via middleware.
 3. Repositories usam `LIMIT`/`OFFSET` + `ORDER BY` whitelistado.
-4. Redis obrigatorio em producao multi-instancia / Vercel.
+4. Em serverless, o rate limit em memoria e por instancia; trate-o como protecao complementar, nao como barreira distribuida global.

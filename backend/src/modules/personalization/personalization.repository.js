@@ -180,6 +180,8 @@ async function listHealthHistory(userId, { days = 180 } = {}) {
 }
 
 async function getSpendingByCategory(userId, referenceMonth = monthStart()) {
+  const { monthStart: start, nextMonth } = monthBounds(referenceMonth);
+
   const { rows } = await pool.query(
     `
       SELECT
@@ -190,11 +192,12 @@ async function getSpendingByCategory(userId, referenceMonth = monthStart()) {
       WHERE m.usuario_id = $1
         AND m.tipo IN ('despesa', 'recorrencia', 'compra_parcelada', 'pagamento_fatura')
         AND m.status <> 'cancelada'
-        AND date_trunc('month', m.data_transacao)::date = $2::date
+        AND m.data_transacao >= $2::date
+        AND m.data_transacao < $3::date
       GROUP BY 1
       ORDER BY total DESC
     `,
-    [userId, referenceMonth],
+    [userId, start, nextMonth],
   );
   return rows.map((row) => ({
     category: row.category,
@@ -202,107 +205,171 @@ async function getSpendingByCategory(userId, referenceMonth = monthStart()) {
   }));
 }
 
+/**
+ * Calcula bounds do mes a partir de YYYY-MM-DD (ou YYYY-MM-01).
+ * Evita timezone: opera apenas sobre componentes de data civil.
+ */
+function monthBounds(referenceMonth = monthStart()) {
+  const monthStartIso = String(referenceMonth).slice(0, 10);
+  const [year, month] = monthStartIso.split("-").map(Number);
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+  return {
+    monthStart: `${year}-${String(month).padStart(2, "0")}-01`,
+    nextMonth: `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`,
+  };
+}
+
+function mapGoalsRows(rows = []) {
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.nome,
+    target: Number(row.valor_alvo) || 0,
+    current: Number(row.valor_atual) || 0,
+    deadline: row.prazo,
+    remaining: Math.max((Number(row.valor_alvo) || 0) - (Number(row.valor_atual) || 0), 0),
+    progress:
+      Number(row.valor_alvo) > 0
+        ? Math.round(((Number(row.valor_atual) || 0) / Number(row.valor_alvo)) * 100)
+        : 0,
+  }));
+}
+
+function mapPendingBillsRows(rows = []) {
+  return rows.map((row) => ({
+    id: row.id,
+    description: row.descricao,
+    value: Number(row.valor) || 0,
+    dueDate: row.data_transacao,
+    status: row.status,
+  }));
+}
+
+function mapCardsRows(rows = []) {
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.nome,
+    closingDay: Number(row.dia_fechamento) || 1,
+    dueDay: Number(row.dia_vencimento) || 10,
+    totalLimit: Number(row.limite_total) || 0,
+    availableLimit: Number(row.limite_disponivel) || 0,
+    usedLimit: Math.max(
+      (Number(row.limite_total) || 0) - (Number(row.limite_disponivel) || 0),
+      0,
+    ),
+  }));
+}
+
+function mapMonthSnapshotRow(row = {}) {
+  return {
+    income: Number(row.income) || 0,
+    expenses: Number(row.expenses) || 0,
+    investedExpenses: 0,
+    goals: mapGoalsRows(row.goals || []),
+    pendingBills: mapPendingBillsRows(row.pending_bills || []),
+    cards: mapCardsRows(row.cards || []),
+    portfolio: Number(row.portfolio) || 0,
+    investedCapital: Number(row.invested) || 0,
+  };
+}
+
+/**
+ * Snapshot do mes em 1 round-trip.
+ * Filtro temporal por intervalo [month_start, next_month) — sem date_trunc(coluna).
+ */
 async function getMonthSnapshot(userId, referenceMonth = monthStart()) {
+  const { monthStart: start, nextMonth } = monthBounds(referenceMonth);
+
   const { rows } = await pool.query(
     `
-      SELECT
-        COALESCE(SUM(valor) FILTER (WHERE tipo = 'receita'), 0)::numeric AS income,
-        COALESCE(SUM(valor) FILTER (
-          WHERE tipo IN ('despesa', 'recorrencia', 'compra_parcelada', 'pagamento_fatura')
-        ), 0)::numeric AS expenses
-      FROM movimentacoes
-      WHERE usuario_id = $1
-        AND status <> 'cancelada'
-        AND date_trunc('month', data_transacao)::date = $2::date
-    `,
-    [userId, referenceMonth],
-  );
-
-  const goals = await pool.query(
-    `
-      SELECT id, nome, valor_alvo, valor_atual, prazo, status
-      FROM metas
-      WHERE usuario_id = $1 AND status = 'ativa'
-      ORDER BY prazo ASC NULLS LAST
-      LIMIT 20
-    `,
-    [userId],
-  );
-
-  const pendingBills = await pool.query(
-    `
-      SELECT id, descricao, valor, data_transacao, status
-      FROM movimentacoes
-      WHERE usuario_id = $1
-        AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')
-        AND status = 'pendente'
-      ORDER BY data_transacao ASC
-      LIMIT 10
-    `,
-    [userId],
-  );
-
-  const cards = await pool.query(
-    `
-      SELECT
-        id, nome, dia_fechamento, dia_vencimento,
-        limite_total, limite_disponivel
-      FROM cartoes
-      WHERE usuario_id = $1
-    `,
-    [userId],
-  );
-
-  const investments = await pool.query(
-    `
-      SELECT
-        COALESCE(SUM(valor_atual), 0)::numeric AS portfolio,
-        COALESCE(SUM(valor_inicial), 0)::numeric AS invested
-      FROM investimentos
-      WHERE usuario_id = $1
-    `,
-    [userId],
-  );
-
-  const snap = rows[0] || {};
-  return {
-    income: Number(snap.income) || 0,
-    expenses: Number(snap.expenses) || 0,
-    investedExpenses: 0,
-    goals: goals.rows.map((row) => ({
-      id: row.id,
-      name: row.nome,
-      target: Number(row.valor_alvo) || 0,
-      current: Number(row.valor_atual) || 0,
-      deadline: row.prazo,
-      remaining: Math.max((Number(row.valor_alvo) || 0) - (Number(row.valor_atual) || 0), 0),
-      progress:
-        Number(row.valor_alvo) > 0
-          ? Math.round(((Number(row.valor_atual) || 0) / Number(row.valor_alvo)) * 100)
-          : 0,
-    })),
-    pendingBills: pendingBills.rows.map((row) => ({
-      id: row.id,
-      description: row.descricao,
-      value: Number(row.valor) || 0,
-      dueDate: row.data_transacao,
-      status: row.status,
-    })),
-    cards: cards.rows.map((row) => ({
-      id: row.id,
-      name: row.nome,
-      closingDay: Number(row.dia_fechamento) || 1,
-      dueDay: Number(row.dia_vencimento) || 10,
-      totalLimit: Number(row.limite_total) || 0,
-      availableLimit: Number(row.limite_disponivel) || 0,
-      usedLimit: Math.max(
-        (Number(row.limite_total) || 0) - (Number(row.limite_disponivel) || 0),
-        0,
+      WITH bounds AS (
+        SELECT $2::date AS month_start, $3::date AS next_month
       ),
-    })),
-    portfolio: Number(investments.rows[0]?.portfolio) || 0,
-    investedCapital: Number(investments.rows[0]?.invested) || 0,
-  };
+      month_totals AS (
+        SELECT
+          COALESCE(SUM(m.valor) FILTER (WHERE m.tipo = 'receita'), 0)::numeric AS income,
+          COALESCE(SUM(m.valor) FILTER (
+            WHERE m.tipo IN ('despesa', 'recorrencia', 'compra_parcelada', 'pagamento_fatura')
+          ), 0)::numeric AS expenses
+        FROM movimentacoes m
+        CROSS JOIN bounds b
+        WHERE m.usuario_id = $1
+          AND m.status <> 'cancelada'
+          AND m.data_transacao >= b.month_start
+          AND m.data_transacao < b.next_month
+      ),
+      goals_data AS (
+        SELECT COALESCE(
+          (
+            SELECT jsonb_agg(to_jsonb(g) ORDER BY g.prazo ASC NULLS LAST)
+            FROM (
+              SELECT id, nome, valor_alvo, valor_atual, prazo, status
+              FROM metas
+              WHERE usuario_id = $1 AND status = 'ativa'
+              ORDER BY prazo ASC NULLS LAST
+              LIMIT 20
+            ) g
+          ),
+          '[]'::jsonb
+        ) AS goals
+      ),
+      pending_data AS (
+        SELECT COALESCE(
+          (
+            SELECT jsonb_agg(to_jsonb(p) ORDER BY p.data_transacao ASC)
+            FROM (
+              SELECT id, descricao, valor, data_transacao, status
+              FROM movimentacoes
+              WHERE usuario_id = $1
+                AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')
+                AND status = 'pendente'
+              ORDER BY data_transacao ASC
+              LIMIT 10
+            ) p
+          ),
+          '[]'::jsonb
+        ) AS pending_bills
+      ),
+      cards_data AS (
+        SELECT COALESCE(
+          (
+            SELECT jsonb_agg(to_jsonb(c))
+            FROM (
+              SELECT
+                id, nome, dia_fechamento, dia_vencimento,
+                limite_total, limite_disponivel
+              FROM cartoes
+              WHERE usuario_id = $1
+            ) c
+          ),
+          '[]'::jsonb
+        ) AS cards
+      ),
+      investment_totals AS (
+        SELECT
+          COALESCE(SUM(valor_atual), 0)::numeric AS portfolio,
+          COALESCE(SUM(valor_inicial), 0)::numeric AS invested
+        FROM investimentos
+        WHERE usuario_id = $1
+      )
+      SELECT
+        mt.income,
+        mt.expenses,
+        gd.goals,
+        pd.pending_bills,
+        cd.cards,
+        it.portfolio,
+        it.invested
+      FROM month_totals mt
+      CROSS JOIN goals_data gd
+      CROSS JOIN pending_data pd
+      CROSS JOIN cards_data cd
+      CROSS JOIN investment_totals it
+    `,
+    [userId, start, nextMonth],
+  );
+
+  return mapMonthSnapshotRow(rows[0]);
 }
 
 module.exports = {
@@ -315,4 +382,6 @@ module.exports = {
   listHealthHistory,
   getSpendingByCategory,
   getMonthSnapshot,
+  monthBounds,
+  mapMonthSnapshotRow,
 };

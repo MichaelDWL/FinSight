@@ -1,7 +1,6 @@
 const rateLimit = require("express-rate-limit");
 const { ipKeyGenerator } = require("express-rate-limit");
 const slowDown = require("express-slow-down");
-const env = require("../../config/env");
 const rateLimitConfig = require("../../config/rate-limit.config");
 const logger = require("../../utils/logger");
 const { getBridge, getStatus } = require("../../middlewares/rate-limit.store");
@@ -15,17 +14,14 @@ class RateLimitService {
   constructor(config = rateLimitConfig) {
     this.config = config;
     this._cache = new Map();
-    this._warnedNoRedis = false;
+    this._warnedInstanceScope = false;
   }
 
   assertStorePolicy() {
-    if (!this.config.requireRedisInProduction) return;
-    if (!env.isProduction) return;
-    if (env.redisUrl) return;
-    if (this._warnedNoRedis) return;
-    this._warnedNoRedis = true;
-    logger.error(
-      "RateLimit em PRODUCAO sem REDIS_URL — memoria por instancia e ineficaz contra abuso. Configure REDIS_URL."
+    if (this._warnedInstanceScope) return;
+    this._warnedInstanceScope = true;
+    logger.info(
+      "RateLimit em memoria por instancia. Em ambiente serverless, os contadores nao sao distribuidos entre instancias."
     );
   }
 
@@ -34,7 +30,7 @@ class RateLimitService {
    * Usa ipKeyGenerator para normalizar IPv6 (exigencia express-rate-limit).
    */
   buildKeyGenerator({ keyBy = "ip", group = "api" } = {}) {
-    return (req, res) => {
+    return (req, _res) => {
       const ipKey = ipKeyGenerator(req.ip || req.socket?.remoteAddress || "unknown");
       const userId = req.user?.id || "anon";
       const method = req.method || "GET";

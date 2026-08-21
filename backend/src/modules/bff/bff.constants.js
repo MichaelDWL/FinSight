@@ -4,6 +4,7 @@
  */
 const BFF_CACHE_TTL = {
   home: 60,
+  "home-secondary": 60,
   dashboard: 30,
   investments: 900, // 15 min — dados de mercado
   accounts: 45,

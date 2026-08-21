@@ -2,7 +2,8 @@ const pool = require("../../database/pool");
 const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 const { cacheAdapter } = require("../analytics/analytics.cache");
-const sharedRedis = require("../../platform/redis");
+const CacheService = require("../bff/cache/cache.service");
+const { getStatus: getRateLimitStatus } = require("../../middlewares/rate-limit.store");
 const { isReady: bootstrapReady } = require("../../platform/bootstrap");
 const AppError = require("../../utils/AppError");
 
@@ -41,8 +42,12 @@ const getReady = asyncHandler(async (_req, res) => {
         ssl: db.ssl,
       },
       bootstrap: bootstrapReady(),
-      redis: sharedRedis.isReady() ? "connected" : "optional-absent",
-      cache: cacheAdapter.getStatus(),
+      redis: "not-configured",
+      cache: {
+        analytics: cacheAdapter.getStatus(),
+        bff: CacheService.getStatus(),
+      },
+      rateLimit: getRateLimitStatus(),
       timestamp: new Date().toISOString(),
     },
   });
@@ -72,8 +77,12 @@ const getHealth = asyncHandler(async (_req, res) => {
         ssl: db.ssl,
       },
       bootstrap: bootstrapReady(),
-      redis: sharedRedis.isReady(),
-      cache: cacheAdapter.getStatus(),
+      redis: "not-configured",
+      cache: {
+        analytics: cacheAdapter.getStatus(),
+        bff: CacheService.getStatus(),
+      },
+      rateLimit: getRateLimitStatus(),
       timestamp: new Date().toISOString(),
     },
   });

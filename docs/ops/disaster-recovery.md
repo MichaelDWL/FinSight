@@ -21,7 +21,7 @@
 2. Restaurar ultimo dump ou PITR (Neon/Supabase).
 3. `npm run migrate`
 4. Validar `/ready` + smoke login.
-5. Invalidar cache Redis (`FLUSHDB` no namespace se necessario).
+5. Reiniciar/redeploy se precisar limpar caches em memoria locais.
 
 ### 3. Vazamento de secrets (JWT / CRON)
 
@@ -39,7 +39,7 @@
 
 ```text
 1. Identificar: /live (processo) vs /ready (deps)
-2. Se /live OK e /ready FAIL → banco ou Redis
+2. Se /live OK e /ready FAIL → banco ou bootstrap da aplicacao
 3. Se ambos FAIL → plataforma (Vercel)
 4. Comunicar usuarios (status page / email)
 5. Restaurar → migrar → smoke → reabrir
@@ -52,4 +52,4 @@
 
 ## Contatos / ownership
 
-Definir no time: quem tem acesso Vercel, Neon/Supabase e Redis (Upstash).
+Definir no time: quem tem acesso Vercel e Neon/Supabase.

@@ -16,6 +16,7 @@ const env = require("../config/env");
 const { isServerless } = require("../platform/runtime");
 const logger = require("../utils/logger");
 const { recordQuery } = require("../modules/bff/monitoring/sql.tracker");
+const { buildSslConfig, describeSslMode } = require("./sslConfig");
 
 // Singleton entre "warm" invocations do serverless e entre hot-reloads em dev.
 // Guardar no globalThis evita que um require duplicado (ex.: caminhos resolvidos
@@ -111,40 +112,6 @@ function describeDbError(error) {
 }
 
 /**
- * Monta a config de SSL a partir do .env, sem segredos fixos no codigo.
- *  - DATABASE_SSL=false            -> SSL desabilitado (dev / Docker).
- *  - DATABASE_SSL=true             -> valida certificado (rejectUnauthorized:true).
- *  - DATABASE_SSL_CA=<PEM>         -> valida contra o CA informado (Supabase).
- *  - DATABASE_SSL_INSECURE=true    -> nao valida (SOMENTE testes; nunca producao).
- */
-function buildSslConfig() {
-  if (!env.databaseSsl) {
-    if (env.isProduction) {
-      logger.warn(
-        "[database] DATABASE_SSL=false em producao. Supabase exige SSL — habilite DATABASE_SSL=true."
-      );
-    }
-    return false;
-  }
-
-  if (env.databaseSslInsecure) {
-    if (env.isProduction) {
-      logger.warn(
-        "[database] DATABASE_SSL_INSECURE=true em producao — verificacao de certificado DESABILITADA (risco de MITM). Remova assim que possivel."
-      );
-    }
-    return { rejectUnauthorized: false };
-  }
-
-  const ssl = { rejectUnauthorized: true };
-  if (env.databaseSslCa) {
-    // Permite CA colado em uma linha com "\n" literais (formato comum em envs).
-    ssl.ca = env.databaseSslCa.replace(/\\n/g, "\n");
-  }
-  return ssl;
-}
-
-/**
  * Cria e configura o Pool. Chamado UMA unica vez (protegido pelo singleton).
  */
 function createPool() {
@@ -154,19 +121,27 @@ function createPool() {
     ? Math.max(1, Math.min(env.dbPoolMax, env.dbPoolMaxServerless || 2))
     : env.dbPoolMax;
 
+  const sslBuilt = buildSslConfig(env, { warn: (msg) => logger.warn(msg) });
+  const sslMode = describeSslMode(sslBuilt);
+  // Nao passar metadados internos (__caSource) ao driver pg.
+  const ssl = sslBuilt
+    ? {
+        rejectUnauthorized: sslBuilt.rejectUnauthorized !== false,
+        ...(sslBuilt.ca ? { ca: sslBuilt.ca } : {}),
+      }
+    : false;
+
   const pool = new Pool({
     connectionString: env.databaseUrl,
     application_name: "finsight",
     max: poolMax,
-    // Serverless: libera conexoes ociosas rapidamente (instancias efemeras).
-    idleTimeoutMillis: isServerless ? 5_000 : 30_000,
+    idleTimeoutMillis: isServerless ? 60_000 : 30_000,
     connectionTimeoutMillis: 10_000,
-    // Evita que a instancia serverless fique presa por conexoes ociosas.
-    allowExitOnIdle: isServerless,
+    allowExitOnIdle: false,
     // Mantem sockets vivos (recomendado para Supabase atras de proxy/pooler).
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
-    ssl: buildSslConfig(),
+    ssl,
   });
 
   pool.on("error", (error) => {
@@ -212,7 +187,7 @@ function createPool() {
         now: row.now || null,
         postgresVersion: row.version || null,
         database: row.database || null,
-        ssl: Boolean(pool.options && pool.options.ssl),
+        ssl: sslMode,
         poolMax,
       };
     } catch (error) {
@@ -228,6 +203,7 @@ function createPool() {
         code: (error && error.code) || null,
         message: title,
         hint,
+        ssl: sslMode,
       };
     }
   };
@@ -235,7 +211,7 @@ function createPool() {
   logger.info("[database] pool inicializado", {
     runtime: isServerless ? "serverless" : "long-running",
     poolMax,
-    ssl: Boolean(pool.options && pool.options.ssl),
+    ssl: sslMode,
   });
 
   return pool;

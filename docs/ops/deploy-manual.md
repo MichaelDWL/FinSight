@@ -1,13 +1,13 @@
 # Manual de Deploy — FinSight
 
-Documento oficial de implantação para produção com **Vercel** (frontend + Serverless Functions), **Supabase PostgreSQL**, **Upstash Redis**, **Resend** e **Vercel Cron**.
+Documento oficial de implantação para produção com **Vercel** (frontend + Serverless Functions), **Supabase PostgreSQL**, **Resend** e **Vercel Cron**.
 
 **Stack alvo**
 
 - Frontend: Vercel (estático)
 - Backend: Vercel Serverless Functions
 - Banco: Supabase PostgreSQL
-- Redis: Upstash Redis
+- Cache/rate limit: memória por instância
 - E-mail: Resend
 - Cron: Vercel Cron
 - Repositório: GitHub
@@ -30,12 +30,12 @@ Documento oficial de implantação para produção com **Vercel** (frontend + Se
 
 | Pergunta | Resposta |
 |----------|----------|
-| Pronto para deploy? | **Condicionalmente sim** — o código já é serverless-ready, mas o deploy só é seguro após cumprir o checklist pré-deploy (migrations, secrets, Resend, Redis, SSL). |
+| Pronto para deploy? | **Condicionalmente sim** — o código já é serverless-ready, mas o deploy só é seguro após cumprir o checklist pré-deploy (migrations, secrets, Resend, SSL). |
 | Nível de prontidão | **MVP Production-ready com ressalvas** |
 | Nota (0–10) | **7,5 / 10** |
-| Riscos remanescentes | Redis opcional (sem ele, rate-limit/cache por instância); Hobby Cron 1x/dia com precisão ±59 min; cold start + Argon2; upload ainda stub; MFA não implementado; E2E Playwright não é suite ativa; purge de mercado pode referenciar nomes de tabela divergentes do schema. |
+| Riscos remanescentes | Rate-limit/cache em memória por instância; Hobby Cron 1x/dia com precisão ±59 min; cold start + Argon2; upload ainda stub; MFA não implementado; E2E Playwright não é suite ativa; purge de mercado pode referenciar nomes de tabela divergentes do schema. |
 
-**Veredito:** o projeto **pode** ir para produção como MVP financeiro, desde que o operador execute migrations fora do request path, configure secrets fortes, Resend com domínio verificado e Upstash Redis. Sem isso, é **No-Go**.
+**Veredito:** o projeto **pode** ir para produção como MVP financeiro, desde que o operador execute migrations fora do request path, configure secrets fortes e Resend com domínio verificado.
 
 ---
 
@@ -57,16 +57,14 @@ Serverless Functions
         │
         ▼
 Bootstrap lazy (src/platform/bootstrap.js)
-  • Redis Upstash
-  • Cache BFF / Analytics
-  • Rate-limit store → Redis
+  • Cache BFF / Analytics em memoria
+  • Rate-limit store em memoria por instancia
         │
         ▼
 Camadas da API
   Routes → Controllers → BFF / Services → Repositories
         │
         ├──► Supabase PostgreSQL (pg Pool, SSL)
-        ├──► Upstash Redis (cache + rate-limit)
         ├──► Resend (e-mail transacional)
         └──► APIs externas (somente no Cron diário)
                  • Banco Central (BCB/SGS)
@@ -100,12 +98,11 @@ Vercel Project
         └── api/cron/market (Vercel Cron 0 6 * * * UTC)
                 │
                 ├── Supabase PostgreSQL (dados + migrations)
-                ├── Upstash Redis (cache BFF, analytics, rate-limit)
                 ├── Resend (welcome, verify, reset)
                 └── BCB / BRAPI / Stooq (sync diário → Postgres)
 ```
 
-**Região configurada:** `iad1` (US East) em `vercel.json`. Ideal alinhar Supabase/Upstash à mesma região (ou a mais próxima) para latência.
+**Região configurada:** `gru1` em `vercel.json`, alinhada ao Supabase em `sa-east-1` para reduzir latência no Brasil.
 
 ---
 
@@ -127,7 +124,6 @@ Vercel Project
 | `DATABASE_SSL_INSECURE` | **Nunca** em prod rotina | Sim | Desliga verificação de cert | `false` | — | **ausente/false** |
 | `DB_POOL_MAX` | Não | Sim | Pool long-running | `10` | `10` | `10` |
 | `DB_POOL_MAX_SERVERLESS` | Recomendada | Sim | Pool por instância serverless | `2` | — | `1` ou `2` |
-| `REDIS_URL` | **Fortemente recomendada** | Sim | Upstash Redis | `rediss://default:…@….upstash.io:6379` | opcional | **Sim** |
 | `JWT_ACCESS_SECRET` | **Sim** | Sim | Assinatura access JWT (≥32, forte) | `base64url 48 bytes` | dev fraco ok | **forte** |
 | `JWT_REFRESH_SECRET` | **Sim** | Sim | Assinatura refresh JWT | idem | dev | **forte** |
 | `JWT_ACCESS_EXPIRES_IN` | Não | Sim | TTL access | `15m` | `15m` | `15m` |
@@ -215,7 +211,7 @@ Gerar **três** valores distintos: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `C
 ### Cache
 
 - Estático: Vercel CDN para `frontend/js` e `style`.
-- API: cache de aplicação via Upstash (BFF TTLs), não CDN cache de `/api` (cookies/auth).
+- API: cache de aplicação em memória por instância (BFF/analytics), não CDN cache de `/api` (cookies/auth).
 
 ---
 
@@ -223,7 +219,7 @@ Gerar **três** valores distintos: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `C
 
 | Tema | Recomendação |
 |------|----------------|
-| **Projeto** | Criar em região próxima de `iad1` (ex.: East US) |
+| **Projeto** | Criar em região próxima de `gru1` / `sa-east-1` |
 | **Banco** | Postgres gerenciado do projeto (não usar Auth do Supabase para o MVP) |
 | **SSL** | Sempre; na app: `DATABASE_SSL=true` |
 | **Connection string Runtime** | **Transaction pooler** porta **6543** (`?pgbouncer=true` se exigido) |
@@ -330,8 +326,7 @@ Checklist de produção:
 - [ ] JWT access/refresh com secrets fortes e audiências distintas
 - [ ] CSRF double-submit (`CSRF_ENABLED=true`)
 - [ ] CORS com origem explícita (`CORS_ORIGIN`)
-- [ ] Rate Limit + Slow Down (Redis em prod)
-- [ ] Redis Upstash configurado
+- [ ] Rate Limit + Slow Down ativos (memória por instância)
 - [ ] Helmet ativo
 - [ ] Idempotência (`Idempotency-Key` em mutações críticas)
 - [ ] Auditoria (`logs_auditoria` + financeira)
@@ -356,12 +351,12 @@ Checklist de produção:
 |------|--------------|--------------|
 | Paginação | Middleware `paginate` em listagens | Manter pageSize baixo |
 | Compressão | `compression` (≥1KB) | OK |
-| Cache BFF | TTLs por endpoint + Redis | **REDIS_URL obrigatório prático** |
+| Cache BFF | TTLs por endpoint + memória por instância | Opcional, descartável e local |
 | Lazy loading FE | Templates + modules + `core/store`/`events` | Ver `docs/frontend-architecture.md` |
 | Payload | BFF agregado | Evitar N+1 no FE |
 | SQL | Views analytics + índices | Rodar `EXPLAIN` em staging (`docs/database/query-plan.md`) |
 | Pool serverless | max 1–2 conexões | Usar pooler Supabase |
-| Cold start | Express + bootstrap Redis | Aceitável MVP; monitorar p95 |
+| Cold start | Express + bootstrap leve | Aceitável MVP; monitorar p95 |
 | Cron | 60s / sync diário | Observar duração no log |
 
 ---
@@ -373,7 +368,6 @@ Checklist de produção:
 - [ ] Criar repositório GitHub e branch `main` protegida
 - [ ] Criar projeto na Vercel e conectar GitHub
 - [ ] Criar projeto no Supabase (região alinhada)
-- [ ] Criar database Upstash Redis (`rediss://`)
 - [ ] Criar conta Resend + verificar domínio
 - [ ] Comprar/apontar domínio (opcional no 1º deploy)
 
@@ -390,7 +384,6 @@ Checklist de produção:
 
 - [ ] `NODE_ENV=production`
 - [ ] `DATABASE_URL` (pooler) + `DATABASE_SSL=true`
-- [ ] `REDIS_URL`
 - [ ] `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET`
 - [ ] `CRON_SECRET`
 - [ ] `CORS_ORIGIN` = URL final
@@ -443,7 +436,7 @@ Checklist de produção:
 - [ ] Banco: inserts reais de um usuário de teste
 - [ ] Cron: execução listada + log “Market sync”
 - [ ] E-mail Resend: delivery de verify/reset
-- [ ] Redis: `redis: connected` no bootstrap / ready
+- [ ] `/ready` com `redis: "not-configured"` e caches em `memory`
 - [ ] SSL do site (cadeado) + cookies `Secure`
 - [ ] Dashboard carrega em < poucos segundos (warm)
 - [ ] Providers: `market_provider_status` atualizado após cron
@@ -472,7 +465,7 @@ Checklist de produção:
 1. Pausar tráfego (Deployment Protection / manutenção).
 2. Restore do dump/PITR Supabase ([backup-restore.md](./backup-restore.md)).
 3. `npm run migrate` na versão de schema compatível.
-4. Invalidar Redis (`FLUSHDB` no DB Upstash do app, com cuidado).
+4. Reiniciar/redeploy se precisar limpar caches em memória das instâncias ativas.
 5. Redeploy da tag/commit anterior.
 6. Smoke login + contagens SQL.
 
@@ -506,7 +499,6 @@ Valores aproximados em USD/mês — planos free sujeitos a mudança.
 |---------|------------------|----------------|--------------|
 | **Vercel** | Hobby | **US$ 0** | Pro (~US$ 20) se precisar cron >1x/dia, logs longos, team, mais funções |
 | **Supabase** | Free | **US$ 0** | Pro (~US$ 25) se DB >500MB, pausa de projeto, PITR, mais conexões |
-| **Upstash Redis** | Free | **US$ 0** | Pay-as-you-go se estourar comandos/storage |
 | **Resend** | Free | **US$ 0** (~3k e-mails/mês) | Pago se volume de verify/reset crescer |
 | **Domínio** | Registro | **US$ 10–20/ano** | — |
 | **BRAPI** | Free / token | **US$ 0–?** | Se watchlist crescer além do free |
@@ -519,7 +511,6 @@ Valores aproximados em USD/mês — planos free sujeitos a mudança.
 - Cron mais de 1x/dia ou precisão minuto a minuto
 - Cold starts / timeouts frequentes no sync
 - Conexões Postgres esgotadas
-- Redis rate-limit errors
 - Necessidade de PITR / SLA / suporte
 - > ~50–100 usuários ativos diários com dashboards pesados
 
@@ -529,7 +520,6 @@ Valores aproximados em USD/mês — planos free sujeitos a mudança.
 
 ### Curto prazo
 
-- Redis obrigatório em prod (alertar se ausente)
 - Sentry ativo com `@sentry/node` instalado
 - Staging Preview na Vercel com DB separado
 - Corrigir/validar purge de histórico (`market_history` vs nomes no job)
@@ -567,9 +557,8 @@ Falta **operacional**, não só código:
 1. Supabase com schema + `npm run migrate` aplicados
 2. Variáveis de produção fortes (JWT, CRON, SSL)
 3. Resend com domínio verificado
-4. Upstash Redis
-5. Smoke tests pós-deploy (`/ready`, auth, cron, LGPD)
-6. `ALLOW_ADMIN_SEED` desligado
+4. Smoke tests pós-deploy (`/ready`, auth, cron, LGPD)
+5. `ALLOW_ADMIN_SEED` desligado
 
 ### Se SIM — cuidados obrigatórios
 
@@ -619,26 +608,20 @@ SELECT email, papel, status FROM usuarios LIMIT 5;
 
 7. Desligar seed daí em diante (`ALLOW_ADMIN_SEED` não vai para a Vercel).
 
-### Fase B — Redis (Upstash)
-
-1. Criar database Redis.
-2. Copiar `REDIS_URL` (`rediss://…`).
-3. Preferir região próxima de `iad1`.
-
-### Fase C — Resend
+### Fase B — Resend
 
 1. Criar API Key.
 2. Verificar domínio (DNS SPF/DKIM).
 3. Definir `EMAIL_FROM` com esse domínio.
 4. Testar envio pelo dashboard Resend.
 
-### Fase D — GitHub
+### Fase C — GitHub
 
 1. Garantir que o código está em `main`.
 2. Confirmar CI verde.
 3. Não commitar `.env`.
 
-### Fase E — Vercel
+### Fase D — Vercel
 
 1. **Add New Project** → importar o repo.
 2. Root: `/` — Node 20.
@@ -650,7 +633,6 @@ NODE_ENV=production
 DATABASE_URL=postgresql://...@...pooler.supabase.com:6543/postgres
 DATABASE_SSL=true
 DB_POOL_MAX_SERVERLESS=2
-REDIS_URL=rediss://...
 JWT_ACCESS_SECRET=...
 JWT_REFRESH_SECRET=...
 CRON_SECRET=...
@@ -671,7 +653,7 @@ BRAPI_TOKEN=...
 6. Em **Settings → Cron Jobs**, confirmar `/api/cron/market` `0 6 * * *`.
 7. Abrir a URL do deploy.
 
-### Fase F — Validação imediata
+### Fase E — Validação imediata
 
 ```bash
 curl -s https://SEU_DOMINIO/live
@@ -691,7 +673,7 @@ No browser:
 7. Perfil → exportar dados LGPD
 8. (Admin) painel admin
 
-### Fase G — Domínio custom (opcional)
+### Fase F — Domínio custom (opcional)
 
 1. Vercel → Domains → adicionar.
 2. Configurar DNS.
@@ -699,7 +681,7 @@ No browser:
 4. Redeploy.
 5. Revalidar cookies e login.
 
-### Fase H — Liberar usuários
+### Fase G — Liberar usuários
 
 1. Checklist pós-deploy 100%.
 2. Publicar `privacy.html` / termos.
@@ -717,7 +699,6 @@ NODE_ENV=production
 DATABASE_URL=
 DATABASE_SSL=true
 DB_POOL_MAX_SERVERLESS=2
-REDIS_URL=
 JWT_ACCESS_SECRET=
 JWT_REFRESH_SECRET=
 JWT_ACCESS_EXPIRES_IN=15m

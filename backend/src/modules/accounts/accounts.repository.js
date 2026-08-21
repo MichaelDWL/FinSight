@@ -3,47 +3,6 @@ const pool = require("../../database/pool");
 const SETTLED = "('confirmada', 'paga')";
 const OUTFLOW_TYPES = "('despesa', 'recorrencia', 'pagamento_fatura')";
 
-// Subqueries reutilizadas para consolidar receitas/despesas do mes e a ultima
-// movimentacao de cada conta. Espelham a regra do balanceService: transferencia
-// entra na conta destino e sai da conta origem.
-const RECEITAS_MES = `
-  COALESCE((
-    SELECT SUM(m.valor) FROM movimentacoes m
-    WHERE m.usuario_id = c.usuario_id
-      AND m.status IN ${SETTLED}
-      AND date_trunc('month', m.data_transacao) = date_trunc('month', CURRENT_DATE)
-      AND (
-        (m.tipo = 'receita' AND m.conta_id = c.id)
-        OR (m.tipo = 'transferencia' AND m.conta_destino_id = c.id)
-      )
-  ), 0) AS receitas_mes
-`;
-
-const DESPESAS_MES = `
-  COALESCE((
-    SELECT SUM(m.valor) FROM movimentacoes m
-    WHERE m.usuario_id = c.usuario_id
-      AND m.status IN ${SETTLED}
-      AND date_trunc('month', m.data_transacao) = date_trunc('month', CURRENT_DATE)
-      AND (
-        (m.tipo IN ${OUTFLOW_TYPES} AND m.conta_id = c.id)
-        OR (m.tipo = 'transferencia' AND m.conta_id = c.id)
-      )
-  ), 0) AS despesas_mes
-`;
-
-const ULTIMA_MOV = `
-  (SELECT MAX(m.data_transacao) FROM movimentacoes m
-    WHERE m.usuario_id = c.usuario_id
-      AND (m.conta_id = c.id OR m.conta_destino_id = c.id)) AS ultima_movimentacao
-`;
-
-const TOTAL_MOV = `
-  (SELECT COUNT(*) FROM movimentacoes m
-    WHERE m.usuario_id = c.usuario_id
-      AND (m.conta_id = c.id OR m.conta_destino_id = c.id)) AS total_movimentacoes
-`;
-
 function mapAccount(row) {
   return {
     id: row.id,
@@ -59,6 +18,25 @@ function mapAccount(row) {
     monthExpenses: Number(row.despesas_mes || 0),
     lastMovement: row.ultima_movimentacao || null,
     movementsCount: Number(row.total_movimentacoes || 0),
+  };
+}
+
+/** Conta leve para shell/Home — sem stats de movimentacoes. */
+function mapAccountSummary(row) {
+  return {
+    id: row.id,
+    icon: row.icone || "bank",
+    name: row.nome,
+    type: row.tipo,
+    institution: row.instituicao || "",
+    balance: Number(row.saldo_atual),
+    color: row.cor || "#0d6efd",
+    notes: row.observacao || "",
+    status: row.status,
+    monthIncome: 0,
+    monthExpenses: 0,
+    lastMovement: null,
+    movementsCount: 0,
   };
 }
 
@@ -84,13 +62,87 @@ function mapMovement(row, accountId) {
 async function findAll(userId) {
   const { rows } = await pool.query(
     `
+      WITH month_bounds AS (
+        SELECT
+          date_trunc('month', CURRENT_DATE)::date AS month_start,
+          (date_trunc('month', CURRENT_DATE) + interval '1 month')::date AS next_month_start
+      ),
+      account_stats AS (
+        SELECT
+          account_id,
+          SUM(month_income)::numeric AS receitas_mes,
+          SUM(month_expenses)::numeric AS despesas_mes,
+          MAX(last_movement) AS ultima_movimentacao,
+          SUM(movement_count)::int AS total_movimentacoes
+        FROM (
+          SELECT
+            m.conta_id AS account_id,
+            SUM(
+              CASE
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo IN ${OUTFLOW_TYPES}
+                THEN m.valor
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo = 'transferencia'
+                THEN m.valor
+                ELSE 0
+              END
+            ) AS month_expenses,
+            SUM(
+              CASE
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo = 'receita'
+                THEN m.valor
+                ELSE 0
+              END
+            ) AS month_income,
+            MAX(m.data_transacao) AS last_movement,
+            COUNT(*) AS movement_count
+          FROM movimentacoes m
+          CROSS JOIN month_bounds mb
+          WHERE m.usuario_id = $1
+            AND m.conta_id IS NOT NULL
+          GROUP BY m.conta_id
+
+          UNION ALL
+
+          SELECT
+            m.conta_destino_id AS account_id,
+            0::numeric AS month_expenses,
+            SUM(
+              CASE
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo = 'transferencia'
+                THEN m.valor
+                ELSE 0
+              END
+            ) AS month_income,
+            MAX(m.data_transacao) AS last_movement,
+            COUNT(*) AS movement_count
+          FROM movimentacoes m
+          CROSS JOIN month_bounds mb
+          WHERE m.usuario_id = $1
+            AND m.conta_destino_id IS NOT NULL
+          GROUP BY m.conta_destino_id
+        ) aggregated
+        GROUP BY account_id
+      )
       SELECT
         c.id, c.nome, c.tipo, c.instituicao, c.saldo_atual, c.cor, c.icone, c.observacao, c.status,
-        ${RECEITAS_MES},
-        ${DESPESAS_MES},
-        ${ULTIMA_MOV},
-        ${TOTAL_MOV}
+        COALESCE(s.receitas_mes, 0) AS receitas_mes,
+        COALESCE(s.despesas_mes, 0) AS despesas_mes,
+        s.ultima_movimentacao,
+        COALESCE(s.total_movimentacoes, 0) AS total_movimentacoes
       FROM contas c
+      LEFT JOIN account_stats s ON s.account_id = c.id
       WHERE c.usuario_id = $1
       ORDER BY c.created_at ASC
     `,
@@ -100,16 +152,105 @@ async function findAll(userId) {
   return rows.map(mapAccount);
 }
 
-async function findById(userId, id) {
+/**
+ * Lista enxuta: apenas colunas de contas (sem CTE/scan de movimentacoes).
+ * Adequada para Home shell e wealthBreakdown (id, type, balance, ...).
+ */
+async function findSummary(userId) {
   const { rows } = await pool.query(
     `
       SELECT
-        c.id, c.nome, c.tipo, c.instituicao, c.saldo_atual, c.cor, c.icone, c.observacao, c.status,
-        ${RECEITAS_MES},
-        ${DESPESAS_MES},
-        ${ULTIMA_MOV},
-        ${TOTAL_MOV}
+        c.id, c.nome, c.tipo, c.instituicao, c.saldo_atual,
+        c.cor, c.icone, c.observacao, c.status
       FROM contas c
+      WHERE c.usuario_id = $1
+      ORDER BY c.created_at ASC
+    `,
+    [userId],
+  );
+
+  return rows.map(mapAccountSummary);
+}
+
+async function findById(userId, id) {
+  // Stats via agregacao unica (JOIN/GROUP), equivalente ao findAll — sem subqueries correlacionadas.
+  const { rows } = await pool.query(
+    `
+      WITH month_bounds AS (
+        SELECT
+          date_trunc('month', CURRENT_DATE)::date AS month_start,
+          (date_trunc('month', CURRENT_DATE) + interval '1 month')::date AS next_month_start
+      ),
+      account_stats AS (
+        SELECT
+          SUM(month_income)::numeric AS receitas_mes,
+          SUM(month_expenses)::numeric AS despesas_mes,
+          MAX(last_movement) AS ultima_movimentacao,
+          SUM(movement_count)::int AS total_movimentacoes
+        FROM (
+          SELECT
+            SUM(
+              CASE
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo IN ${OUTFLOW_TYPES}
+                THEN m.valor
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo = 'transferencia'
+                THEN m.valor
+                ELSE 0
+              END
+            ) AS month_expenses,
+            SUM(
+              CASE
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo = 'receita'
+                THEN m.valor
+                ELSE 0
+              END
+            ) AS month_income,
+            MAX(m.data_transacao) AS last_movement,
+            COUNT(*) AS movement_count
+          FROM movimentacoes m
+          CROSS JOIN month_bounds mb
+          WHERE m.usuario_id = $1
+            AND m.conta_id = $2
+
+          UNION ALL
+
+          SELECT
+            0::numeric AS month_expenses,
+            SUM(
+              CASE
+                WHEN m.status IN ${SETTLED}
+                  AND m.data_transacao >= mb.month_start
+                  AND m.data_transacao < mb.next_month_start
+                  AND m.tipo = 'transferencia'
+                THEN m.valor
+                ELSE 0
+              END
+            ) AS month_income,
+            MAX(m.data_transacao) AS last_movement,
+            COUNT(*) AS movement_count
+          FROM movimentacoes m
+          CROSS JOIN month_bounds mb
+          WHERE m.usuario_id = $1
+            AND m.conta_destino_id = $2
+        ) aggregated
+      )
+      SELECT
+        c.id, c.nome, c.tipo, c.instituicao, c.saldo_atual, c.cor, c.icone, c.observacao, c.status,
+        COALESCE(s.receitas_mes, 0) AS receitas_mes,
+        COALESCE(s.despesas_mes, 0) AS despesas_mes,
+        s.ultima_movimentacao,
+        COALESCE(s.total_movimentacoes, 0) AS total_movimentacoes
+      FROM contas c
+      LEFT JOIN account_stats s ON true
       WHERE c.usuario_id = $1 AND c.id = $2
     `,
     [userId, id]
@@ -200,4 +341,4 @@ async function remove(userId, id) {
   return rowCount > 0;
 }
 
-module.exports = { findAll, findById, create, update, remove };
+module.exports = { findAll, findSummary, findById, create, update, remove, mapAccountSummary };

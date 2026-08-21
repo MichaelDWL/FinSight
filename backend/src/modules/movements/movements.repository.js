@@ -108,12 +108,17 @@ async function listAll(userId, options = {}) {
 
   const filters = SafeQueryBuilder.for("movements").buildFromQuery(options.filters || {}, 2);
   const whereExtra = filters.sql ? ` AND ${filters.sql}` : "";
+  const skipTotal = options.skipTotal === true;
 
-  const countResult = await pool.query(
-    `SELECT COUNT(*)::int AS total FROM movimentacoes m
-      WHERE m.usuario_id = $1 AND m.excluido_em IS NULL${whereExtra}`,
-    [userId, ...filters.params]
-  );
+  let total = null;
+  if (!skipTotal) {
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM movimentacoes m
+        WHERE m.usuario_id = $1 AND m.excluido_em IS NULL${whereExtra}`,
+      [userId, ...filters.params]
+    );
+    total = countResult.rows[0].total;
+  }
 
   const order = paginationService.resolveOrderBy(
     pagination,
@@ -129,9 +134,18 @@ async function listAll(userId, options = {}) {
     [userId, ...filters.params, pagination.limit, pagination.offset]
   );
 
+  const items = rows.map(mapTransactionView);
+  if (skipTotal) {
+    return {
+      items,
+      ...paginationService.toMeta(pagination, items.length),
+      totalUnknown: true,
+    };
+  }
+
   return {
-    items: rows.map(mapTransactionView),
-    ...paginationService.toMeta(pagination, countResult.rows[0].total),
+    items,
+    ...paginationService.toMeta(pagination, total),
   };
 }
 
@@ -152,12 +166,17 @@ async function listBillsView(userId, options = {}) {
       { resource: "movements", defaultSort: "date" }
     );
 
-  const countResult = await pool.query(
-    `SELECT COUNT(*)::int AS total FROM movimentacoes
-      WHERE usuario_id = $1 AND excluido_em IS NULL
-        AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')`,
-    [userId]
-  );
+  const skipTotal = options.skipTotal === true;
+  let total = null;
+  if (!skipTotal) {
+    const countResult = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM movimentacoes
+        WHERE usuario_id = $1 AND excluido_em IS NULL
+          AND tipo IN ('despesa', 'recorrencia', 'pagamento_fatura')`,
+      [userId]
+    );
+    total = countResult.rows[0].total;
+  }
 
   const order = paginationService.resolveOrderBy(
     { ...pagination, resource: "movements" },
@@ -172,9 +191,18 @@ async function listBillsView(userId, options = {}) {
     [userId, pagination.limit, pagination.offset]
   );
 
+  const items = rows.map(mapBillView);
+  if (skipTotal) {
+    return {
+      items,
+      ...paginationService.toMeta(pagination, items.length),
+      totalUnknown: true,
+    };
+  }
+
   return {
-    items: rows.map(mapBillView),
-    ...paginationService.toMeta(pagination, countResult.rows[0].total),
+    items,
+    ...paginationService.toMeta(pagination, total),
   };
 }
 
@@ -417,6 +445,9 @@ async function create(userId, payload, auditMeta = {}) {
         `UPDATE movimentacoes SET recorrencia_id = $2, origem = 'recorrente' WHERE id = $1`,
         [rows[0].id, recorrenciaId]
       );
+
+      // Gera ocorrencias vencidas no mesmo fluxo de mutacao (nao em GET).
+      await recurrenceService.generate(client, userId);
     }
 
     await financialAudit.record({

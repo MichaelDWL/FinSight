@@ -33,7 +33,9 @@ async function findAll(userId) {
   const { rows } = await pool.query(
     `
       SELECT
-        c.*,
+        c.id, c.nome, c.banco, c.bandeira, c.ultimos_digitos, c.cor,
+        c.dia_fechamento, c.dia_vencimento, c.limite_total, c.limite_disponivel,
+        c.observacao, c.conta_pagamento_id, c.created_at,
         co.nome AS conta_pagamento,
         COALESCE(SUM(f.valor_total) FILTER (WHERE f.status IN ('aberta', 'fechada', 'atrasada')), 0) AS fatura_atual,
         COALESCE(SUM(f.valor_total) FILTER (WHERE f.data_vencimento > CURRENT_DATE), 0) AS proxima_fatura
@@ -54,7 +56,9 @@ async function findById(userId, id) {
   const { rows } = await pool.query(
     `
       SELECT
-        c.*,
+        c.id, c.nome, c.banco, c.bandeira, c.ultimos_digitos, c.cor,
+        c.dia_fechamento, c.dia_vencimento, c.limite_total, c.limite_disponivel,
+        c.observacao, c.conta_pagamento_id, c.created_at,
         co.nome AS conta_pagamento,
         COALESCE(SUM(f.valor_total) FILTER (WHERE f.status IN ('aberta', 'fechada', 'atrasada')), 0) AS fatura_atual,
         COALESCE(SUM(f.valor_total) FILTER (WHERE f.data_vencimento > CURRENT_DATE), 0) AS proxima_fatura
@@ -74,10 +78,13 @@ async function findById(userId, id) {
       SELECT descricao AS name, valor, data_transacao AS date, COALESCE(cat.nome, 'Cartao') AS category
       FROM movimentacoes t
       LEFT JOIN categorias cat ON cat.id = t.categoria_id
-      WHERE t.usuario_id = $1 AND t.cartao_id = $2
+      WHERE t.usuario_id = $1
+        AND t.cartao_id = $2
+        AND t.excluido_em IS NULL
       ORDER BY t.data_transacao DESC
+      LIMIT $3
     `,
-    [userId, id]
+    [userId, id, 100]
   );
 
   card.purchases = purchases.rows.map((row) => ({

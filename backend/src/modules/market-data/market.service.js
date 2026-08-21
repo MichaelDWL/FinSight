@@ -137,6 +137,52 @@ async function getAsset(assetCode) {
   };
 }
 
+/**
+ * Carrega N ativos em 3 queries (snapshot + history + stats), sem N+1.
+ * @returns {Map<string, object|null>}
+ */
+async function getAssets(assetCodes = [], { historyLimit = 90 } = {}) {
+  const codes = repository.normalizeAssetCodes(assetCodes);
+  const result = new Map();
+  if (!codes.length) return result;
+
+  const [snapshots, historyByCode, statsByCode] = await Promise.all([
+    repository.getMarketDataByCodes(codes),
+    repository.getMarketHistoryBatch(codes, { limit: historyLimit }),
+    repository.getMarketStatsBatch(codes),
+  ]);
+
+  const snapshotByCode = new Map(
+    snapshots.map((item) => [String(item.assetCode).toUpperCase(), item]),
+  );
+
+  for (const code of codes) {
+    const snapshot = snapshotByCode.get(code);
+    if (!snapshot) {
+      result.set(code, null);
+      continue;
+    }
+    const history = historyByCode.get(code) || [];
+    const stats = statsByCode.get(code) || {
+      minPrice: null,
+      maxPrice: null,
+      avgPrice: null,
+      points: 0,
+    };
+    const volatility = computeVolatility(history.map((item) => item.price));
+    result.set(code, {
+      ...snapshot,
+      history,
+      stats: {
+        ...stats,
+        volatility,
+      },
+    });
+  }
+
+  return result;
+}
+
 async function getHistory(assetCode, options = {}) {
   const code = String(assetCode || "").toUpperCase().trim();
   if (!code) return [];
@@ -428,6 +474,7 @@ module.exports = {
   ensureAssetInWatchlist,
   ensureUserAssetsOnWatchlist,
   getAsset,
+  getAssets,
   getHistory,
   getOverview,
   getProvidersStatus,

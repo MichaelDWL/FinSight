@@ -21,7 +21,10 @@ function buildCashflowQuery() {
             THEN v.valor
           END), 0) AS expenses
         FROM bounds b
-        LEFT JOIN vw_analytics_movimentacoes v ON v.usuario_id = $1
+        LEFT JOIN vw_analytics_movimentacoes v
+          ON v.usuario_id = $1
+         AND v.data_transacao BETWEEN b.start_date AND b.end_date
+         AND (v.is_receita_liquidada OR v.is_despesa_periodo)
       ),
       daily_flow AS (
         SELECT
@@ -81,7 +84,9 @@ function buildCashflowQuery() {
         ) m
         LEFT JOIN vw_analytics_movimentacoes v
           ON v.usuario_id = $1
-          AND date_trunc('month', v.data_transacao)::date = m.month_start
+          AND v.data_transacao >= m.month_start
+          AND v.data_transacao < (m.month_start + interval '1 month')::date
+          AND (v.is_receita_liquidada OR v.is_despesa_periodo)
         GROUP BY m.month_start
         ORDER BY m.month_start
       )

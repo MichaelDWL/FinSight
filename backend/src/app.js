@@ -38,9 +38,11 @@ app.get("/", (_req, res) => {
       privacy: "/api/privacy",
       cron: {
         market: "/api/cron/market",
+        recurrences: "/api/cron/recurrences",
       },
       bff: {
         home: "/api/home",
+        homeSecondary: "/api/home/secondary",
         dashboard: "/api/dashboard",
         investments: "/api/investments",
         accounts: "/api/accounts",

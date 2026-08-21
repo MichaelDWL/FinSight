@@ -1,19 +1,19 @@
 const movementsService = require("../../movements/movements.service");
 const accountsService = require("../../accounts/accounts.service");
-const usersService = require("../../users/users.service");
 const dashboardRepository = require("../../dashboard/dashboard.repository");
 const CacheService = require("../cache/cache.service");
 const { BFF_CACHE_TTL } = require("../bff.constants");
 const { parallel } = require("../utils/parallel");
+const { resolveUser } = require("../utils/resolveUser");
 
 /**
  * TransactionsBFFService — lista + filtros + resumo + graficos.
  */
-async function buildTransactions(userId) {
+async function buildTransactions(userId, options = {}) {
   const result = await parallel({
-    user: () => usersService.getProfile(userId),
+    user: () => resolveUser(userId, options),
     transactions: () => movementsService.listTransactions(userId, { pageSize: 100, asArray: true }),
-    accounts: { fn: () => accountsService.list(userId), optional: true, fallback: [] },
+    accounts: { fn: () => accountsService.listSummary(userId), optional: true, fallback: [] },
     categoryComparison: {
       fn: () => dashboardRepository.getCategorySpendingComparison(userId),
       optional: true,
@@ -96,12 +96,12 @@ async function buildTransactions(userId) {
   };
 }
 
-async function getTransactions(userId) {
+async function getTransactions(userId, _query = {}, options = {}) {
   const cacheKey = CacheService.buildKey("transactions", userId);
   const { data, cacheHit } = await CacheService.wrap(
     cacheKey,
     BFF_CACHE_TTL.transactions,
-    () => buildTransactions(userId),
+    () => buildTransactions(userId, options),
   );
 
   return { data, cacheHit };

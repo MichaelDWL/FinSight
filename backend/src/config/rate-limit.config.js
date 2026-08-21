@@ -8,10 +8,7 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 
 const rateLimitConfig = Object.freeze({
-  /** Sem REDIS_URL em producao: alerta; memoria so e aceitavel em desenvolvimento. */
-  requireRedisInProduction: true,
-
-  /** Prefixo Redis / store */
+  /** Prefixo logico do store local */
   keyPrefix: "finsight:rl",
 
   /** Limite global da API (por IP) */

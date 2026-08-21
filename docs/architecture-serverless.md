@@ -19,7 +19,7 @@ FinSight/
   src/                      # Codigo de negocio + HTTP app
     platform/               # runtime, bootstrap, httpHandler
     modules/                # dominio (auth, bff, market-data, cron, ...)
-    middlewares/rateLimit/  # store memoria → Redis
+    middlewares/rateLimit/  # store em memoria por instancia
     services/upload/        # UploadService (Cloudinary futuro)
     config/env.js
     server.js               # long-running only
@@ -28,7 +28,7 @@ FinSight/
   Dockerfile                # build a partir da raiz
   vercel.json
   package.json              # deps + scripts na raiz
-  docker-compose.yml        # Postgres + API + Redis (RUNTIME=long)
+  docker-compose.yml        # Postgres + API (RUNTIME=long)
 ```
 
 ## Fluxos
@@ -45,9 +45,9 @@ Vercel Cron → `GET /api/cron/market` + `Authorization: Bearer $CRON_SECRET`
 
 ## Rate limit
 
-Store adaptativo (`src/middlewares/rate-limit.store.js`):
-- Sem `REDIS_URL`: memoria (dev / single instance)
-- Com Redis: promove automaticamente no bootstrap (compartilhado entre instancias)
+Store local (`src/middlewares/rate-limit.store.js`):
+- Memoria por instancia
+- Em serverless, os contadores nao sao distribuidos entre instancias
 
 ## Variaveis criticas (Vercel)
 
@@ -59,7 +59,6 @@ Store adaptativo (`src/middlewares/rate-limit.store.js`):
 | `CRON_SECRET` | protege o job; Vercel envia Bearer automaticamente |
 | `JWT_*` / `COOKIE_*` | auth |
 | `CORS_ORIGIN` | URL do frontend na Vercel |
-| `REDIS_URL` | **recomendado** em producao (cache + rate-limit compartilhado; Upstash) |
 | `RUNTIME` | omitir (auto) ou `serverless` |
 | `ALLOW_ADMIN_SEED` | nunca `true` em producao rotineira |
 | `EMAIL_PROVIDER=resend` | + `RESEND_API_KEY` em producao |
@@ -70,17 +69,15 @@ Store adaptativo (`src/middlewares/rate-limit.store.js`):
 1. Aplicar schema inicial (`docs/database/schema.sql`) no Postgres gerenciado (uma vez).
 2. `DATABASE_URL` + secrets no painel Vercel.
 3. Rodar migrations **fora** do request: `npm run migrate` (CI ou maquina com acesso ao DB).
-4. Configurar `REDIS_URL` (Upstash) — sem Redis, cache/rate-limit ficam por instancia.
-5. Confirmar Cron `/api/cron/market` + `CRON_SECRET`.
-6. Smoke: `/live`, `/ready`, login.
+4. Confirmar Cron `/api/cron/market` + `CRON_SECRET`.
+5. Smoke: `/live`, `/ready`, login.
 
 ## Migrar para Railway / VPS / Fly
 
 1. Subir com `RUNTIME=long` (`Dockerfile` na raiz).
 2. Apontar o frontend para a URL da API (ou reverse proxy `/api`).
 3. Trocar Vercel Cron por crontab chamando `/api/cron/market` **ou** manter `MARKET_SCHEDULER_ENABLED=true`.
-4. `REDIS_URL` no Compose/servico.
-5. Nenhuma mudanca em Services/Repositories.
+4. Nenhuma mudanca em Services/Repositories.
 
 ## Ops
 

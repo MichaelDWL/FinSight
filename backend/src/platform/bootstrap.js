@@ -1,7 +1,5 @@
-const sharedRedis = require("./redis");
 const { initCache } = require("../modules/analytics/analytics.cache");
 const CacheService = require("../modules/bff/cache/cache.service");
-const { promoteAllToRedis } = require("../middlewares/rate-limit.store");
 const logger = require("../utils/logger");
 
 let bootPromise = null;
@@ -17,17 +15,15 @@ async function ensureReady() {
 
   bootPromise = (async () => {
     const started = Date.now();
-    await sharedRedis.connect();
     await Promise.all([
       initCache(),
       CacheService.init(),
-      promoteAllToRedis(),
     ]);
     require("../modules/personalization");
     ready = true;
     logger.info("Platform bootstrap concluido", {
       durationMs: Date.now() - started,
-      redis: sharedRedis.isReady(),
+      cacheMode: CacheService.getStatus().mode,
     });
   })().catch((error) => {
     bootPromise = null;

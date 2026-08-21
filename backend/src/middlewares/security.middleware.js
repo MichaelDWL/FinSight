@@ -58,6 +58,16 @@ function securityMiddleware(app) {
         "Idempotency-Key",
         "X-Request-Id",
       ],
+      // Permite o frontend/devtools lerem metricas BFF sem APM externo.
+      exposedHeaders: [
+        "X-Request-Id",
+        "X-BFF-Endpoint",
+        "X-BFF-Cache",
+        "X-BFF-Duration-Ms",
+        "X-BFF-SQL-Count",
+        "X-BFF-SQL-Ms",
+        "X-BFF-Warm",
+      ],
     })
   );
 

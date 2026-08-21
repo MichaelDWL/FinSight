@@ -59,13 +59,9 @@ async function findAll(userId, options = {}) {
     "i.data_investimento DESC, i.created_at DESC"
   );
 
-  const countResult = await pool.query(
-    `SELECT COUNT(*)::int AS total FROM investimentos WHERE usuario_id = $1`,
-    [userId]
-  );
+  const includeTotal = Boolean(options.pagination);
 
-  const { rows } = await pool.query(
-    `
+  const selectQuery = `
       SELECT
         ${INVESTMENT_COLUMNS},
         ci.nome AS categoria,
@@ -79,12 +75,23 @@ async function findAll(userId, options = {}) {
       WHERE i.usuario_id = $1
       ORDER BY ${order.clause}
       LIMIT $2 OFFSET $3
-    `,
-    [userId, pagination.limit, pagination.offset]
-  );
+    `;
+
+  if (!includeTotal) {
+    const { rows } = await pool.query(selectQuery, [userId, pagination.limit, pagination.offset]);
+    return {
+      items: rows.map(mapInvestment),
+      ...paginationService.toMeta(pagination, rows.length),
+    };
+  }
+
+  const [countResult, listResult] = await Promise.all([
+    pool.query(`SELECT COUNT(*)::int AS total FROM investimentos WHERE usuario_id = $1`, [userId]),
+    pool.query(selectQuery, [userId, pagination.limit, pagination.offset]),
+  ]);
 
   return {
-    items: rows.map(mapInvestment),
+    items: listResult.rows.map(mapInvestment),
     ...paginationService.toMeta(pagination, countResult.rows[0].total),
   };
 }

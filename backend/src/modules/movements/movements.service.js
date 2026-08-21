@@ -20,6 +20,7 @@ function normalizeListOptions(options = {}) {
     return {
       pagination: options.pagination,
       filters: options.filters || {},
+      skipTotal: options.skipTotal === true || options.asArray === true,
     };
   }
   return {
@@ -33,6 +34,7 @@ function normalizeListOptions(options = {}) {
       { resource: "movements", defaultSort: "date" }
     ),
     filters: options.filters || {},
+    skipTotal: options.skipTotal === true || options.asArray === true,
   };
 }
 

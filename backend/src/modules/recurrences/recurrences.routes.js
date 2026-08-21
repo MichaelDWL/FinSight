@@ -13,6 +13,7 @@ const idParam = z.object({
 const router = Router();
 
 router.get("/", controller.list);
+router.post("/sync", controller.sync);
 router.delete("/:id", validate(idParam), controller.remove);
 
 module.exports = router;

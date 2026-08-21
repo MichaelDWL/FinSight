@@ -7,7 +7,7 @@ Data: 2026-07-17
 | Area | Antes | Depois |
 |------|-------|--------|
 | Migrations | So no long-running, sem controle | `schema_migrations` + `npm run migrate` |
-| Redis | 3 clientes / personalization so memoria | Client compartilhado (`src/platform/redis.js`) |
+| Cache | Clientes Redis distintos | Cache local em memoria por instancia |
 | TLS DB | `rejectUnauthorized: false` | `true` + CA opcional; insecure so emergencia |
 | LGPD | Exclusao fake | Export, consent, delete/anonimizacao, privacy.html |
 | Audit financeiro | Ausente | Tabela imutavel + trigger |
@@ -36,7 +36,7 @@ Data: 2026-07-17
 
 ## Riscos remanescentes
 
-1. Redis ainda opcional — sem ele, rate-limit/cache por instancia
+1. Rate-limit/cache em memoria por instancia
 2. MFA apenas preparado (coluna), nao implementado
 3. `core/app.js` ainda orquestra muitas rotas (~2.2k linhas); store/events/modules já extraídos — ver `docs/frontend-architecture.md`
 4. EXPLAIN ANALYZE precisa ser rodado em staging com dados reais
@@ -59,4 +59,4 @@ Data: 2026-07-17
 | Escalabilidade | 7.5 |
 | Prontidao para Producao | 7.5 |
 
-**Veredito:** pronto para MVP em producao na Vercel **desde que** o checklist em `docs/ops/production-checklist.md` seja cumprido (migrate + secrets + Resend + Redis recomendado).
+**Veredito:** pronto para MVP em producao na Vercel **desde que** o checklist em `docs/ops/production-checklist.md` seja cumprido (migrate + secrets + Resend).

@@ -15,4 +15,12 @@ const remove = asyncHandler(async (req, res) => {
   return success(res, { message: "Recorrencia desativada com sucesso.", data: { id: req.params.id } });
 });
 
-module.exports = { list, remove };
+const sync = asyncHandler(async (req, res) => {
+  const generated = await recurrenceService.syncRecurringTransactions(getCurrentUserId(req));
+  return success(res, {
+    message: "Recorrencias sincronizadas.",
+    data: { generated },
+  });
+});
+
+module.exports = { list, remove, sync };

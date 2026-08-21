@@ -1,60 +1,54 @@
-const usersService = require("../../users/users.service");
 const goalsService = require("../../goals/goals.service");
 const personalizationEngine = require("../../personalization/engine/PersonalizationEngine");
-const dashboardService = require("../../dashboard/dashboard.service");
 const CacheService = require("../cache/cache.service");
 const { BFF_CACHE_TTL } = require("../bff.constants");
 const { parallel } = require("../utils/parallel");
+const { resolveUser } = require("../utils/resolveUser");
 
 /**
- * InsightsBFFService — alertas, recomendacoes, metas e saude financeira.
+ * InsightsBFFService — metas + personalizacao (somente leitura).
+ * Nao carrega getDashboard completo (evita dezenas de queries duplicadas).
  */
-async function buildInsights(userId) {
+async function buildInsights(userId, options = {}) {
   const result = await parallel({
-    user: () => usersService.getProfile(userId),
+    user: () => resolveUser(userId, options),
     personalization: {
-      fn: () => personalizationEngine.rebuildContext(userId),
+      fn: () => personalizationEngine.readContext(userId),
       optional: true,
       fallback: null,
     },
     goals: { fn: () => goalsService.list(userId), optional: true, fallback: [] },
-    dashboard: {
-      fn: () => dashboardService.getDashboard(userId),
-      optional: true,
-      fallback: null,
-    },
   });
 
   const personalization = result.personalization || {};
-  const dashboard = result.dashboard || {};
 
   return {
     user: result.user,
-    alerts: personalization.alerts || dashboard.alerts || [],
-    recommendations: personalization.recommendations || dashboard.recommendations || [],
+    alerts: personalization.alerts || [],
+    recommendations: personalization.recommendations || [],
     goals: result.goals,
     savings: {
-      monthlyBalance: dashboard.monthlyBalance ?? null,
-      freeBudget: dashboard.monthlyBalance ?? null,
-      budgets: personalization.budgets || dashboard.budgets || [],
-      progress: personalization.progress || dashboard.progress || [],
+      monthlyBalance: null,
+      freeBudget: null,
+      budgets: personalization.budgets || [],
+      progress: personalization.progress || [],
     },
     financialHealth: {
-      score: personalization.health || dashboard.healthScore || null,
-      chips: dashboard.financialHealth || [],
-      wealthBreakdown: dashboard.wealthBreakdown || null,
+      score: personalization.health || null,
+      chips: [],
+      wealthBreakdown: null,
     },
-    insights: personalization.insights || dashboard.insights || [],
+    insights: personalization.insights || [],
     personalization,
   };
 }
 
-async function getInsights(userId) {
+async function getInsights(userId, _query = {}, options = {}) {
   const cacheKey = CacheService.buildKey("insights", userId);
   const { data, cacheHit } = await CacheService.wrap(
     cacheKey,
     BFF_CACHE_TTL.insights,
-    () => buildInsights(userId),
+    () => buildInsights(userId, options),
   );
 
   return { data, cacheHit };

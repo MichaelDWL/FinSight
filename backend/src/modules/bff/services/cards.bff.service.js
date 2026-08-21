@@ -1,17 +1,17 @@
 const cardsService = require("../../cards/cards.service");
 const invoicesService = require("../../invoices/invoices.service");
 const analyticsService = require("../../analytics/analytics.service");
-const usersService = require("../../users/users.service");
 const CacheService = require("../cache/cache.service");
 const { BFF_CACHE_TTL } = require("../bff.constants");
 const { parallel } = require("../utils/parallel");
+const { resolveUser } = require("../utils/resolveUser");
 
 /**
  * CardsBFFService — tela de cartoes em uma chamada.
  */
-async function buildCards(userId, query = {}) {
+async function buildCards(userId, query = {}, options = {}) {
   const result = await parallel({
-    user: () => usersService.getProfile(userId),
+    user: () => resolveUser(userId, options),
     cards: () => cardsService.list(userId),
     invoices: {
       fn: () => invoicesService.listCurrent(userId),
@@ -86,13 +86,13 @@ async function buildCards(userId, query = {}) {
   };
 }
 
-async function getCards(userId, query = {}) {
+async function getCards(userId, query = {}, options = {}) {
   const period = query.period || "30d";
   const cacheKey = CacheService.buildKey("cards", userId, period);
   const { data, cacheHit } = await CacheService.wrap(
     cacheKey,
     BFF_CACHE_TTL.cards,
-    () => buildCards(userId, query),
+    () => buildCards(userId, query, options),
   );
 
   return { data, cacheHit };

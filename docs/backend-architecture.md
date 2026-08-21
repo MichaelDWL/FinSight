@@ -76,7 +76,7 @@ BFF (uma chamada por tela) → CRUDs por domínio.
 
 - Config central: `config/rate-limit.config.js` (único lugar para ajustar limites).
 - Middleware: `middlewares/rate-limit.middleware.js`.
-- Store adaptativo (memória → Redis): `middlewares/rate-limit.store.js`.
+- Store local em memória por instância: `middlewares/rate-limit.store.js`.
 - Serviço: `services/rate-limit/rate-limit.service.js`.
 
 ## Notas

@@ -3,7 +3,6 @@ const cardsService = require("../cards/cards.service");
 const goalsService = require("../goals/goals.service");
 const investmentsService = require("../investments/investments.service");
 const movementsService = require("../movements/movements.service");
-const recurrenceService = require("../../services/recurrence.service");
 const repository = require("./dashboard.repository");
 const personalizationEngine = require("../personalization/engine/PersonalizationEngine");
 
@@ -354,12 +353,124 @@ function formatCurrency(value) {
   }).format(Number(value) || 0);
 }
 
-async function getDashboard(userId) {
-  await recurrenceService.ensureGenerated(userId);
+function buildTrends(summary, previousMonth, monthlyBalance) {
+  return {
+    balance: calcTrend(summary.balance, summary.balance - monthlyBalance),
+    income: calcTrend(summary.income, previousMonth.income),
+    expenses: calcTrend(summary.expenses, previousMonth.expenses),
+    netWorth: calcTrend(summary.netWorth, summary.netWorth - monthlyBalance),
+  };
+}
 
+/**
+ * Caminho critico da Home: KPIs, shell (contas/cartoes), movimentacoes recentes.
+ * Sem personalization, graficos analiticos, metas, bills ou lista de investimentos.
+ */
+async function getHomeCore(userId) {
+  const [financial, transactions, accounts, cards] = await Promise.all([
+    repository.getFinancialSummaries(userId),
+    movementsService.listTransactions(userId, { pageSize: 6, asArray: true }),
+    accountsService.listSummary(userId),
+    cardsService.list(userId),
+  ]);
+
+  const { summary, previousMonth } = financial;
+  const monthlyBalance = summary.income - summary.expenses;
+  const wealthBreakdown = buildWealthBreakdown(accounts, summary.investmentsTotal, cards);
+
+  return {
+    ...summary,
+    monthlyBalance,
+    trends: buildTrends(summary, previousMonth, monthlyBalance),
+    wealthBreakdown,
+    accounts,
+    cards,
+    latestTransactions: transactions,
+    transactions,
+    investments: [],
+    goals: [],
+    bills: [],
+    pendingBills: [],
+    monthlyFlow: [],
+    flowSummary: {},
+    currentInvoices: [],
+    financialHealth: [],
+    insights: [],
+    personalization: null,
+    alerts: [],
+    recommendations: [],
+    budgets: [],
+    progress: [],
+    healthScore: null,
+    meta: { scope: "core", secondaryPending: true },
+  };
+}
+
+/**
+ * Dados secundarios da Home: graficos, saude financeira, metas e personalizacao.
+ * Carregados apos a primeira pintura; nao bloqueiam o caminho critico.
+ */
+async function getHomeSecondary(userId) {
   const [
+    bundle,
+    monthlyFlow,
+    cards,
+    bills,
+    goals,
+    personalization,
+  ] = await Promise.all([
+    repository.getHomeSecondaryBundle(userId),
+    repository.getMonthlyFlow(userId, 6),
+    cardsService.list(userId),
+    movementsService.listBills(userId, { pageSize: 20, asArray: true }),
+    goalsService.list(userId),
+    // Home nao renderiza historico anual de saude — evita 1 SELECT extra.
+    personalizationEngine.readContext(userId, { historyDays: 0 }).catch(() => null),
+  ]);
+
+  const { summary, previousMonth } = bundle.financial;
+  const categoryComparison = bundle.categoryComparison;
+  const topIncome = bundle.topIncome;
+  const pendingBills = bills.filter((bill) => bill.status !== "paid");
+  const wealthBreakdown = {
+    investments: summary.investmentsTotal,
+  };
+
+  const baseInsights = buildInsights({
     summary,
     previousMonth,
+    monthlyFlow,
+    categoryComparison,
+    pendingBills,
+    cards,
+    wealthBreakdown,
+  });
+
+  const insights = personalization?.insights?.length
+    ? [...personalization.insights, ...baseInsights].slice(0, 8)
+    : baseInsights;
+
+  return {
+    monthlyFlow,
+    flowSummary: buildFlowSummary(categoryComparison, topIncome),
+    financialHealth: buildFinancialHealth({ pendingBills, cards, goals }),
+    goals,
+    bills,
+    pendingBills: pendingBills.slice(0, 8),
+    insights,
+    personalization,
+    alerts: personalization?.alerts || [],
+    recommendations: personalization?.recommendations || [],
+    budgets: personalization?.budgets || [],
+    progress: personalization?.progress || [],
+    healthScore: personalization?.health || null,
+    meta: { scope: "secondary", secondaryPending: false },
+  };
+}
+
+async function getDashboard(userId) {
+  const [
+    financial,
     monthlyFlow,
     categoryComparison,
     topIncome,
@@ -372,8 +483,7 @@ async function getDashboard(userId) {
     goals,
     personalization,
   ] = await Promise.all([
-    repository.getFinancialSummary(userId),
-    repository.getPreviousMonthSummary(userId),
+    repository.getFinancialSummaries(userId),
     repository.getMonthlyFlow(userId, 6),
     repository.getCategorySpendingComparison(userId),
     repository.getTopIncomeThisMonth(userId),
@@ -384,8 +494,10 @@ async function getDashboard(userId) {
     movementsService.listBills(userId, { pageSize: 50, asArray: true }),
     investmentsService.list(userId),
     goalsService.list(userId),
-    personalizationEngine.rebuildContext(userId).catch(() => null),
+    personalizationEngine.readContext(userId).catch(() => null),
   ]);
+
+  const { summary, previousMonth } = financial;
 
   const monthlyBalance = summary.income - summary.expenses;
   const pendingBills = bills.filter((bill) => bill.status !== "paid");
@@ -408,12 +520,7 @@ async function getDashboard(userId) {
   return {
     ...summary,
     monthlyBalance,
-    trends: {
-      balance: calcTrend(summary.balance, summary.balance - monthlyBalance),
-      income: calcTrend(summary.income, previousMonth.income),
-      expenses: calcTrend(summary.expenses, previousMonth.expenses),
-      netWorth: calcTrend(summary.netWorth, summary.netWorth - monthlyBalance),
-    },
+    trends: buildTrends(summary, previousMonth, monthlyBalance),
     monthlyFlow,
     flowSummary: buildFlowSummary(categoryComparison, topIncome),
     currentInvoices,
@@ -437,4 +544,4 @@ async function getDashboard(userId) {
   };
 }
 
-module.exports = { getDashboard };
+module.exports = { getDashboard, getHomeCore, getHomeSecondary };

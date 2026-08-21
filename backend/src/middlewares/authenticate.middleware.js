@@ -11,6 +11,25 @@ const {
   ROLES,
 } = require("../modules/auth/constants");
 
+const TOUCH_INTERVAL_MS = 5 * 60 * 1000;
+const touchedAt = new Map();
+
+function shouldTouchSession(sessionId) {
+  const last = touchedAt.get(sessionId);
+  if (!last) return true;
+  return Date.now() - last >= TOUCH_INTERVAL_MS;
+}
+
+function recordTouch(sessionId) {
+  touchedAt.set(sessionId, Date.now());
+  if (touchedAt.size > 5000) {
+    const oldest = touchedAt.keys().next().value;
+    touchedAt.delete(oldest);
+  }
+}
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 async function authenticate(req, _res, next) {
   try {
     const token = getAccessTokenFromRequest(req);
@@ -19,10 +38,24 @@ async function authenticate(req, _res, next) {
     }
 
     const payload = verifyAccessToken(token);
-    const user = await usersRepo.findById(payload.sub);
+    const isSafeMethod = SAFE_METHODS.has(req.method);
 
-    if (!user) {
-      throw new AppError("Autenticacao necessaria.", 401);
+    const canSkipDb = isSafeMethod && payload.status && payload.role;
+    let user;
+    if (canSkipDb) {
+      user = {
+        id: payload.sub,
+        nome: payload.name || null,
+        email: payload.email || null,
+        papel: payload.role,
+        status: payload.status,
+        email_verificado_at: payload.emailVerified ? true : null,
+      };
+    } else {
+      user = await usersRepo.findById(payload.sub);
+      if (!user) {
+        throw new AppError("Autenticacao necessaria.", 401);
+      }
     }
 
     if (user.status === ACCOUNT_STATUS.SUSPENDED) {
@@ -35,9 +68,14 @@ async function authenticate(req, _res, next) {
     }
 
     if (payload.sid) {
-      const alive = await sessionsRepo.touchSession(payload.sid);
-      if (!alive) {
-        throw new AppError("Sessao revogada ou expirada.", 401);
+      if (isSafeMethod && !shouldTouchSession(payload.sid)) {
+        // skip touch — session assumed alive within throttle window
+      } else {
+        const alive = await sessionsRepo.touchSession(payload.sid);
+        if (!alive) {
+          throw new AppError("Sessao revogada ou expirada.", 401);
+        }
+        recordTouch(payload.sid);
       }
     }
 
@@ -64,7 +102,7 @@ async function authenticate(req, _res, next) {
       status: user.status,
       emailVerified: Boolean(user.email_verificado_at),
       sessionId: payload.sid || null,
-      mfaEnabled: false, // coluna mfa_enabled reservada (migration 010) — MFA futuro
+      mfaEnabled: false,
     };
 
     return next();

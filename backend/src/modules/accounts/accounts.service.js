@@ -12,6 +12,11 @@ async function list(userId) {
   return repository.findAll(userId);
 }
 
+/** Lista leve sem agregacoes de movimentacoes — uso: Home core / shell. */
+async function listSummary(userId) {
+  return repository.findSummary(userId);
+}
+
 async function detail(userId, id) {
   const account = await repository.findById(userId, id);
   if (!account) throw new AppError("Conta nao encontrada.", 404);
@@ -38,4 +43,4 @@ async function remove(userId, id) {
   return { id };
 }
 
-module.exports = { list, detail, create, update, remove };
+module.exports = { list, listSummary, detail, create, update, remove };

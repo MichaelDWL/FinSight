@@ -20,7 +20,10 @@ function buildExpensesQuery() {
             THEN 1
           END) AS transactions_count
         FROM bounds b
-        LEFT JOIN vw_analytics_movimentacoes v ON v.usuario_id = $1
+        LEFT JOIN vw_analytics_movimentacoes v
+          ON v.usuario_id = $1
+         AND v.is_despesa_periodo
+         AND v.data_transacao BETWEEN b.prev_start AND b.end_date
       ),
       by_category AS (
         SELECT
@@ -69,7 +72,8 @@ function buildExpensesQuery() {
         LEFT JOIN vw_analytics_movimentacoes v
           ON v.usuario_id = $1
           AND v.is_despesa_periodo
-          AND date_trunc('month', v.data_transacao)::date = m.month_start
+          AND v.data_transacao >= m.month_start
+          AND v.data_transacao < (m.month_start + interval '1 month')::date
         GROUP BY m.month_start
         ORDER BY m.month_start
       ),

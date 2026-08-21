@@ -1,8 +1,12 @@
 {
   "installCommand": "npm install",
-  "regions": ["iad1"],
+  "regions": ["gru1"],
   "functions": {
     "api/cron/market.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/cron/recurrences.js": {
       "maxDuration": 60,
       "memory": 1024
     },
@@ -13,6 +17,7 @@
   },
   "rewrites": [
     { "source": "/api/cron/market", "destination": "/api/cron/market" },
+    { "source": "/api/cron/recurrences", "destination": "/api/cron/recurrences" },
     { "source": "/api/(.*)", "destination": "/api/[...path]" },
     { "source": "/health", "destination": "/api/[...path]" },
     { "source": "/live", "destination": "/api/[...path]" },
@@ -43,6 +48,10 @@
     {
       "path": "/api/cron/market",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/recurrences",
+      "schedule": "15 6 * * *"
     }
   ]
 }

@@ -2,17 +2,17 @@ const investmentsService = require("../../investments/investments.service");
 const analyticsService = require("../../analytics/analytics.service");
 const marketService = require("../../market-data/market.service");
 const rateService = require("../../market-data/rate.service");
-const usersService = require("../../users/users.service");
 const CacheService = require("../cache/cache.service");
 const { BFF_CACHE_TTL } = require("../bff.constants");
 const { parallel } = require("../utils/parallel");
+const { resolveUser } = require("../utils/resolveUser");
 
 /**
  * InvestmentBFFService — carteira completa em uma chamada.
  */
-async function buildInvestments(userId, query = {}) {
+async function buildInvestments(userId, query = {}, options = {}) {
   const result = await parallel({
-    user: () => usersService.getProfile(userId),
+    user: () => resolveUser(userId, options),
     portfolio: {
       fn: () => investmentsService.listDetailed(userId),
       optional: true,
@@ -73,13 +73,13 @@ async function buildInvestments(userId, query = {}) {
   };
 }
 
-async function getInvestments(userId, query = {}) {
+async function getInvestments(userId, query = {}, options = {}) {
   const period = query.period || "30d";
   const cacheKey = CacheService.buildKey("investments", userId, period);
   const { data, cacheHit } = await CacheService.wrap(
     cacheKey,
     BFF_CACHE_TTL.investments,
-    () => buildInvestments(userId, query),
+    () => buildInvestments(userId, query, options),
   );
 
   return { data, cacheHit };

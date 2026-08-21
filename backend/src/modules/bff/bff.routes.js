@@ -20,6 +20,7 @@ const router = Router();
 router.use(bffLimiter);
 
 router.get("/home", dashboardLimiter, controller.home);
+router.get("/home/secondary", dashboardLimiter, controller.homeSecondary);
 router.get("/dashboard", dashboardLimiter, controller.dashboard);
 router.get("/investments", investmentsLimiter, controller.investments);
 router.get("/accounts", accountsLimiter, controller.accounts);

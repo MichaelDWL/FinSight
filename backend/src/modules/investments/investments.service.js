@@ -7,10 +7,22 @@ const { PROJECTION_DISCLAIMER } = require("../market-data/market.constants");
 const repository = require("./investments.repository");
 const { detectInvestmentType, resolveCategoryName } = require("./investmentType.detector");
 const projectionService = require("./projection.service");
+const { memoize } = require("../bff/utils/requestContext");
 
 function bustCaches(userId, eventName = personalization.EVENTS.INVESTMENT_ADDED) {
   invalidateUserAnalytics(userId).catch(() => undefined);
   personalization.notifyMutation(userId, eventName).catch(() => undefined);
+}
+
+function loadInvestmentsPage(userId, options = {}) {
+  return memoize(
+    `investments:findAll:${userId}:${options.pageSize ?? 100}:${options.pagination ? "p" : "a"}`,
+    () =>
+      repository.findAll(userId, {
+        pagination: options.pagination,
+        pageSize: options.pageSize ?? 100,
+      }),
+  );
 }
 
 async function resolveTypeAndCategory(payload) {
@@ -62,7 +74,7 @@ async function attachProjection(investment) {
 }
 
 async function list(userId, options = {}) {
-  const result = await repository.findAll(userId, {
+  const result = await loadInvestmentsPage(userId, {
     pageSize: options.pageSize ?? 100,
     ...options,
   });
@@ -70,17 +82,18 @@ async function list(userId, options = {}) {
 }
 
 async function listDetailed(userId, options = {}) {
-  const page = await repository.findAll(userId, {
+  const page = await loadInvestmentsPage(userId, {
     pagination: options.pagination,
     pageSize: options.pageSize ?? 100,
   });
   const items = page.items;
   const rates = await rateService.getCurrentRates();
+  const assetCodes = [...new Set(items.map((item) => item.assetCode).filter(Boolean))];
+  // 90 dias: suficiente para sparkline/variacao da carteira na UI (slice -90 no frontend).
+  // Evita carregar 365d × N ativos no BFF de lista. Detalhe de ativo usa getAsset (ate 365d).
+  const marketCache = await marketService.getAssets(assetCodes, { historyLimit: 90 });
 
-  const marketCache = new Map();
-
-  const detailed = [];
-  for (const item of items) {
+  const detailed = items.map((item) => {
     const investmentType =
       item.investmentType ||
       detectInvestmentType({
@@ -89,32 +102,26 @@ async function listDetailed(userId, options = {}) {
         assetCode: item.assetCode,
       });
 
-    let marketAsset = null;
-    if (item.assetCode) {
-      if (!marketCache.has(item.assetCode)) {
-        marketCache.set(
-          item.assetCode,
-          await marketService.getAsset(item.assetCode).catch(() => null)
-        );
-      }
-      marketAsset = marketCache.get(item.assetCode);
-    }
-
+    const code = item.assetCode ? String(item.assetCode).toUpperCase() : null;
+    const marketAsset = code ? marketCache.get(code) || null : null;
     const withType = { ...item, investmentType };
+
     if (projectionService.isFixedIncome(investmentType)) {
-      detailed.push({
+      return {
         ...withType,
         simulation: projectionService.projectFixedIncome(withType, rates),
-      });
-    } else if (projectionService.isVariableIncome(investmentType) && item.assetCode) {
-      detailed.push({
+      };
+    }
+
+    if (projectionService.isVariableIncome(investmentType) && item.assetCode) {
+      return {
         ...withType,
         simulation: projectionService.buildVariableIncomeView(withType, marketAsset),
-      });
-    } else {
-      detailed.push({ ...withType, simulation: null });
+      };
     }
-  }
+
+    return { ...withType, simulation: null };
+  });
 
   if (options.pagination) {
     return { ...page, items: detailed };
@@ -219,7 +226,7 @@ async function simulate(payload) {
 
 async function portfolioSummary(userId) {
   const [investmentsPage, rates] = await Promise.all([
-    repository.findAll(userId),
+    loadInvestmentsPage(userId),
     rateService.getCurrentRates(),
   ]);
   const investments = investmentsPage.items;

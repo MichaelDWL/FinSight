@@ -7,4 +7,7 @@ const router = Router();
 router.get("/market", verifyCronSecret, controller.market);
 router.post("/market", verifyCronSecret, controller.market);
 
+router.get("/recurrences", verifyCronSecret, controller.recurrences);
+router.post("/recurrences", verifyCronSecret, controller.recurrences);
+
 module.exports = router;

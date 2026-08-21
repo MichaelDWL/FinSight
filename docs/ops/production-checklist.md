@@ -8,9 +8,11 @@ Manual completo de implantacao: [deploy-manual.md](./deploy-manual.md)
 - [ ] `npm run migrate` executado contra o banco de producao
 - [ ] Secrets fortes: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CRON_SECRET` (>=32 / >=16)
 - [ ] `DATABASE_SSL=true` e `DATABASE_SSL_INSECURE` **nao** definido (ou false)
+- [ ] `DATABASE_SSL_CA` (ou `DATABASE_SSL_CA_FILE`) validado com `npm run verify:db-ssl`
+- [ ] Ver guia: `docs/ops/database-ssl.md`
 - [ ] `CORS_ORIGIN` = URL do frontend na Vercel
 - [ ] `COOKIE_SECURE=true`, `COOKIE_SAME_SITE=lax` (mesmo dominio)
-- [ ] `REDIS_URL` (Upstash) — fortemente recomendado
+- [ ] Confirmar `/ready` com `redis: "not-configured"` e `cache` em modo `memory`
 - [ ] `EMAIL_PROVIDER=resend` + `RESEND_API_KEY` + dominio verificado
 - [ ] `ALLOW_ADMIN_SEED` ausente ou false
 - [ ] `REQUIRE_EMAIL_VERIFIED=true`

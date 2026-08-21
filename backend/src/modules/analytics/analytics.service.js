@@ -1,4 +1,3 @@
-const recurrenceService = require("../../services/recurrence.service");
 const { cacheAdapter, buildCacheKey } = require("./analytics.cache");
 const { CACHE_TTL } = require("./constants");
 const { resolvePeriod } = require("./period.resolver");
@@ -17,91 +16,70 @@ const personalizationEngine = require("../personalization/engine/Personalization
 const { attachPersonalization } = require("../personalization/utils/orderKpis");
 
 async function loadPersonalization(userId) {
-  return personalizationEngine.rebuildContext(userId).catch(() => null);
+  return personalizationEngine.readContext(userId).catch(() => null);
+}
+
+async function withCachedDashboard(userId, dashboard, query, ttlSeconds, buildResult) {
+  const period = resolvePeriod(query);
+  const cacheKey = buildCacheKey(userId, dashboard, period);
+  const cached = await cacheAdapter.get(cacheKey);
+  if (cached) return cached;
+
+  const result = await buildResult(period);
+  await cacheAdapter.set(cacheKey, result, ttlSeconds);
+  return result;
 }
 
 async function getGeneral(userId, query = {}) {
-  await recurrenceService.ensureGenerated(userId);
-
-  const period = resolvePeriod(query);
-  const cacheKey = buildCacheKey(userId, "general", period);
-  const cached = await cacheAdapter.get(cacheKey);
-  if (cached) return cached;
-
-  const [raw, personalization] = await Promise.all([
-    generalRepository.fetchGeneralDashboard(userId, period),
-    loadPersonalization(userId),
-  ]);
-  const result = buildGeneralDashboard(raw, period, { personalization });
-
-  await cacheAdapter.set(cacheKey, result, CACHE_TTL.general);
-  return result;
+  return withCachedDashboard(userId, "general", query, CACHE_TTL.general, async (period) => {
+    const [raw, personalization] = await Promise.all([
+      generalRepository.fetchGeneralDashboard(userId, period),
+      loadPersonalization(userId),
+    ]);
+    return buildGeneralDashboard(raw, period, { personalization });
+  });
 }
 
 async function getExpenses(userId, query = {}) {
-  await recurrenceService.ensureGenerated(userId);
-
-  const period = resolvePeriod(query);
-  const cacheKey = buildCacheKey(userId, "expenses", period);
-  const cached = await cacheAdapter.get(cacheKey);
-  if (cached) return cached;
-
-  const [raw, personalization] = await Promise.all([
-    expensesRepository.fetchExpensesDashboard(userId, period),
-    loadPersonalization(userId),
-  ]);
-  const result = attachPersonalization(
-    buildExpensesDashboard(raw, period),
-    personalization,
-    "expenses",
-  );
-
-  await cacheAdapter.set(cacheKey, result, CACHE_TTL.expenses);
-  return result;
+  return withCachedDashboard(userId, "expenses", query, CACHE_TTL.expenses, async (period) => {
+    const [raw, personalization] = await Promise.all([
+      expensesRepository.fetchExpensesDashboard(userId, period),
+      loadPersonalization(userId),
+    ]);
+    return attachPersonalization(
+      buildExpensesDashboard(raw, period),
+      personalization,
+      "expenses",
+    );
+  });
 }
 
 async function getCashflow(userId, query = {}) {
-  await recurrenceService.ensureGenerated(userId);
-
-  const period = resolvePeriod(query);
-  const cacheKey = buildCacheKey(userId, "cashflow", period);
-  const cached = await cacheAdapter.get(cacheKey);
-  if (cached) return cached;
-
-  const [raw, personalization] = await Promise.all([
-    cashflowRepository.fetchCashflowDashboard(userId, period),
-    loadPersonalization(userId),
-  ]);
-  const result = attachPersonalization(
-    buildCashflowDashboard(raw, period),
-    personalization,
-    "cashflow",
-  );
-
-  await cacheAdapter.set(cacheKey, result, CACHE_TTL.cashflow);
-  return result;
+  return withCachedDashboard(userId, "cashflow", query, CACHE_TTL.cashflow, async (period) => {
+    const [raw, personalization] = await Promise.all([
+      cashflowRepository.fetchCashflowDashboard(userId, period),
+      loadPersonalization(userId),
+    ]);
+    return attachPersonalization(
+      buildCashflowDashboard(raw, period),
+      personalization,
+      "cashflow",
+    );
+  });
 }
 
 async function getCards(userId, query = {}) {
-  await recurrenceService.ensureGenerated(userId);
-
-  const period = resolvePeriod(query);
-  const cacheKey = buildCacheKey(userId, "cards", period);
-  const cached = await cacheAdapter.get(cacheKey);
-  if (cached) return cached;
-
-  const [raw, personalization] = await Promise.all([
-    cardsRepository.fetchCardsDashboard(userId, period),
-    loadPersonalization(userId),
-  ]);
-  const result = attachPersonalization(
-    buildCardsDashboard(raw, period),
-    personalization,
-    "cards",
-  );
-
-  await cacheAdapter.set(cacheKey, result, CACHE_TTL.cards);
-  return result;
+  return withCachedDashboard(userId, "cards", query, CACHE_TTL.cards, async (period) => {
+    const [raw, personalization] = await Promise.all([
+      cardsRepository.fetchCardsDashboard(userId, period),
+      loadPersonalization(userId),
+    ]);
+    return attachPersonalization(
+      buildCardsDashboard(raw, period),
+      personalization,
+      "cards",
+    );
+  });
 }
 
 async function getInvestments(userId, query = {}) {

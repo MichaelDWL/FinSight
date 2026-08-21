@@ -4,6 +4,7 @@
  */
 
 export const store = {
+  bffCache: {},
   bootstrapReady: false,
   loadedRouteKey: null,
   dashboardData: null,

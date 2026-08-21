@@ -1,18 +1,18 @@
 const accountsService = require("../../accounts/accounts.service");
 const movementsService = require("../../movements/movements.service");
 const invoicesService = require("../../invoices/invoices.service");
-const usersService = require("../../users/users.service");
 const dashboardRepository = require("../../dashboard/dashboard.repository");
 const CacheService = require("../cache/cache.service");
 const { BFF_CACHE_TTL } = require("../bff.constants");
 const { parallel } = require("../utils/parallel");
+const { resolveUser } = require("../utils/resolveUser");
 
 /**
  * AccountsBFFService — tela de contas em uma chamada.
  */
-async function buildAccounts(userId) {
+async function buildAccounts(userId, options = {}) {
   const result = await parallel({
-    user: () => usersService.getProfile(userId),
+    user: () => resolveUser(userId, options),
     accounts: () => accountsService.list(userId),
     bills: { fn: () => movementsService.listBills(userId, { pageSize: 100, asArray: true }), optional: true, fallback: [] },
     invoices: {
@@ -91,12 +91,12 @@ async function buildAccounts(userId) {
   };
 }
 
-async function getAccounts(userId) {
+async function getAccounts(userId, _query = {}, options = {}) {
   const cacheKey = CacheService.buildKey("accounts", userId);
   const { data, cacheHit } = await CacheService.wrap(
     cacheKey,
     BFF_CACHE_TTL.accounts,
-    () => buildAccounts(userId),
+    () => buildAccounts(userId, options),
   );
 
   return { data, cacheHit };

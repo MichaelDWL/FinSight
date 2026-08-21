@@ -1,6 +1,4 @@
-const env = require("../../config/env");
 const logger = require("../../utils/logger");
-const sharedRedis = require("../../platform/redis");
 
 const DASHBOARDS = ["general", "expenses", "cashflow", "cards", "investments"];
 const memoryStore = new Map();
@@ -20,29 +18,9 @@ function isExpired(entry) {
   return !entry || Date.now() > entry.expiresAt;
 }
 
-function redisClient() {
-  return sharedRedis.getClient();
-}
-
-function redisReady() {
-  return sharedRedis.isReady();
-}
-
 async function initCache() {
-  if (!env.redisUrl) {
-    cacheMode = "memory";
-    logger.info("Analytics cache em memoria (REDIS_URL nao configurado).");
-    return;
-  }
-
-  const client = await sharedRedis.connect();
-  if (client) {
-    cacheMode = "redis";
-    logger.info("Analytics cache usando Redis compartilhado.");
-  } else {
-    cacheMode = "memory";
-    logger.warn("Falha ao conectar Redis, usando cache em memoria.");
-  }
+  cacheMode = "memory";
+  logger.info("Analytics cache em memoria.");
 }
 
 async function memoryGet(key) {
@@ -75,89 +53,23 @@ async function memoryInvalidateUser(userId) {
   return removed;
 }
 
-async function redisGet(key) {
-  const client = redisClient();
-  if (!redisReady() || !client) return null;
-
-  try {
-    const raw = await client.get(key);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch (error) {
-    logger.warn("Falha ao ler cache Redis.", { error: error.message, key });
-    return null;
-  }
-}
-
-async function redisSet(key, value, ttlSeconds) {
-  const client = redisClient();
-  if (!redisReady() || !client) return;
-
-  try {
-    await client.set(key, JSON.stringify(value), { EX: ttlSeconds });
-  } catch (error) {
-    logger.warn("Falha ao gravar cache Redis.", { error: error.message, key });
-  }
-}
-
-async function redisInvalidateUser(userId) {
-  const client = redisClient();
-  if (!redisReady() || !client) return 0;
-
-  const prefix = buildUserPrefix(userId);
-  let removed = 0;
-  let cursor = "0";
-
-  try {
-    do {
-      const result = await client.scan(cursor, {
-        MATCH: `${prefix}*`,
-        COUNT: 100,
-      });
-
-      cursor = result.cursor;
-      const keys = result.keys || [];
-
-      if (keys.length) {
-        await client.del(keys);
-        removed += keys.length;
-      }
-    } while (cursor !== "0");
-  } catch (error) {
-    logger.warn("Falha ao invalidar cache Redis.", { error: error.message, userId });
-  }
-
-  return removed;
-}
-
 const cacheAdapter = {
   async get(key) {
-    if (cacheMode === "redis") {
-      const value = await redisGet(key);
-      if (value !== null) return value;
-    }
-
     return memoryGet(key);
   },
 
   async set(key, value, ttlSeconds) {
     await memorySet(key, value, ttlSeconds);
-
-    if (cacheMode === "redis") {
-      await redisSet(key, value, ttlSeconds);
-    }
   },
 
   async invalidateUser(userId) {
-    const memoryRemoved = await memoryInvalidateUser(userId);
-    const redisRemoved = await redisInvalidateUser(userId);
-    return memoryRemoved + redisRemoved;
+    return memoryInvalidateUser(userId);
   },
 
   getStatus() {
     return {
       mode: cacheMode,
-      redisConnected: redisReady(),
+      redisConnected: false,
       memoryEntries: memoryStore.size,
       dashboards: DASHBOARDS,
     };

@@ -53,6 +53,10 @@ function buildTokenPair(user, sessionId, tokenFamily) {
   const accessToken = signAccessToken({
     sub: user.id,
     role: user.papel,
+    status: user.status,
+    emailVerified: Boolean(user.email_verificado_at),
+    name: user.nome,
+    email: user.email,
     sid: sessionId,
   });
 

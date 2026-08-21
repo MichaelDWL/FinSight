@@ -90,18 +90,37 @@ export async function loadAnalyticsDashboard(route = store.currentAnalyticsRoute
 
   store.isLoadingAnalyticsDashboard = true;
   try {
-    // Uma unica chamada BFF para todos os paineis do dashboard
-    if (
-      !store.analyticsDashboardPayload ||
-      store.currentDashboardPeriod !== period
-    ) {
-      store.analyticsDashboardPayload = await bffService.getDashboard({ period });
+    const section = renderer.section;
+    const periodChanged = store.currentDashboardPeriod !== period;
+    const cachedSection =
+      !periodChanged && store.analyticsDashboardPayload?.sections?.[section]
+        ? store.analyticsDashboardPayload.sections[section]
+        : null;
+
+    if (!cachedSection) {
+      if (periodChanged) {
+        store.analyticsDashboardPayload = null;
+      }
+
+      const payload = await bffService.getDashboard({ period, section });
+      applyBffShell(payload);
+
+      store.analyticsDashboardPayload = {
+        ...(store.analyticsDashboardPayload || {}),
+        ...payload,
+        period,
+        sections: {
+          ...(store.analyticsDashboardPayload?.sections || {}),
+          ...(payload.sections || {}),
+        },
+      };
+    } else if (store.analyticsDashboardPayload?.user) {
       applyBffShell(store.analyticsDashboardPayload);
     }
 
     store.analyticsDashboardData = pickAnalyticsSection(
       store.analyticsDashboardPayload,
-      renderer.section,
+      section,
     );
     store.currentDashboardPeriod = period;
     store.currentAnalyticsRoute = normalizedRoute;

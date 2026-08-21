@@ -1,11 +1,8 @@
 /**
- * Store adaptativo para express-rate-limit.
- * Memoria (L1) por padrao; promove para Redis compartilhado quando disponivel.
+ * Store local para express-rate-limit.
+ * Em ambiente serverless, o rate limit em memoria e por instancia.
  */
 const { MemoryStore } = require("express-rate-limit");
-const env = require("../config/env");
-const logger = require("../utils/logger");
-const sharedRedis = require("../platform/redis");
 
 const bridges = new Map();
 
@@ -20,7 +17,6 @@ class AdaptiveRateLimitStore {
   constructor(prefix) {
     this.prefix = prefix;
     this.memory = new MemoryStore();
-    this.redisStore = null;
     this.localKeys = new Set();
   }
 
@@ -29,7 +25,7 @@ class AdaptiveRateLimitStore {
   }
 
   getStore() {
-    return this.redisStore || this.memory;
+    return this.memory;
   }
 
   async increment(key) {
@@ -60,73 +56,18 @@ class AdaptiveRateLimitStore {
       await this.getStore().shutdown();
     }
   }
-
-  async attachRedis(client) {
-    if (!client || this.redisStore) return;
-    try {
-      const { RedisStore } = require("rate-limit-redis");
-      this.redisStore = new RedisStore({
-        sendCommand: (...args) => client.sendCommand(args),
-        prefix: `finsight:rl:${this.prefix}:`,
-      });
-      logger.info("RateLimit store promoveu para Redis", { prefix: this.prefix });
-    } catch (error) {
-      logger.warn("RateLimit permanece em memoria", {
-        prefix: this.prefix,
-        error: error.message,
-      });
-    }
-  }
-}
-
-let redisReady = false;
-let promotePromise = null;
-
-async function promoteAllToRedis() {
-  if (!env.redisUrl) {
-    logger.info("RateLimit em memoria (REDIS_URL ausente).");
-    return { mode: "memory" };
-  }
-  if (redisReady) return { mode: "redis" };
-  if (promotePromise) return promotePromise;
-
-  promotePromise = (async () => {
-    try {
-      const client = await sharedRedis.connect();
-      if (!client) {
-        return { mode: "memory" };
-      }
-      redisReady = true;
-
-      await Promise.all(
-        [...bridges.values()].map((bridge) => bridge.attachRedis(client))
-      );
-
-      logger.info("RateLimit Redis compartilhado pronto.");
-      return { mode: "redis" };
-    } catch (error) {
-      redisReady = false;
-      logger.warn("RateLimit fallback memoria", { error: error.message });
-      return { mode: "memory", error: error.message };
-    } finally {
-      promotePromise = null;
-    }
-  })();
-
-  return promotePromise;
 }
 
 function getStatus() {
   return {
-    mode: redisReady ? "redis" : "memory",
-    redisReady,
+    mode: "memory",
+    redisReady: false,
     bridges: bridges.size,
   };
 }
 
 module.exports = {
   getBridge,
-  promoteAllToRedis,
   getStatus,
   AdaptiveRateLimitStore,
 };

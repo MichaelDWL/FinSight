@@ -16,6 +16,7 @@ function buildQuery(params = {}) {
  */
 export const bffService = {
   getHome: () => api.get("/home"),
+  getHomeSecondary: () => api.get("/home/secondary"),
   getDashboard: (params = {}) => api.get(`/dashboard${buildQuery(params)}`),
   getInvestments: (params = {}) => api.get(`/investments${buildQuery(params)}`),
   getAccounts: () => api.get("/accounts"),

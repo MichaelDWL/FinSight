@@ -1,20 +1,68 @@
 const analyticsService = require("../../analytics/analytics.service");
-const usersService = require("../../users/users.service");
 const accountsService = require("../../accounts/accounts.service");
 const cardsService = require("../../cards/cards.service");
 const goalsService = require("../../goals/goals.service");
 const CacheService = require("../cache/cache.service");
 const { BFF_CACHE_TTL } = require("../bff.constants");
 const { parallel } = require("../utils/parallel");
+const { resolveUser } = require("../utils/resolveUser");
+
+const SECTION_LOADERS = {
+  general: (userId, query) => analyticsService.getGeneral(userId, query),
+  expenses: (userId, query) => analyticsService.getExpenses(userId, query),
+  cashflow: (userId, query) => analyticsService.getCashflow(userId, query),
+  cards: (userId, query) => analyticsService.getCards(userId, query),
+  investments: (userId, query) => analyticsService.getInvestments(userId, query),
+};
+
+const VALID_SECTIONS = new Set(Object.keys(SECTION_LOADERS));
+
+function normalizeSection(section) {
+  if (!section) return null;
+  const value = String(section).trim().toLowerCase();
+  return VALID_SECTIONS.has(value) ? value : null;
+}
 
 /**
- * DashboardBFFService — agrega todos os painéis analytics em um JSON.
+ * Painel unico — usado quando o frontend pede ?section=.
+ * Carrega apenas o analytics necessario para a tela atual.
  */
-async function buildDashboard(userId, query = {}) {
+async function buildDashboardSection(userId, query = {}, options = {}) {
+  const period = query.period || "30d";
+  const section = normalizeSection(query.section);
+
+  const loader = SECTION_LOADERS[section];
+  const { user, panel } = await parallel({
+    user: () => resolveUser(userId, options),
+    panel: () => loader(userId, query),
+  });
+
+  const personalization = panel?.personalization || null;
+
+  return {
+    user,
+    period,
+    sections: {
+      [section]: panel,
+    },
+    personalization,
+    meta: {
+      scope: "section",
+      section,
+      secondaryPending: false,
+    },
+  };
+}
+
+/**
+ * Payload completo (legado / consumidores sem section).
+ * Mantido para compatibilidade; o frontend de analytics usa section.
+ */
+async function buildDashboardFull(userId, query = {}, options = {}) {
   const period = query.period || "30d";
 
   const result = await parallel({
-    user: () => usersService.getProfile(userId),
+    user: () => resolveUser(userId, options),
     general: () => analyticsService.getGeneral(userId, query),
     expenses: () => analyticsService.getExpenses(userId, query),
     cashflow: () => analyticsService.getCashflow(userId, query),
@@ -60,19 +108,42 @@ async function buildDashboard(userId, query = {}) {
     },
     accounts: result.accounts,
     personalization,
+    meta: {
+      scope: "full",
+      section: null,
+      secondaryPending: false,
+    },
   };
 }
 
-async function getDashboard(userId, query = {}) {
+async function buildDashboard(userId, query = {}, options = {}) {
+  const section = normalizeSection(query.section);
+  if (section) {
+    return buildDashboardSection(userId, { ...query, section }, options);
+  }
+  return buildDashboardFull(userId, query, options);
+}
+
+async function getDashboard(userId, query = {}, options = {}) {
   const period = query.period || "30d";
-  const cacheKey = CacheService.buildKey("dashboard", userId, period);
+  const section = normalizeSection(query.section);
+  const cacheVariant = section ? `${period}:${section}` : period;
+  const cacheKey = CacheService.buildKey("dashboard", userId, cacheVariant);
   const { data, cacheHit } = await CacheService.wrap(
     cacheKey,
     BFF_CACHE_TTL.dashboard,
-    () => buildDashboard(userId, query),
+    () => buildDashboard(userId, query, options),
   );
 
   return { data, cacheHit };
 }
 
-module.exports = { getDashboard, buildDashboard };
+module.exports = {
+  getDashboard,
+  buildDashboard,
+  buildDashboardSection,
+  buildDashboardFull,
+  normalizeSection,
+  VALID_SECTIONS,
+  SECTION_LOADERS,
+};

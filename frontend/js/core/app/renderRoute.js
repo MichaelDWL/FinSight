@@ -13,7 +13,7 @@ import {
   isAnalyticsDashboardRoute,
   renderAnalyticsDashboardPage,
 } from "./analyticsDashboard.js";
-import { loadRouteData } from "./dataLoaders.js";
+import { loadRouteData, hasCachedData, enrichHomeSecondary } from "./dataLoaders.js";
 import { openInvestmentModal } from "./modals.js";
 import {
   dashboardView,
@@ -60,12 +60,15 @@ export async function renderRoute() {
   }
 
   destroyAllCharts();
-  app.innerHTML = `
-    <section class="app-page">
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
-    </section>
-  `;
+
+  if (!hasCachedData(viewRoute)) {
+    app.innerHTML = `
+      <section class="app-page">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </section>
+    `;
+  }
 
   await loadRouteData(route);
 
@@ -92,6 +95,16 @@ export async function renderRoute() {
   };
 
   app.innerHTML = views[viewRoute]();
+
+  if (viewRoute === "dashboard") {
+    enrichHomeSecondary()
+      .then((updated) => {
+        if (!updated || getRoute() !== "dashboard") return;
+        app.innerHTML = dashboardView();
+        initCustomSelects(app);
+      })
+      .catch(() => {});
+  }
 
   if (viewRoute === "perfil") {
     bindProfilePage(app, {

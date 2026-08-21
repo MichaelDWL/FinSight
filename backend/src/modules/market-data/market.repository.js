@@ -335,6 +335,117 @@ async function getMarketStats(assetCode) {
   };
 }
 
+function normalizeAssetCodes(assetCodes = []) {
+  return [...new Set(
+    (assetCodes || [])
+      .map((code) => String(code || "").toUpperCase().trim())
+      .filter(Boolean),
+  )];
+}
+
+/** Snapshots em lote — 1 query para N asset_codes. */
+async function getMarketDataByCodes(assetCodes = []) {
+  const codes = normalizeAssetCodes(assetCodes);
+  if (!codes.length) return [];
+
+  const { rows } = await pool.query(
+    `
+      SELECT *
+      FROM market_data
+      WHERE asset_code = ANY($1::text[])
+    `,
+    [codes],
+  );
+  return rows.map(mapMarketRow);
+}
+
+/**
+ * Historico em lote (ultimos `limit` pontos por ativo), ASC por data.
+ * 1 query no lugar de N getMarketHistory.
+ */
+async function getMarketHistoryBatch(assetCodes = [], { limit = 365 } = {}) {
+  const codes = normalizeAssetCodes(assetCodes);
+  if (!codes.length) return new Map();
+
+  const safeLimit = Math.max(1, Math.min(Number(limit) || 365, 365));
+  const { rows } = await pool.query(
+    `
+      SELECT asset_code, price, date, provider, source, created_at AS "createdAt"
+      FROM (
+        SELECT
+          asset_code,
+          price,
+          date,
+          provider,
+          source,
+          created_at,
+          ROW_NUMBER() OVER (PARTITION BY asset_code ORDER BY date DESC) AS rn
+        FROM market_history
+        WHERE asset_code = ANY($1::text[])
+      ) ranked
+      WHERE rn <= $2
+      ORDER BY asset_code ASC, date ASC
+    `,
+    [codes, safeLimit],
+  );
+
+  const byCode = new Map(codes.map((code) => [code, []]));
+  for (const row of rows) {
+    const code = String(row.asset_code).toUpperCase();
+    const list = byCode.get(code) || [];
+    list.push({
+      price: Number(row.price),
+      date: row.date,
+      provider: row.provider || null,
+      source: row.source || null,
+      createdAt: row.createdAt,
+    });
+    byCode.set(code, list);
+  }
+  return byCode;
+}
+
+/** Stats agregados em lote — 1 query GROUP BY. */
+async function getMarketStatsBatch(assetCodes = []) {
+  const codes = normalizeAssetCodes(assetCodes);
+  if (!codes.length) return new Map();
+
+  const { rows } = await pool.query(
+    `
+      SELECT
+        asset_code,
+        MIN(price) AS min_price,
+        MAX(price) AS max_price,
+        AVG(price) AS avg_price,
+        COUNT(*)::int AS points
+      FROM market_history
+      WHERE asset_code = ANY($1::text[])
+      GROUP BY asset_code
+    `,
+    [codes],
+  );
+
+  const byCode = new Map();
+  for (const code of codes) {
+    byCode.set(code, {
+      minPrice: null,
+      maxPrice: null,
+      avgPrice: null,
+      points: 0,
+    });
+  }
+  for (const row of rows) {
+    const code = String(row.asset_code).toUpperCase();
+    byCode.set(code, {
+      minPrice: row.min_price != null ? Number(row.min_price) : null,
+      maxPrice: row.max_price != null ? Number(row.max_price) : null,
+      avgPrice: row.avg_price != null ? Number(row.avg_price) : null,
+      points: row.points || 0,
+    });
+  }
+  return byCode;
+}
+
 async function syncLegacyIndicesFromRates(rates) {
   if (!rates) return;
 
@@ -431,8 +542,11 @@ module.exports = {
   getEconomicHistory,
   getEconomicRates,
   getMarketDataByCode,
+  getMarketDataByCodes,
   getMarketHistory,
+  getMarketHistoryBatch,
   getMarketStats,
+  getMarketStatsBatch,
   getProviderStatus,
   hasEconomicHistory,
   insertEconomicHistory,
@@ -448,4 +562,5 @@ module.exports = {
   upsertMarketData,
   upsertProviderStatus,
   upsertWatchlistItem,
+  normalizeAssetCodes,
 };

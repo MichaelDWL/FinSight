@@ -50,7 +50,7 @@ npm run migrate
 ## O que NAO entra no backup de aplicacao
 
 - Secrets (`.env`) — use vault / Vercel Env
-- Cache Redis — descartavel
+- Cache em memoria — descartavel
 - Arquivos de upload locais — use Cloudinary
 
 ## Validacao pos-restore

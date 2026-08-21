@@ -1,62 +1,103 @@
-const usersService = require("../../users/users.service");
 const dashboardService = require("../../dashboard/dashboard.service");
 const CacheService = require("../cache/cache.service");
 const { BFF_CACHE_TTL } = require("../bff.constants");
 const { parallel } = require("../utils/parallel");
+const { resolveUser } = require("../utils/resolveUser");
 
 /**
- * HomeBFFService — apenas orquestra services existentes.
+ * HomeBFFService — caminho critico enxuto + enriquecimento secundario.
  * Sem regras de negocio.
  */
-async function buildHome(userId) {
-  const { user, dashboard } = await parallel({
-    user: () => usersService.getProfile(userId),
-    dashboard: () => dashboardService.getDashboard(userId),
-  });
 
-  const pendingBills = dashboard.pendingBills || [];
-  const recentTransactions = dashboard.latestTransactions || [];
+function shapeHomeCore(user, core) {
+  const recentTransactions = core.latestTransactions || core.transactions || [];
 
   return {
     user,
     summary: {
-      balance: dashboard.balance,
-      income: dashboard.income,
-      expenses: dashboard.expenses,
-      netWorth: dashboard.netWorth,
-      investmentsTotal: dashboard.investmentsTotal,
-      monthlyBalance: dashboard.monthlyBalance,
-      trends: dashboard.trends,
+      balance: core.balance,
+      income: core.income,
+      expenses: core.expenses,
+      netWorth: core.netWorth,
+      investmentsTotal: core.investmentsTotal,
+      monthlyBalance: core.monthlyBalance,
+      trends: core.trends,
     },
-    accounts: dashboard.accounts || [],
-    cards: dashboard.cards || [],
-    investments: dashboard.investments || [],
-    goals: dashboard.goals || [],
-    alerts: dashboard.alerts || [],
-    notifications: dashboard.personalization?.notifications || [],
-    insights: dashboard.insights || [],
-    nextBills: pendingBills.slice(0, 8),
+    accounts: core.accounts || [],
+    cards: core.cards || [],
+    investments: [],
+    goals: [],
+    alerts: [],
+    notifications: [],
+    insights: [],
+    nextBills: [],
     recentTransactions,
     charts: {
-      monthlyFlow: dashboard.monthlyFlow || [],
-      wealthBreakdown: dashboard.wealthBreakdown || {},
-      flowSummary: dashboard.flowSummary || {},
+      monthlyFlow: [],
+      wealthBreakdown: core.wealthBreakdown || {},
+      flowSummary: {},
     },
     // Compatibilidade com homeView atual (campos flat)
-    ...dashboard,
+    ...core,
     user,
+    meta: { scope: "core", secondaryPending: true },
   };
 }
 
-async function getHome(userId) {
+function shapeHomeSecondary(secondary) {
+  return {
+    ...secondary,
+    nextBills: (secondary.pendingBills || []).slice(0, 8),
+    notifications: secondary.personalization?.notifications || [],
+    charts: {
+      monthlyFlow: secondary.monthlyFlow || [],
+      flowSummary: secondary.flowSummary || {},
+    },
+    meta: { scope: "secondary", secondaryPending: false },
+  };
+}
+
+async function buildHome(userId, options = {}) {
+  const { user, core } = await parallel({
+    user: () => resolveUser(userId, options),
+    core: () => dashboardService.getHomeCore(userId),
+  });
+
+  return shapeHomeCore(user, core);
+}
+
+async function buildHomeSecondary(userId) {
+  const secondary = await dashboardService.getHomeSecondary(userId);
+  return shapeHomeSecondary(secondary);
+}
+
+async function getHome(userId, _query = {}, options = {}) {
   const cacheKey = CacheService.buildKey("home", userId);
   const { data, cacheHit } = await CacheService.wrap(
     cacheKey,
     BFF_CACHE_TTL.home,
-    () => buildHome(userId),
+    () => buildHome(userId, options),
   );
 
   return { data, cacheHit };
 }
 
-module.exports = { getHome, buildHome };
+async function getHomeSecondary(userId, _query = {}, _options = {}) {
+  const cacheKey = CacheService.buildKey("home-secondary", userId);
+  const { data, cacheHit } = await CacheService.wrap(
+    cacheKey,
+    BFF_CACHE_TTL["home-secondary"],
+    () => buildHomeSecondary(userId),
+  );
+
+  return { data, cacheHit };
+}
+
+module.exports = {
+  getHome,
+  buildHome,
+  getHomeSecondary,
+  buildHomeSecondary,
+  shapeHomeCore,
+  shapeHomeSecondary,
+};

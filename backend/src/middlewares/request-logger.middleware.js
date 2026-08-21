@@ -24,7 +24,10 @@ function requestLogger(req, res, next) {
       userId: req.user?.id || null,
       ip: meta.ip,
       sqlCount: res.getHeader?.("X-BFF-SQL-Count") || null,
+      sqlMs: res.getHeader?.("X-BFF-SQL-Ms") || null,
+      bffDurationMs: res.getHeader?.("X-BFF-Duration-Ms") || null,
       cache: res.getHeader?.("X-BFF-Cache") || null,
+      warm: res.getHeader?.("X-BFF-Warm") || null,
     });
   });
 

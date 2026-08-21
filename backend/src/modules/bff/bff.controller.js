@@ -2,7 +2,12 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 const { getCurrentUserId } = require("../../utils/demoUser");
 const { runWithSqlTracking } = require("./monitoring/sql.tracker");
+const { runWithRequestContext } = require("./utils/requestContext");
 const { createBffMonitor, countRecords } = require("./monitoring/bff.monitor");
+
+function runBffTracked(fn) {
+  return runWithSqlTracking(() => runWithRequestContext(fn));
+}
 
 const homeBffService = require("./services/home.bff.service");
 const dashboardBffService = require("./services/dashboard.bff.service");
@@ -20,9 +25,11 @@ function createHandler(endpoint, serviceFn, message) {
     const userId = getCurrentUserId(req);
     const monitor = createBffMonitor(endpoint, { userId });
 
-    const { data, cacheHit } = await runWithSqlTracking(() =>
-      serviceFn(userId, req.query || {}),
-    );
+    const { data, cacheHit } = await runBffTracked(async () => {
+      const result = await serviceFn(userId, req.query || {}, { reqUser: req.user });
+      monitor.captureSql();
+      return result;
+    });
 
     monitor.setCacheHit(cacheHit);
     monitor.setRecordCount(countRecords(data));
@@ -43,9 +50,11 @@ function createDetailHandler(endpoint, serviceFn, message) {
     const id = req.params.id;
     const monitor = createBffMonitor(endpoint, { userId });
 
-    const { data, cacheHit } = await runWithSqlTracking(() =>
-      serviceFn(userId, id),
-    );
+    const { data, cacheHit } = await runBffTracked(async () => {
+      const result = await serviceFn(userId, id, { reqUser: req.user });
+      monitor.captureSql();
+      return result;
+    });
 
     monitor.setCacheHit(cacheHit);
     monitor.setRecordCount(countRecords(data));
@@ -61,6 +70,11 @@ function createDetailHandler(endpoint, serviceFn, message) {
 }
 
 const home = createHandler("home", homeBffService.getHome, "Home carregada.");
+const homeSecondary = createHandler(
+  "home-secondary",
+  homeBffService.getHomeSecondary,
+  "Home secundaria carregada.",
+);
 const dashboard = createHandler(
   "dashboard",
   dashboardBffService.getDashboard,
@@ -105,6 +119,7 @@ const cardDetail = createDetailHandler(
 
 module.exports = {
   home,
+  homeSecondary,
   dashboard,
   investments,
   accounts,
