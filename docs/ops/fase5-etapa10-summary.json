@@ -1,0 +1,89 @@
+{
+  "measuredAt": "2026-08-21T12:44:30.436Z",
+  "ready": [
+    {
+      "wall": 209.75,
+      "db": 6.17
+    },
+    {
+      "wall": 104.92,
+      "db": 5.83
+    },
+    {
+      "wall": 113.61,
+      "db": 5.58
+    }
+  ],
+  "rows": [
+    {
+      "name": "home",
+      "missWall": 86.41,
+      "missServer": 0.05,
+      "missSql": 0,
+      "hitServer": 0.05,
+      "hitWall": 86.41,
+      "wallP50": 96.56,
+      "wallP95": 119.29
+    },
+    {
+      "name": "home-secondary",
+      "missWall": 82.4,
+      "missServer": 0.05,
+      "missSql": 0,
+      "hitServer": 0.05,
+      "hitWall": 82.4,
+      "wallP50": 82.4,
+      "wallP95": 88.96
+    },
+    {
+      "name": "dashboard",
+      "missWall": 137.44,
+      "missServer": 8.21,
+      "missSql": 4,
+      "hitServer": 0.12,
+      "hitWall": 75.51,
+      "wallP50": 95.94,
+      "wallP95": 137.44
+    },
+    {
+      "name": "insights",
+      "missWall": 87.44,
+      "missServer": 0.05,
+      "missSql": 0,
+      "hitServer": 0.05,
+      "hitWall": 87.44,
+      "wallP50": 156.23,
+      "wallP95": 204.93
+    },
+    {
+      "name": "accounts",
+      "missWall": 98.06,
+      "missServer": 0.04,
+      "missSql": 0,
+      "hitServer": 0.04,
+      "hitWall": 98.06,
+      "wallP50": 98.06,
+      "wallP95": 104.38
+    },
+    {
+      "name": "transactions",
+      "missWall": 95.56,
+      "missServer": 14.04,
+      "missSql": 5,
+      "hitServer": 0.04,
+      "hitWall": 88.1,
+      "wallP50": 89.06,
+      "wallP95": 95.56
+    },
+    {
+      "name": "investments",
+      "missWall": 95.81,
+      "missServer": 0.07,
+      "missSql": 0,
+      "hitServer": 0.07,
+      "hitWall": 95.81,
+      "wallP50": 82.06,
+      "wallP95": 95.81
+    }
+  ]
+}
