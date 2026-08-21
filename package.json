@@ -20,6 +20,8 @@
     "test:smoke": "vitest run tests/api/smoke.test.js",
     "measure:bff": "node scripts/measure-bff-perf.mjs",
     "measure:bff:prod": "node --env-file=backend/.env.vercel scripts/measure-bff-perf.mjs --base https://finsight-mdwl.vercel.app --rounds 5",
+    "measure:cold-warm": "node --env-file=backend/.env.vercel scripts/measure-cold-warm.mjs",
+    "measure:cold-warm:idle": "node --env-file=backend/.env.vercel scripts/measure-cold-warm.mjs --idle-sec 420",
     "verify:db-ssl": "node scripts/verify-db-ssl.mjs",
     "baseline:db": "node scripts/fase4-db-baseline.mjs"
   },

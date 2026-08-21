@@ -1,9 +1,16 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createRequire } from "module";
 
 const require = createRequire(import.meta.url);
 
 describe("BFF monitor + SQL tracker", () => {
+  beforeEach(() => {
+    const { __resetServedOnceForTests } = require(
+      "../../backend/src/modules/bff/monitoring/bff.monitor",
+    );
+    __resetServedOnceForTests();
+  });
+
   it("runWithSqlTracking isola contadores por invocacao", async () => {
     const { runWithSqlTracking, recordQuery, getSqlStats } = require(
       "../../backend/src/modules/bff/monitoring/sql.tracker",
@@ -58,7 +65,36 @@ describe("BFF monitor + SQL tracker", () => {
     expect(Number(headers["X-BFF-Duration-Ms"])).toBeGreaterThanOrEqual(0);
     expect(headers["X-BFF-SQL-Count"]).toBe("1");
     expect(headers["X-BFF-SQL-Ms"]).toBe("12.5");
-    expect(headers["X-BFF-Warm"]).toMatch(/^[01]$/);
+    expect(headers["X-BFF-Warm"]).toBe("0");
+    expect(headers["X-BFF-Uptime-Sec"]).toBeDefined();
+    expect(headers["X-BFF-Serialize-Ms"]).toBeDefined();
+  });
+
+  it("segunda request no mesmo processo marca warm=1", () => {
+    const { createBffMonitor } = require(
+      "../../backend/src/modules/bff/monitoring/bff.monitor",
+    );
+    const mkRes = () => {
+      const headers = {};
+      return {
+        headers,
+        res: {
+          headersSent: false,
+          statusCode: 200,
+          setHeader(name, value) {
+            headers[name] = value;
+          },
+        },
+      };
+    };
+
+    const first = mkRes();
+    createBffMonitor("home").finish(first.res, {});
+    expect(first.headers["X-BFF-Warm"]).toBe("0");
+
+    const second = mkRes();
+    createBffMonitor("home").finish(second.res, {});
+    expect(second.headers["X-BFF-Warm"]).toBe("1");
   });
 
   it("captureSql preserva contagem apos sair do ALS", () => {

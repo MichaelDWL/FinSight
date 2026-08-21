@@ -1,16 +1,32 @@
 const logger = require("../../../utils/logger");
 const { getSqlStats } = require("./sql.tracker");
 
-/** Processo com uptime >= limiar e tratado como warm (nao e cold start serverless). */
-const WARM_UPTIME_SECONDS = 5;
+/**
+ * Estado por processo Node (reutilizado entre invocacoes warm na Vercel).
+ * warm=1 somente se ESTE processo ja completou ao menos 1 request BFF antes.
+ * Mais confiavel que so uptime: cold start longo pode ultrapassar limiar de segundos
+ * ainda na 1a request e marcar warm=false positivo.
+ */
+const SERVED_KEY = Symbol.for("finsight.bff.servedOnce");
+
+function getServedState() {
+  if (!globalThis[SERVED_KEY]) {
+    globalThis[SERVED_KEY] = { servedOnce: false };
+  }
+  return globalThis[SERVED_KEY];
+}
 
 /**
  * Monitoramento de endpoints BFF.
  * Coleta: tempo total, SQL, serializacao e tamanho da resposta.
- * Headers: X-BFF-Duration-Ms, X-BFF-SQL-Count, X-BFF-Cache, X-BFF-Warm.
+ * Headers: X-BFF-Duration-Ms, X-BFF-SQL-*, X-BFF-Cache, X-BFF-Warm, X-BFF-Uptime-Sec.
  */
 function createBffMonitor(endpoint, { userId, cacheHit = false } = {}) {
   const startedAt = process.hrtime.bigint();
+  const uptimeAtStart = process.uptime();
+  const servedState = getServedState();
+  /** Capturado no inicio: instancia ja atendeu request anterior neste processo. */
+  const warmAtStart = servedState.servedOnce === true;
   let serializeMs = 0;
   let recordCount = 0;
   let sqlSnapshot = null;
@@ -50,7 +66,8 @@ function createBffMonitor(endpoint, { userId, cacheHit = false } = {}) {
       const totalMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
       const sql =
         sqlSnapshot || getSqlStats() || { queryCount: 0, totalQueryMs: 0, rowCount: 0 };
-      const warm = process.uptime() >= WARM_UPTIME_SECONDS;
+
+      servedState.servedOnce = true;
 
       const approxBytes = (() => {
         try {
@@ -64,8 +81,8 @@ function createBffMonitor(endpoint, { userId, cacheHit = false } = {}) {
         endpoint: `bff:${endpoint}`,
         userId,
         cacheHit,
-        warm,
-        processUptimeSec: Math.round(process.uptime() * 10) / 10,
+        warm: warmAtStart,
+        processUptimeSec: Math.round(uptimeAtStart * 10) / 10,
         totalMs: Math.round(totalMs * 100) / 100,
         sqlQueryCount: sql.queryCount,
         sqlTotalMs: Math.round(sql.totalQueryMs * 100) / 100,
@@ -91,7 +108,9 @@ function createBffMonitor(endpoint, { userId, cacheHit = false } = {}) {
         res.setHeader("X-BFF-Duration-Ms", String(metrics.totalMs));
         res.setHeader("X-BFF-SQL-Count", String(metrics.sqlQueryCount));
         res.setHeader("X-BFF-SQL-Ms", String(metrics.sqlTotalMs));
-        res.setHeader("X-BFF-Warm", warm ? "1" : "0");
+        res.setHeader("X-BFF-Serialize-Ms", String(metrics.serializeMs));
+        res.setHeader("X-BFF-Warm", warmAtStart ? "1" : "0");
+        res.setHeader("X-BFF-Uptime-Sec", String(metrics.processUptimeSec));
       }
 
       return metrics;
@@ -110,7 +129,14 @@ function countRecords(value) {
   }, 0);
 }
 
+/** Apenas testes — reseta o flag de instancia. */
+function __resetServedOnceForTests() {
+  const state = getServedState();
+  state.servedOnce = false;
+}
+
 module.exports = {
   createBffMonitor,
   countRecords,
+  __resetServedOnceForTests,
 };

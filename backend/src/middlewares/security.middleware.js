@@ -66,7 +66,9 @@ function securityMiddleware(app) {
         "X-BFF-Duration-Ms",
         "X-BFF-SQL-Count",
         "X-BFF-SQL-Ms",
+        "X-BFF-Serialize-Ms",
         "X-BFF-Warm",
+        "X-BFF-Uptime-Sec",
       ],
     })
   );
