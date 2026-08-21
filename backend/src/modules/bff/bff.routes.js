@@ -1,7 +1,6 @@
 const { Router } = require("express");
 const controller = require("./bff.controller");
 const validate = require("../../middlewares/validate.middleware");
-const { idParam } = require("../accounts/accounts.validator");
 const {
   bffLimiter,
   dashboardLimiter,
@@ -14,7 +13,14 @@ const {
 /**
  * Rotas BFF — uma chamada HTTP por tela.
  * Rate limits por grupo (config/rateLimit.config.js).
+ *
+ * idParam (zod) so carrega na 1a request de detalhe — nao no /home.
  */
+function validateAccountIdParam(req, res, next) {
+  const { idParam } = require("../accounts/accounts.validator");
+  return validate(idParam)(req, res, next);
+}
+
 const router = Router();
 
 router.use(bffLimiter);
@@ -29,7 +35,17 @@ router.get("/transactions", controller.transactions);
 router.get("/reports", reportsLimiter, controller.reports);
 router.get("/insights", dashboardLimiter, controller.insights);
 
-router.get("/account-detail/:id", accountsLimiter, validate(idParam), controller.accountDetail);
-router.get("/card-detail/:id", cardsLimiter, validate(idParam), controller.cardDetail);
+router.get(
+  "/account-detail/:id",
+  accountsLimiter,
+  validateAccountIdParam,
+  controller.accountDetail,
+);
+router.get(
+  "/card-detail/:id",
+  cardsLimiter,
+  validateAccountIdParam,
+  controller.cardDetail,
+);
 
 module.exports = router;

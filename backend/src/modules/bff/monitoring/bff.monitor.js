@@ -69,13 +69,8 @@ function createBffMonitor(endpoint, { userId, cacheHit = false } = {}) {
 
       servedState.servedOnce = true;
 
-      const approxBytes = (() => {
-        try {
-          return Buffer.byteLength(JSON.stringify(payload ?? null), "utf8");
-        } catch {
-          return 0;
-        }
-      })();
+      // Evita JSON.stringify duplicado so para metrica de bytes (payload ja vai em res.json).
+      const approxBytes = 0;
 
       const metrics = {
         endpoint: `bff:${endpoint}`,

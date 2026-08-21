@@ -1,5 +1,4 @@
 const express = require("express");
-const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const compression = require("compression");
 
@@ -12,6 +11,7 @@ const requestLogger = require("./middlewares/request-logger.middleware");
 const { bootstrapMiddleware } = require("./platform/bootstrap");
 const { initSentry } = require("./observability/sentry");
 const { success } = require("./utils/apiResponse");
+const { isServerless } = require("./platform/runtime");
 
 initSentry();
 
@@ -19,7 +19,11 @@ const app = express();
 
 securityMiddleware(app);
 app.use(compression({ threshold: 1024 }));
-app.use(morgan("combined"));
+// morgan e redundante com requestLogger estruturado; em serverless so adiciona CPU no cold/warm path.
+if (!isServerless) {
+  // eslint-disable-next-line global-require
+  app.use(require("morgan")("combined"));
+}
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
 app.use(requestLogger);
