@@ -23,6 +23,7 @@
     "measure:cold-warm": "node --env-file=backend/.env.vercel scripts/measure-cold-warm.mjs",
     "measure:cold-warm:idle": "node --env-file=backend/.env.vercel scripts/measure-cold-warm.mjs --idle-sec 420",
     "measure:bootstrap": "node scripts/measure-bootstrap.mjs",
+    "measure:db-path": "node --env-file=backend/.env.vercel scripts/measure-db-path.mjs",
     "verify:db-ssl": "node scripts/verify-db-ssl.mjs",
     "baseline:db": "node scripts/fase4-db-baseline.mjs"
   },

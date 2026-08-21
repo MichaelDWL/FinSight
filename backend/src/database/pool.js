@@ -170,20 +170,31 @@ function createPool() {
 
   /**
    * Health check da conexao — usado pelo endpoint GET /ready.
-   * Executa `SELECT NOW()` (+ versao e database atual) e reporta status,
-   * tempo de resposta, versao do PostgreSQL e database em uso.
+   * Decompoe acquire (nova conexao/TLS se frio) vs query pura.
    */
   pool.checkDatabaseConnection = async function checkDatabaseConnection() {
     const started = process.hrtime.bigint();
+    let client = null;
+    let acquireMs = null;
+    let queryMs = null;
     try {
-      const { rows } = await originalQuery(
-        "SELECT NOW() AS now, version() AS version, current_database() AS database"
+      const tAcquire = process.hrtime.bigint();
+      client = await pool.connect();
+      acquireMs = Number(process.hrtime.bigint() - tAcquire) / 1e6;
+
+      const tQuery = process.hrtime.bigint();
+      const { rows } = await client.query(
+        "SELECT NOW() AS now, version() AS version, current_database() AS database",
       );
+      queryMs = Number(process.hrtime.bigint() - tQuery) / 1e6;
+
       const responseTimeMs = Number(process.hrtime.bigint() - started) / 1e6;
       const row = rows[0] || {};
       return {
         status: "ok",
         responseTimeMs: Math.round(responseTimeMs * 100) / 100,
+        acquireMs: Math.round(acquireMs * 100) / 100,
+        queryMs: Math.round(queryMs * 100) / 100,
         now: row.now || null,
         postgresVersion: row.version || null,
         database: row.database || null,
@@ -200,11 +211,15 @@ function createPool() {
       return {
         status: "error",
         responseTimeMs: Math.round(responseTimeMs * 100) / 100,
+        acquireMs: acquireMs != null ? Math.round(acquireMs * 100) / 100 : null,
+        queryMs: queryMs != null ? Math.round(queryMs * 100) / 100 : null,
         code: (error && error.code) || null,
         message: title,
         hint,
         ssl: sslMode,
       };
+    } finally {
+      if (client) client.release();
     }
   };
 

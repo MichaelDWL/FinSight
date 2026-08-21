@@ -37,6 +37,8 @@ const getReady = asyncHandler(async (_req, res) => {
       database: {
         status: "connected",
         responseTimeMs: db.responseTimeMs,
+        acquireMs: db.acquireMs ?? null,
+        queryMs: db.queryMs ?? null,
         version: db.postgresVersion,
         name: db.database,
         ssl: db.ssl,
@@ -72,6 +74,8 @@ const getHealth = asyncHandler(async (_req, res) => {
       database: {
         status: "connected",
         responseTimeMs: db.responseTimeMs,
+        acquireMs: db.acquireMs ?? null,
+        queryMs: db.queryMs ?? null,
         version: db.postgresVersion,
         name: db.database,
         ssl: db.ssl,
