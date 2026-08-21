@@ -13,7 +13,12 @@ import {
   isAnalyticsDashboardRoute,
   renderAnalyticsDashboardPage,
 } from "./analyticsDashboard.js";
-import { loadRouteData, hasCachedData, enrichHomeSecondary } from "./dataLoaders.js";
+import {
+  loadRouteData,
+  hasCachedData,
+  enrichHomeSecondary,
+  invalidateBffCache,
+} from "./dataLoaders.js";
 import { openInvestmentModal } from "./modals.js";
 import {
   dashboardView,
@@ -35,6 +40,7 @@ import {
 } from "./views.js";
 
 export async function reloadAndRender() {
+  invalidateBffCache();
   store.bootstrapReady = false;
   store.loadedRouteKey = null;
   store.dashboardData = null;
@@ -72,6 +78,7 @@ export async function renderRoute() {
 
   await loadRouteData(route);
 
+  // Insights BFF ja traz personalization; getContext so como fallback.
   if (viewRoute === "perfil" && !store.personalizationContext) {
     store.personalizationContext = await personalizationService
       .getContext()
@@ -110,9 +117,8 @@ export async function renderRoute() {
     bindProfilePage(app, {
       showToast,
       onSaved: async () => {
-        store.personalizationContext = await personalizationService
-          .getContext()
-          .catch(() => store.personalizationContext);
+        invalidateBffCache(["insights"]);
+        store.personalizationContext = null;
         store.bootstrapReady = false;
         await reloadAndRender();
       },

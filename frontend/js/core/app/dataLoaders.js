@@ -151,8 +151,11 @@ function applyInvestmentsData(data) {
 function applyInsightsData(data, route) {
   applyBffShell(data);
   store.goals = (data.goals || []).map(normalizeGoal);
-  if (route === "perfil") {
-    store.personalizationContext = data.personalization || null;
+  // metas e perfil compartilham o mesmo payload BFF — personalizacao serve os dois.
+  if (data.personalization) {
+    store.personalizationContext = data.personalization;
+  } else if (route === "perfil") {
+    store.personalizationContext = null;
   }
 }
 
@@ -183,6 +186,17 @@ function applyRouteData(route, data) {
     applyInvestmentsData(data);
   } else if (["metas", "perfil"].includes(route)) {
     applyInsightsData(data, route);
+  }
+}
+
+/** Invalida cache SWR em memoria (mutacoes / logout / reload forçado). */
+export function invalidateBffCache(keys = null) {
+  if (!keys) {
+    store.bffCache = {};
+    return;
+  }
+  for (const key of keys) {
+    delete store.bffCache[key];
   }
 }
 
@@ -221,12 +235,30 @@ const ROUTE_DATA_LOADERS = {
   perfil: () => fetchAndApply("perfil"),
 };
 
+const inflightBff = new Map();
+
 async function fetchAndApply(route) {
-  const data = await fetchRouteData(route);
-  if (data === null) return;
   const key = bffCacheKey(route);
-  setCachedBff(key, data);
-  applyRouteData(route, data);
+  if (inflightBff.has(key)) {
+    await inflightBff.get(key);
+    const cached = getCachedBff(key);
+    if (cached) applyRouteData(route, cached);
+    return;
+  }
+
+  const pending = (async () => {
+    const data = await fetchRouteData(route);
+    if (data === null) return;
+    setCachedBff(key, data);
+    applyRouteData(route, data);
+  })();
+
+  inflightBff.set(key, pending);
+  try {
+    await pending;
+  } finally {
+    inflightBff.delete(key);
+  }
 }
 
 export async function loadBootstrap({ force = false } = {}) {
@@ -235,9 +267,12 @@ export async function loadBootstrap({ force = false } = {}) {
 
   store.isLoadingData = true;
   try {
+    const profilePromise = store.currentUser
+      ? Promise.resolve(store.currentUser)
+      : usersService.profile();
     const [bootstrap, user] = await Promise.all([
       bootstrapService.getBootstrap(),
-      usersService.profile(),
+      profilePromise,
     ]);
     applyBootstrapData(bootstrap);
     store.currentUser = user;
@@ -317,13 +352,25 @@ export async function enrichHomeSecondary({ force = false } = {}) {
     }
   }
 
-  try {
+  if (inflightBff.has(cacheKey) && !force) {
+    await inflightBff.get(cacheKey);
+    return Boolean(getCachedBff(cacheKey)) && !alreadyComplete;
+  }
+
+  const pending = (async () => {
     const data = await bffService.getHomeSecondary();
     setCachedBff(cacheKey, data);
     applyHomeSecondaryData(data);
+  })();
+
+  inflightBff.set(cacheKey, pending);
+  try {
+    await pending;
     return true;
   } catch (error) {
     console.error(error);
     return Boolean(cached) && !alreadyComplete;
+  } finally {
+    inflightBff.delete(cacheKey);
   }
 }
