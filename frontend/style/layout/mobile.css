@@ -140,8 +140,7 @@
       calc(var(--pad-md) + env(safe-area-inset-bottom, 0px));
     border-radius: 0;
     box-shadow: 18px 0 40px rgba(15, 45, 79, 0.28);
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
     transform: translateX(-105%);
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
@@ -266,10 +265,13 @@
   .nav-list,
   body.sidebar-closed .nav-list {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: var(--gap-sm);
     width: 100%;
-    overflow: visible;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .nav-item,
@@ -309,7 +311,8 @@
     left: auto;
     right: auto;
     bottom: auto;
-    margin-left: 0.85rem;
+    margin: 0;
+    padding: 0 0.35rem 0 0.75rem;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -317,8 +320,8 @@
   }
 
   .nav-group-open .nav-submenu {
-    max-height: 20rem;
-    padding: 0.25rem 0;
+    max-height: 22rem;
+    padding: 0.2rem 0.35rem 0.35rem 0.75rem;
   }
 
   .nav-submenu a,

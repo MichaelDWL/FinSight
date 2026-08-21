@@ -17,24 +17,15 @@
     var(--brand-800) 100%
   );
   box-shadow: 6px 0 24px rgba(15, 45, 79, 0.18);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   transition:
     width 0.25s ease,
     padding 0.25s ease;
 }
 
-.sidebar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebar::-webkit-scrollbar-thumb {
-  border-radius: var(--border-radius-sm);
-  background-color: rgba(255, 255, 255, 0.24);
-}
-
 .sidebar-btn {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   gap: var(--gap-sm);
@@ -96,11 +87,30 @@
 
 .nav-list {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: var(--gap-sm);
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 0.1rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+.nav-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.24);
 }
 
 .nav-item {
+  flex-shrink: 0;
+  min-width: 0;
   border-radius: var(--border-radius-md);
   color: var(--pw2);
   font-family: "Inter", sans-serif;
@@ -108,8 +118,7 @@
   font-weight: 500;
   transition:
     background-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+    color 0.2s ease;
 }
 
 .nav-item a,
@@ -155,23 +164,37 @@
   transform: rotate(180deg);
 }
 
-.nav-item:hover,
-.nav-item.nav-active {
+.nav-item:not(.nav-group):hover,
+.nav-item:not(.nav-group).nav-active {
   color: var(--pw);
   background: linear-gradient(90deg, var(--brand-accent) 0%, #0965e8 100%);
   box-shadow: 0 10px 20px rgba(13, 110, 253, 0.22);
-  transform: translateX(2px);
 }
 
-.nav-group.nav-active {
+.nav-group {
+  overflow: hidden;
+}
+
+.nav-group.nav-active,
+.nav-group.nav-group-open {
   background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-group-toggle:hover {
+  color: var(--pw);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.nav-group.nav-active > .nav-group-toggle {
+  color: var(--pw);
 }
 
 .nav-submenu {
   display: grid;
   max-height: 0;
-  gap: 0.2rem;
-  margin-left: 2.35rem;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0 0.35rem 0 0.9rem;
   overflow: hidden;
   opacity: 0;
   transition:
@@ -181,9 +204,13 @@
 }
 
 .nav-group-open .nav-submenu {
-  max-height: min-content;
-  padding: 0.18rem 0 0.45rem;
+  max-height: 22rem;
+  padding: 0.12rem 0.35rem 0.4rem 0.9rem;
   opacity: 1;
+}
+
+.nav-submenu li {
+  min-width: 0;
 }
 
 .nav-submenu a,
@@ -194,8 +221,9 @@
   justify-content: flex-start;
   flex-direction: row;
   width: 100%;
+  max-width: 100%;
   min-height: 2.15rem;
-  padding: 0.46rem 0.75rem;
+  padding: 0.46rem 0.7rem;
   border: 0;
   border-radius: 10px;
   appearance: none;
@@ -204,11 +232,11 @@
   font-family: "Inter", sans-serif;
   font-size: 0.84rem;
   text-align: left;
+  white-space: nowrap;
   cursor: pointer;
   transition:
     background-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+    color 0.2s ease;
 }
 
 .nav-submenu a::before,
@@ -226,18 +254,17 @@
 .nav-submenu a:hover,
 .nav-submenu button:hover {
   color: var(--pw);
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(2px);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .nav-submenu .nav-subitem-active {
   color: var(--pw);
   background: #1d4ed8;
-  box-shadow: 0 10px 20px rgba(29, 78, 216, 0.28);
 }
 
 .sidebar-tip {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   align-items: center;
   gap: var(--gap-sm);
@@ -293,6 +320,7 @@
 
 .logout {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   width: 100%;
   gap: 0.75rem;
@@ -362,6 +390,23 @@ body.sidebar-closed .nav-group-toggle span i {
   font-size: 1.15rem;
 }
 
+@media (min-width: 768px) {
+  body.sidebar-closed .nav-group {
+    background: transparent;
+  }
+
+  body.sidebar-closed .nav-group:hover,
+  body.sidebar-closed .nav-group.nav-active {
+    color: var(--pw);
+    background: linear-gradient(90deg, var(--brand-accent) 0%, #0965e8 100%);
+    box-shadow: 0 10px 20px rgba(13, 110, 253, 0.22);
+  }
+
+  body.sidebar-closed .nav-group-toggle:hover {
+    background: transparent;
+  }
+}
+
 body.sidebar-closed .nav-group-chevron,
 body.sidebar-closed .nav-submenu {
   display: none;
@@ -384,6 +429,12 @@ body.sidebar-closed .logout i {
 
 body.sidebar-closed .sidebar-toggle {
   transform: rotate(180deg);
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .sidebar-tip {
+    display: none;
+  }
 }
 
 @media (max-height: 760px) and (min-width: 768px) {

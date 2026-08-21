@@ -479,16 +479,6 @@
     grid-template-columns: 1fr;
   }
 
-  .investments-grid,
-  .financial-grid,
-  .cards-grid,
-  .goals-page-grid,
-  .metrics-grid,
-  .detail-stat-grid,
-  .wealth-mini-grid {
-    grid-template-columns: 1fr;
-  }
-
   .home-transaction-item,
   .home-transaction-side {
     align-items: flex-start;

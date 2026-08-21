@@ -3,20 +3,44 @@ import { routeTitles } from "../router.js";
 import { normalizeDashboardRoute } from "../../modules/dashboard/shared/periodLabels.js";
 import { isAnalyticsDashboardRoute } from "./analyticsDashboard.js";
 
+const NAV_GROUP_NAMES = ["dashboards", "investments", "accounts"];
+
 export function closeQuickActionMenu() {
   quickActionMenu?.classList.add("is-hidden");
   quickAction?.setAttribute("aria-expanded", "false");
 }
 
-export function setInvestmentsMenuExpanded(expanded) {
-  const group = document.querySelector("[data-nav-group='investments']");
-  const toggle = group?.querySelector(
-    "[data-action='toggle-investments-menu']",
-  );
+function setNavGroupExpanded(groupName, expanded) {
+  const group = document.querySelector(`[data-nav-group="${groupName}"]`);
+  const toggle = group?.querySelector(".nav-group-toggle");
   if (!group || !toggle) return;
 
   group.classList.toggle("nav-group-open", expanded);
   toggle.setAttribute("aria-expanded", String(expanded));
+}
+
+function closeOtherNavGroups(exceptGroupName) {
+  NAV_GROUP_NAMES.forEach((name) => {
+    if (name !== exceptGroupName) setNavGroupExpanded(name, false);
+  });
+}
+
+export function closeAllNavGroups() {
+  NAV_GROUP_NAMES.forEach((name) => setNavGroupExpanded(name, false));
+}
+
+export function expandActiveNavGroup() {
+  const groupName = document.querySelector(".nav-group.nav-active")?.dataset.navGroup;
+  if (!NAV_GROUP_NAMES.includes(groupName)) return;
+
+  if (groupName === "dashboards") setDashboardsMenuExpanded(true);
+  else if (groupName === "investments") setInvestmentsMenuExpanded(true);
+  else setAccountsMenuExpanded(true);
+}
+
+export function setInvestmentsMenuExpanded(expanded) {
+  if (expanded) closeOtherNavGroups("investments");
+  setNavGroupExpanded("investments", expanded);
 }
 
 export function toggleInvestmentsMenu() {
@@ -25,12 +49,8 @@ export function toggleInvestmentsMenu() {
 }
 
 export function setAccountsMenuExpanded(expanded) {
-  const group = document.querySelector("[data-nav-group='accounts']");
-  const toggle = group?.querySelector("[data-action='toggle-accounts-menu']");
-  if (!group || !toggle) return;
-
-  group.classList.toggle("nav-group-open", expanded);
-  toggle.setAttribute("aria-expanded", String(expanded));
+  if (expanded) closeOtherNavGroups("accounts");
+  setNavGroupExpanded("accounts", expanded);
 }
 
 export function toggleAccountsMenu() {
@@ -39,12 +59,8 @@ export function toggleAccountsMenu() {
 }
 
 export function setDashboardsMenuExpanded(expanded) {
-  const group = document.querySelector("[data-nav-group='dashboards']");
-  const toggle = group?.querySelector("[data-action='toggle-dashboards-menu']");
-  if (!group || !toggle) return;
-
-  group.classList.toggle("nav-group-open", expanded);
-  toggle.setAttribute("aria-expanded", String(expanded));
+  if (expanded) closeOtherNavGroups("dashboards");
+  setNavGroupExpanded("dashboards", expanded);
 }
 
 export function toggleDashboardsMenu() {
@@ -65,7 +81,9 @@ export function setDashboardSubroute(activeRoute) {
 
 export function setInvestmentSubroute(activeRoute) {
   document
-    .querySelectorAll(".nav-submenu [data-route], .nav-submenu [data-subroute]")
+    .querySelectorAll(
+      "[data-nav-group='investments'] .nav-submenu [data-route], [data-nav-group='investments'] .nav-submenu [data-subroute]",
+    )
     .forEach((item) => {
       const route = item.dataset.route || item.dataset.subroute;
       item.classList.toggle("nav-subitem-active", route === activeRoute);
@@ -105,10 +123,13 @@ export function setActiveRoute(route) {
   document.querySelectorAll("[data-route]").forEach((link) => {
     if (link.closest(".mobile-bottom-nav")) return;
 
-    const targetRoute = link.closest(".nav-submenu") ? route : activeRoute;
-    const isActive = link.dataset.route === targetRoute;
+    const isSubmenuLink = Boolean(link.closest(".nav-submenu"));
+    const isActive = link.dataset.route === (isSubmenuLink ? route : activeRoute);
     link.classList.toggle("nav-link-active", isActive);
-    link.closest(".nav-item")?.classList.toggle("nav-active", isActive);
+
+    if (!isSubmenuLink) {
+      link.closest(".nav-item")?.classList.toggle("nav-active", isActive);
+    }
   });
 
   const investmentRoutes = [

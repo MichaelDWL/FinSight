@@ -75,14 +75,21 @@ export function billCard(bill, compact = false) {
 
 export function accountSummary(account) {
   const icon = resolveIcon(account.icon, "fa-building-columns");
+  const typeLabel = accountTypeLabel(account.type);
+  const name = String(account.name || "").trim();
+  const institution = String(account.institution || "").trim();
+  const subtitle =
+    institution && institution.toLowerCase() !== name.toLowerCase()
+      ? institution
+      : typeLabel;
 
   return `
     <article class="credit-card-panel account-panel" style="--card-accent: ${account.color || "#0d6efd"}">
       <div class="credit-card-top">
         <div>
-          <span class="page-eyebrow">${accountTypeLabel(account.type)}</span>
-          <h3>${account.name}</h3>
-          <p>${account.institution || accountTypeLabel(account.type)}</p>
+          <span class="page-eyebrow">${escapeHtml(typeLabel)}</span>
+          <h3>${escapeHtml(name)}</h3>
+          <p>${escapeHtml(subtitle)}</p>
         </div>
         <i class="fa-solid ${icon}"></i>
       </div>

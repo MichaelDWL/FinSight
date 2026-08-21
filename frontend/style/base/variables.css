@@ -4,9 +4,9 @@
   interpolated inside @media across all browsers.
 
   Desktop:  ≥ 1200px
-  Notebook: 992px – 1199px
-  Tablet:   768px – 991px
-  Mobile:   ≤ 767px   ← shell: compact header + bottom nav + drawer
+  Notebook: 992px – 1199px  ← header sem atalhos (sidebar já cobre)
+  Tablet:   768px – 1024px  ← iPad Mini/Air portrait: sidebar recolhida
+  Mobile:   ≤ 767px         ← header compacto + bottom nav + drawer
   Compact:  ≤ 480px
   Small:    ≤ 360px
 */
@@ -15,6 +15,7 @@
   --bp-desktop: 1200px;
   --bp-notebook: 992px;
   --bp-tablet: 768px;
+  --bp-tablet-max: 1024px;
   --bp-mobile: 767px;
   --bp-compact: 480px;
   --bp-small: 360px;

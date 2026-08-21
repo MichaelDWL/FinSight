@@ -1,3 +1,5 @@
+import { closeAllNavGroups, expandActiveNavGroup } from "../../core/app/navigation.js";
+
 const sidebarToggle = document.querySelector(".sidebar-toggle");
 const mobileMenuBtn = document.querySelector("#mobileMenuBtn");
 const mobileDrawerClose = document.querySelector("#mobileDrawerClose");
@@ -8,6 +10,24 @@ let lastFocusBeforeDrawer = null;
 
 function isMobileShell() {
   return window.matchMedia("(max-width: 767px)").matches;
+}
+
+function isTabletShell() {
+  return window.matchMedia("(min-width: 768px) and (max-width: 1024px)").matches;
+}
+
+function collapseSidebar() {
+  if (document.body.classList.contains("sidebar-closed")) return;
+
+  document.body.classList.add("sidebar-closed");
+  sidebarToggle?.setAttribute("aria-expanded", "false");
+  sidebarToggle?.setAttribute("aria-label", "Abrir menu");
+  closeAllNavGroups();
+}
+
+function syncViewportShell() {
+  if (isMobileShell()) return;
+  if (isTabletShell()) collapseSidebar();
 }
 
 export function openMobileDrawer() {
@@ -58,17 +78,9 @@ export function toggleSidebar() {
   sidebarToggle.setAttribute("aria-label", isOpen ? "Fechar menu" : "Abrir menu");
 
   if (!isOpen) {
-    const investmentsGroup = document.querySelector("[data-nav-group='investments']");
-    investmentsGroup?.classList.remove("nav-group-open");
-    investmentsGroup
-      ?.querySelector("[data-action='toggle-investments-menu']")
-      ?.setAttribute("aria-expanded", "false");
-
-    const accountsGroup = document.querySelector("[data-nav-group='accounts']");
-    accountsGroup?.classList.remove("nav-group-open");
-    accountsGroup
-      ?.querySelector("[data-action='toggle-accounts-menu']")
-      ?.setAttribute("aria-expanded", "false");
+    closeAllNavGroups();
+  } else {
+    expandActiveNavGroup();
   }
 }
 
@@ -100,5 +112,15 @@ mobileDrawer?.addEventListener("click", (event) => {
 window.matchMedia("(max-width: 767px)").addEventListener("change", (event) => {
   if (!event.matches) {
     closeMobileDrawer();
+    syncViewportShell();
   }
 });
+
+window.matchMedia("(min-width: 768px) and (max-width: 1024px)").addEventListener(
+  "change",
+  (event) => {
+    if (event.matches) collapseSidebar();
+  },
+);
+
+syncViewportShell();
